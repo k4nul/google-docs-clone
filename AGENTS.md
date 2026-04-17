@@ -41,6 +41,47 @@
     "test": "npm run test",
     "typecheck": "npm run typecheck"
   },
+  "commit_policy": {
+    "format": "type(scope): subject",
+    "allowed_types": [
+      "feat",
+      "fix",
+      "docs",
+      "style",
+      "refactor",
+      "test",
+      "chore",
+      "perf",
+      "build",
+      "ci",
+      "rename",
+      "remove"
+    ],
+    "allowed_scopes": [
+      "ui",
+      "editor",
+      "auth",
+      "api",
+      "state",
+      "router",
+      "styles",
+      "docs",
+      "repo"
+    ],
+    "subject_rules": {
+      "tense": "present",
+      "lowercase_first_letter": true,
+      "no_trailing_period": true,
+      "avoid_vague_subjects": true,
+      "describe_exact_change": true
+    },
+    "change_isolation": {
+      "single_purpose_per_commit": true,
+      "do_not_mix_feature_and_refactor": true,
+      "separate_formatting_only_commits": true,
+      "split_large_docs_and_feature_changes": true
+    }
+  },
   "harness": {
     "path_base": "repo_root",
     "powershell_restricted_commands": {

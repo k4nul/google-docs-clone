@@ -48,3 +48,17 @@
 - 동일한 검증은 `.github/workflows/ci.yml`에서도 자동 실행한다
 - baseline code owner 설정은 `.github/CODEOWNERS`에서 관리한다
 - 계약 변경이 있으면 코드보다 먼저 또는 동시에 `docs/`를 갱신한다
+
+## Commit Conventions
+
+- 커밋 메시지 형식은 반드시 `type(scope): subject`를 사용한다
+- 허용 type은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`다
+- 허용 scope는 `ui`, `editor`, `auth`, `api`, `state`, `router`, `styles`, `docs`, `repo`다
+- subject는 현재형으로 작성하고 첫 글자는 소문자로 시작한다
+- subject 끝에 마침표를 붙이지 않는다
+- `update`, `fix bug`, `work` 같은 모호한 표현은 사용하지 않는다
+- subject는 무엇이 바뀌었는지 바로 알 수 있게 구체적으로 적는다
+- 한 커밋에는 한 가지 목적만 담는다
+- 기능 추가와 리팩터링은 같은 커밋에 섞지 않는다
+- 포맷팅만 한 변경은 별도 커밋으로 분리한다
+- 문서 변경과 기능 변경이 모두 큰 경우에는 커밋을 분리한다
