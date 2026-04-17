@@ -35,5 +35,47 @@
     "check": "cargo check",
     "fmt": "cargo fmt --check",
     "test": "cargo test"
+  },
+  "commit": {
+    "message_format": "type(scope): subject",
+    "types": [
+      "feat",
+      "fix",
+      "docs",
+      "style",
+      "refactor",
+      "test",
+      "chore",
+      "perf",
+      "build",
+      "ci",
+      "rename",
+      "remove"
+    ],
+    "scopes": [
+      "api",
+      "sync",
+      "yrs",
+      "auth",
+      "db",
+      "websocket",
+      "storage",
+      "config",
+      "docs",
+      "repo"
+    ],
+    "subject_rules": [
+      "present-tense",
+      "lowercase-first-letter",
+      "no-trailing-period",
+      "specific-change-description"
+    ],
+    "work_rules": [
+      "single-purpose-per-commit",
+      "do-not-mix-refactor-and-behavior-change",
+      "update-related-docs-and-tests-on-schema-or-api-change",
+      "run-build-test-lint-when-possible",
+      "mark-uncertain-work-as-todo-or-blocked"
+    ]
   }
 }

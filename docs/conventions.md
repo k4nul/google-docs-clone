@@ -40,3 +40,13 @@
 - 최소 한 개 이상의 endpoint 검증 테스트를 유지한다.
 - 통합 테스트는 앱 빌더를 통해 실제 Router를 띄운다.
 - 새 route를 추가하면 happy path 기준 smoke test를 함께 추가한다.
+
+## Commit Rules
+
+- 커밋 메시지 형식은 `type(scope): subject`를 사용한다.
+- `type`은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 허용한다.
+- `scope`는 백엔드 변경 의도를 드러내도록 `api`, `sync`, `yrs`, `auth`, `db`, `websocket`, `storage`, `config`, `docs`, `repo` 중에서 선택한다.
+- `subject`는 현재형으로 쓰고, 첫 글자는 소문자로 시작하며, 마침표를 붙이지 않는다.
+- `subject`에는 `update`, `fix bug`, `work` 같은 모호한 표현 대신 실제 변경 내용을 적는다.
+- 한 커밋에는 한 가지 목적만 담고, 리팩토링과 동작 변경을 섞지 않는다.
+- 스키마나 API 변경이 있으면 관련 문서와 테스트를 함께 갱신한다.
