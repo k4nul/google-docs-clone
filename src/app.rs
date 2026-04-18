@@ -26,6 +26,6 @@ fn build_cors(config: &Config) -> AppResult<CorsLayer> {
 
     Ok(CorsLayer::new()
         .allow_origin(AllowOrigin::exact(origin))
-        .allow_methods([Method::GET])
+        .allow_methods([Method::GET, Method::POST, Method::DELETE])
         .allow_headers(Any))
 }

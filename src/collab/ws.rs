@@ -28,7 +28,12 @@ pub async fn ws_handler(
 ) -> AppResult<impl IntoResponse> {
     let doc_id = parse_uuid_param("doc_id", &raw_doc_id)?;
     validate_origin(&state, &headers, doc_id)?;
-    let room = state.rooms().get_or_create(doc_id);
+    let room = state
+        .rooms()
+        .get_or_restore(&doc_id)
+        .map_err(anyhow::Error::from)
+        .map_err(AppError::from)?
+        .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))?;
 
     Ok(ws.on_upgrade(move |socket| serve_room_socket(socket, room, doc_id)))
 }

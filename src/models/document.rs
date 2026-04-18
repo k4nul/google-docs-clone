@@ -11,14 +11,22 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn placeholder(id: Uuid) -> Self {
+    pub fn new(id: Uuid, title: Option<String>) -> Self {
         let now = Utc::now();
+        let title = title
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| format!("Document {id}"));
 
         Self {
             id,
-            title: format!("Document {id}"),
+            title,
             created_at: now,
             updated_at: now,
         }
+    }
+
+    pub fn touch(&mut self) {
+        self.updated_at = Utc::now();
     }
 }
