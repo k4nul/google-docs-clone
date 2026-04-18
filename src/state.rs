@@ -4,7 +4,7 @@ use crate::{
     collab::rooms::RoomRegistry,
     config::{Config, DEFAULT_FRONTEND_ORIGIN},
     errors::{AppError, AppResult},
-    storage::{SnapshotStore, in_memory_snapshot_store},
+    storage::{SnapshotStore, in_memory_snapshot_store, snapshot_store_from_config},
 };
 
 #[derive(Clone)]
@@ -50,7 +50,9 @@ impl AppState {
         Self::with_snapshot_store(
             config.frontend_origin.clone(),
             config.api_token.clone(),
-            in_memory_snapshot_store(),
+            snapshot_store_from_config(config)
+                .map_err(anyhow::Error::from)
+                .map_err(AppError::from)?,
         )
     }
 

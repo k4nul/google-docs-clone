@@ -10,7 +10,7 @@
 - `src/routes`: REST endpoint 집합
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 기본 in-memory adapter
+- `src/storage`: snapshot store trait과 memory/file adapter
 
 ## Request Flow
 
@@ -49,10 +49,11 @@
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
-- 현재는 `InMemorySnapshotStore`만 연결되며, future adapter는 같은 trait으로 file/db/object storage를 대체할 수 있다.
+- 현재는 `InMemorySnapshotStore`와 `FileSnapshotStore`가 연결되며, future adapter는 같은 trait으로 db/object storage를 대체할 수 있다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 hydrate한다.
+- `Config.snapshot_store`가 `memory`/`file` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이 문서 metadata와 Yrs full-state update를 함께 저장한다.
 
 ## Multi-Process Distribution Strategy
 

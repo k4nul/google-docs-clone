@@ -40,4 +40,20 @@ impl Document {
     pub fn authorize(&self, token: &str) -> bool {
         self.access_token == token
     }
+
+    pub(crate) fn from_parts(
+        id: Uuid,
+        title: String,
+        created_at: DateTime<Utc>,
+        updated_at: DateTime<Utc>,
+        access_token: String,
+    ) -> Self {
+        Self {
+            id,
+            title,
+            created_at,
+            updated_at,
+            access_token,
+        }
+    }
 }

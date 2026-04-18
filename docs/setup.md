@@ -16,6 +16,7 @@ cargo run
 기본 바인드 주소는 `127.0.0.1:4000`입니다.
 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`이므로 로컬 프런트엔드 개발 서버를 별도 포트에서 띄우는 흐름을 바로 재현할 수 있습니다.
 기본 `API_TOKEN`은 `dev-admin-token`이며, 개발 환경에서는 이 토큰으로 문서 생성/목록 API를 호출합니다.
+기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`를 함께 설정합니다.
 
 ## Test
 
@@ -31,6 +32,8 @@ cargo test
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
+- `SNAPSHOT_STORE`: `memory` 또는 `file`
+- `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 
 ## Local Development Procedure
 
@@ -41,3 +44,4 @@ cargo test
 5. 문서 상세 조회, 삭제, WebSocket 연결에는 `Authorization: Bearer <access_token>`을 사용한다.
 6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞춰 `/ws/:doc_id`에 접속한다.
 7. 작업 마무리 전 `cargo fmt --check`와 `cargo test`를 실행한다.
+8. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.

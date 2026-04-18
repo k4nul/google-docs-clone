@@ -9,6 +9,8 @@ pub const DEFAULT_PORT: u16 = 4000;
 pub const DEFAULT_FRONTEND_ORIGIN: &str = "http://localhost:3000";
 pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
 pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
+pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
+pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -17,6 +19,8 @@ pub struct Config {
     pub frontend_origin: String,
     pub rust_log: String,
     pub api_token: String,
+    pub snapshot_store: String,
+    pub snapshot_dir: String,
 }
 
 impl Config {
@@ -28,6 +32,8 @@ impl Config {
         let frontend_origin = env_string("FRONTEND_ORIGIN", DEFAULT_FRONTEND_ORIGIN)?;
         let rust_log = env_string("RUST_LOG", DEFAULT_RUST_LOG)?;
         let api_token = env_string("API_TOKEN", DEFAULT_API_TOKEN)?;
+        let snapshot_store = env_string("SNAPSHOT_STORE", DEFAULT_SNAPSHOT_STORE)?;
+        let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
 
         Ok(Self {
             host,
@@ -35,6 +41,8 @@ impl Config {
             frontend_origin,
             rust_log,
             api_token,
+            snapshot_store,
+            snapshot_dir,
         })
     }
 

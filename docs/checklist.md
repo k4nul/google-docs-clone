@@ -31,6 +31,8 @@
 
 ## Execution Log
 
+- 2026-04-18: 자동화 run에서 file snapshot store 작업을 검증 완료했다. `cargo check`, `cargo fmt --check`, `cargo test`가 모두 통과했고 `SNAPSHOT_STORE=file` 설정 경로와 재시작 hydrate 테스트 결과를 기준으로 커밋 준비 상태를 확인했다.
+- 2026-04-18: `SNAPSHOT_STORE` (`memory`/`file`)와 `SNAPSHOT_DIR` 설정을 추가하고 `FileSnapshotStore`를 연결했다. 앱 시작 시 file snapshot catalog도 hydrate되며, snapshot round-trip unit test와 재시작 복구 integration test, `.env.example`, README, setup, architecture 문서를 함께 갱신했다.
 - 2026-04-18: Added `ValidatingProtocol` so `/ws/:doc_id` validates incoming awareness payloads against `AwarenessState`. Invalid JSON shape or field values are rejected before shared room awareness mutates, and unit/integration tests plus related docs were updated.
 
 - 2026-04-18: 문서 생성/삭제 API를 추가하고 문서 자동 생성 흐름을 명시 생성 기반으로 정리했다. `GET /api/documents/:id`와 `GET /ws/:doc_id`는 이제 존재하지 않는 문서에 대해 `404`를 반환한다. 관련 테스트, README, API 문서를 함께 갱신했다.

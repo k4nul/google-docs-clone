@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 in-memory adapter
+- `SnapshotStore` trait 및 memory/file adapter
 
 ## 기술 스택
 
@@ -79,14 +79,17 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
+- `SNAPSHOT_STORE`: `memory` 또는 `file`
+- `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 
 ## 현재 범위
 
-- 단일 프로세스 in-memory room 관리
+- 단일 프로세스 room 관리
 - room snapshot 저장/복구 및 idle eviction 정책
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
+- 기본 in-memory snapshot store와 로컬 file snapshot store 지원
 
 ## 비범위
 
@@ -111,6 +114,7 @@ cargo run
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
 - WebSocket 세션이 종료될 때마다 room의 active session 수를 감소시키고, 마지막 세션이 닫히면 최신 snapshot을 저장한 뒤 room을 메모리에서 제거한다.
 - 문서가 삭제된 경우에는 snapshot과 active room을 함께 제거하고, 이미 열린 WebSocket 세션 종료 시 재등록하지 않는다.
+- `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
 
 ## Awareness Metadata Contract
 

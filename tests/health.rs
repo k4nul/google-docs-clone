@@ -5,10 +5,10 @@ use backend::{
     collab::rooms::RoomRegistry,
     config::Config,
     state::AppState,
-    storage::{InMemorySnapshotStore, SnapshotStore},
+    storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
 };
 use serde_json::Value;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, fs, sync::Arc, time::Duration};
 use uuid::Uuid;
 use yrs::{
     Doc, GetString, StateVector, Text, Transact, Update,
@@ -23,7 +23,13 @@ fn test_config() -> Config {
         frontend_origin: "http://localhost:3000".to_owned(),
         rust_log: "backend=debug".to_owned(),
         api_token: "test-admin-token".to_owned(),
+        snapshot_store: "memory".to_owned(),
+        snapshot_dir: "./data/test-snapshots".to_owned(),
     }
+}
+
+fn temp_snapshot_dir(test_name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("backend-{test_name}-{}", Uuid::new_v4()))
 }
 
 fn admin_auth_header(config: &Config) -> String {
@@ -728,4 +734,68 @@ async fn app_state_hydrates_snapshot_backed_rooms_on_startup() {
         hydrated_text.get_string(&hydrated_doc.transact()),
         "restored"
     );
+}
+
+#[tokio::test]
+async fn app_state_uses_file_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("file-store");
+    config.snapshot_store = "file".to_owned();
+    config.snapshot_dir = snapshot_dir.to_string_lossy().into_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with file store");
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to disk".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let evicted = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to disk on eviction");
+    assert!(evicted);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted file snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_dir.join(format!("{}.json", document.id)).exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn file_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("file-store-unit");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Disk".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to file store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from file store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from file store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
