@@ -8,6 +8,7 @@
 - 라우트는 `routes`
 - 실시간 협업은 `collab`
 - 직렬화 모델은 `models`
+- 저장 경계는 `storage`
 
 ## Error Handling
 

@@ -14,7 +14,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(frontend_origin: impl Into<String>) -> Self {
         Self {
-            rooms: Arc::new(RoomRegistry::new()),
+            rooms: Arc::new(RoomRegistry::default()),
             frontend_origin: Arc::<str>::from(frontend_origin.into()),
         }
     }

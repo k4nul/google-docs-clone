@@ -9,6 +9,7 @@
 - `src/routes`: REST endpoint 집합
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/models`: 문서 placeholder 모델
+- `src/storage`: snapshot store trait과 기본 in-memory adapter
 
 ## Request Flow
 
@@ -35,6 +36,9 @@
 
 ## Persistence Extension Points
 
-- `Room`에 snapshot provider를 붙일 수 있도록 메타데이터와 CRDT 상태를 분리해 두었다.
-- 현재는 메모리 전용이므로 프로세스 재시작 시 문서 상태가 유지되지 않는다.
-- 다음 단계에서는 document repository trait과 snapshot serialize/restore 경계를 추가하는 것이 자연스럽다.
+- `SnapshotStore` trait이 `load/save/delete` 경계를 정의하고, `RoomRegistry`가 이 trait에만 의존한다.
+- `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
+- `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
+- 현재는 `InMemorySnapshotStore`만 연결되며, future adapter는 같은 trait으로 file/db/object storage를 대체할 수 있다.
+- `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
+- startup hydration과 eviction-after-save 정책은 아직 없으므로 persisted document catalog 구성은 다음 단계로 남겨 둔다.
