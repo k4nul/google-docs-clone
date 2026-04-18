@@ -22,12 +22,16 @@
 
 ## WS / Yrs Follow-up Items
 
+- [x] incoming awareness payload server validation added
+
 - [x] awareness metadata에 사용자 정보 구조 정의
 - [x] snapshot 복구 시점과 room eviction 정책 정의
 - [x] 다중 프로세스 환경에서 room 분산 전략 검토
 - [x] `yrs-axum` upstream 변화에 맞춘 provider compatibility 검증 자동화
 
 ## Execution Log
+
+- 2026-04-18: Added `ValidatingProtocol` so `/ws/:doc_id` validates incoming awareness payloads against `AwarenessState`. Invalid JSON shape or field values are rejected before shared room awareness mutates, and unit/integration tests plus related docs were updated.
 
 - 2026-04-18: 문서 생성/삭제 API를 추가하고 문서 자동 생성 흐름을 명시 생성 기반으로 정리했다. `GET /api/documents/:id`와 `GET /ws/:doc_id`는 이제 존재하지 않는 문서에 대해 `404`를 반환한다. 관련 테스트, README, API 문서를 함께 갱신했다.
 - 2026-04-18: `SnapshotStore` trait과 `InMemorySnapshotStore`를 추가하고 `RoomRegistry`가 snapshot save/restore 경계를 통해 room을 복구할 수 있도록 정리했다. `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 stored snapshot이 있으면 복구 경로를 탄다. unit/integration test와 README, architecture/conventions 문서를 함께 갱신했다.

@@ -114,6 +114,8 @@ cargo run
 
 ## Awareness Metadata Contract
 
+Non-null awareness payloads are validated against `AwarenessState` on the WebSocket collaboration path. Malformed JSON and invalid field values are rejected before shared room awareness state is mutated.
+
 WebSocket 연결 이후 클라이언트가 게시하는 Yrs awareness state는 아래 JSON 구조를 표준으로 사용한다.
 
 ```json

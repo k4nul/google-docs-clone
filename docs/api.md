@@ -129,6 +129,8 @@ Response: `204 No Content`
 
 ## Frontend Contract Notes
 
+- incoming awareness JSON is validated against `AwarenessState`; malformed JSON, blank required identifiers, or invalid `user.color` values are rejected before room awareness state is updated.
+
 - 프런트엔드는 관리 API 호출 시 `Authorization: Bearer <API_TOKEN>`을 넣어야 한다.
 - 문서 생성 응답의 `credentials.access_token`을 저장하고, 같은 문서의 상세 조회, 삭제, WebSocket 연결에 재사용해야 한다.
 - WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN`과 일치해야 한다.

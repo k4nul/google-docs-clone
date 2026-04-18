@@ -8,11 +8,11 @@ use backend::{
     storage::{InMemorySnapshotStore, SnapshotStore},
 };
 use serde_json::Value;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use uuid::Uuid;
 use yrs::{
     Doc, GetString, StateVector, Text, Transact, Update,
-    sync::{Message, SyncMessage},
+    sync::{AwarenessUpdate, Message, SyncMessage, awareness::AwarenessUpdateEntry},
     updates::{decoder::Decode, encoder::Encode},
 };
 
@@ -627,6 +627,61 @@ async fn websocket_endpoint_supports_yrs_sync_handshake_and_update_broadcast() {
 
     first_client.close().await;
     second_client.close().await;
+}
+
+#[tokio::test]
+async fn websocket_endpoint_rejects_invalid_awareness_payload_updates() {
+    let config = test_config();
+    let state = AppState::from_config(&config).expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Awareness validation".to_owned()))
+        .expect("document should be created");
+
+    let app = build_app(&config, state.clone()).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let mut client = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    let invalid_awareness = AwarenessUpdate {
+        clients: HashMap::from([(
+            7,
+            AwarenessUpdateEntry {
+                clock: 1,
+                json: r#"{"user":{"id":"user-7","name":"Kim","color":"blue"},"client":{"id":"session-3","kind":"editor"}}"#
+                    .to_owned(),
+            },
+        )]),
+    };
+
+    client
+        .send_message(WsMessage::Binary(
+            Message::Awareness(invalid_awareness).encode_v1().into(),
+        ))
+        .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let room = state
+        .rooms()
+        .get_or_restore(&document.id)
+        .expect("room lookup should succeed")
+        .expect("document room should restore after the invalid update path");
+    let awareness_ref = room.awareness();
+    let awareness = awareness_ref.read().await;
+
+    assert!(!awareness.clients().contains_key(&7));
+
+    client.close().await;
 }
 
 #[tokio::test]

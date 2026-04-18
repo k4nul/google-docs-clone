@@ -16,6 +16,7 @@ use yrs_axum::ws::{AxumSink, AxumStream};
 
 use crate::{
     auth::require_bearer_token,
+    collab::protocol::ValidatingProtocol,
     collab::rooms::{Room, RoomRegistry},
     errors::{AppError, AppResult},
     state::AppState,
@@ -61,7 +62,7 @@ async fn serve_room_socket(
     let (sink, stream) = socket.split();
     let sink = Arc::new(Mutex::new(AxumSink::from(sink)));
     let stream = AxumStream::from(stream);
-    let subscription = broadcast_group.subscribe(sink, stream);
+    let subscription = broadcast_group.subscribe_with(sink, stream, ValidatingProtocol);
 
     match subscription.completed().await {
         Ok(()) => info!(%doc_id, "websocket collaboration session ended"),

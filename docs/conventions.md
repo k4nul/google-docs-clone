@@ -27,6 +27,8 @@
 
 ## Route Rules
 
+- incoming WebSocket awareness payloads must be validated in the `collab` boundary before they reach shared room state.
+
 - HTTP route는 `src/routes` 아래에 둔다.
 - WebSocket 협업 엔트리포인트는 `src/collab/ws.rs`에 둔다.
 - route handler는 가능한 한 얇게 유지하고 상태 조회/생성은 registry 계층에 위임한다.

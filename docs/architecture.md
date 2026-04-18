@@ -22,6 +22,8 @@
 
 ## WebSocket / Collab Flow
 
+- Incoming awareness updates pass through a custom Yrs protocol layer before shared room awareness state is mutated.
+
 1. 클라이언트가 `GET /ws/:doc_id`로 업그레이드를 요청한다.
 2. `collab/ws.rs`가 `doc_id` 형식을 검증하고 `Origin` 헤더가 `FRONTEND_ORIGIN`과 일치하는지 확인한다.
 3. 같은 핸들러가 `Authorization: Bearer <access_token>`을 검증한다.
