@@ -16,24 +16,29 @@
 - 공통 실패 타입은 `AppError`와 `AppResult`를 사용한다.
 - 외부 실패 응답은 JSON `error` / `message` 형태로 고정하고 안정적인 메시지로 제한한다.
 - path 파라미터 검증 실패와 WebSocket origin 거절도 공통 에러 타입으로 매핑한다.
+- 인증 누락은 `401 unauthorized`, 토큰 불일치는 `403 forbidden`으로 구분한다.
 
 ## Config Rules
 
 - 환경변수 파싱은 `config.rs`에 모은다.
 - 기본값은 코드에 명시하되 빈 문자열과 잘못된 포맷은 에러로 처리한다.
 - 새 환경변수를 추가하면 `.env.example`, `README.md`, `docs/api.md` 또는 `docs/setup.md`를 함께 갱신한다.
+- 관리용 토큰과 문서별 토큰은 응답/로그에 불필요하게 노출하지 않는다.
 
 ## Route Rules
 
 - HTTP route는 `src/routes` 아래에 둔다.
 - WebSocket 협업 엔트리포인트는 `src/collab/ws.rs`에 둔다.
 - route handler는 가능한 한 얇게 유지하고 상태 조회/생성은 registry 계층에 위임한다.
+- awareness payload 계약은 `src/models/awareness.rs`에 두고, 클라이언트가 그대로 재사용할 수 있는 camelCase JSON shape를 유지한다.
 
 ## Logging / Tracing Rules
 
 - 요청 단위 기본 추적은 `TraceLayer`를 사용한다.
 - WebSocket 연결 시작/종료, 실패는 문서 ID와 함께 기록한다.
+- 마지막 WebSocket 세션 종료 후 snapshot 저장과 idle room eviction 결과도 문서 ID와 함께 기록한다.
 - WebSocket origin 거절도 문서 ID와 함께 기록한다.
+- 다중 프로세스 확장 전까지는 "문서당 단일 owner 프로세스" 가정을 깨는 우회 구현을 넣지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules
@@ -41,6 +46,7 @@
 - 최소 한 개 이상의 endpoint 검증 테스트를 유지한다.
 - 통합 테스트는 앱 빌더를 통해 실제 Router를 띄운다.
 - 새 route를 추가하면 happy path 기준 smoke test를 함께 추가한다.
+- 공유 계약 모델을 추가하면 직렬화 shape와 기본 검증 규칙에 대한 unit test를 함께 둔다.
 
 ## Commit Rules
 

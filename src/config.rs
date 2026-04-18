@@ -8,6 +8,7 @@ pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 4000;
 pub const DEFAULT_FRONTEND_ORIGIN: &str = "http://localhost:3000";
 pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
+pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -15,6 +16,7 @@ pub struct Config {
     pub port: u16,
     pub frontend_origin: String,
     pub rust_log: String,
+    pub api_token: String,
 }
 
 impl Config {
@@ -25,12 +27,14 @@ impl Config {
         let port = env_u16("PORT", DEFAULT_PORT)?;
         let frontend_origin = env_string("FRONTEND_ORIGIN", DEFAULT_FRONTEND_ORIGIN)?;
         let rust_log = env_string("RUST_LOG", DEFAULT_RUST_LOG)?;
+        let api_token = env_string("API_TOKEN", DEFAULT_API_TOKEN)?;
 
         Ok(Self {
             host,
             port,
             frontend_origin,
             rust_log,
+            api_token,
         })
     }
 

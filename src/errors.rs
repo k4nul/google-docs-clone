@@ -16,6 +16,8 @@ pub enum AppError {
     Config(String),
     #[error("forbidden: {0}")]
     Forbidden(String),
+    #[error("unauthorized: {0}")]
+    Unauthorized(String),
     #[error("resource not found: {0}")]
     NotFound(String),
     #[error(transparent)]
@@ -51,6 +53,14 @@ impl IntoResponse for AppError {
                 StatusCode::FORBIDDEN,
                 Json(ErrorBody {
                     error: "forbidden",
+                    message,
+                }),
+            )
+                .into_response(),
+            AppError::Unauthorized(message) => (
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorBody {
+                    error: "unauthorized",
                     message,
                 }),
             )

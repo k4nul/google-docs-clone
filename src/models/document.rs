@@ -8,6 +8,8 @@ pub struct Document {
     pub title: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[serde(skip_serializing, skip_deserializing)]
+    access_token: String,
 }
 
 impl Document {
@@ -23,10 +25,19 @@ impl Document {
             title,
             created_at: now,
             updated_at: now,
+            access_token: Uuid::new_v4().to_string(),
         }
     }
 
     pub fn touch(&mut self) {
         self.updated_at = Utc::now();
+    }
+
+    pub fn access_token(&self) -> &str {
+        &self.access_token
+    }
+
+    pub fn authorize(&self, token: &str) -> bool {
+        self.access_token == token
     }
 }

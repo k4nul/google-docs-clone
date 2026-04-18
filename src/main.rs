@@ -8,7 +8,7 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     init_tracing(&config)?;
 
-    let state = AppState::from_config(&config);
+    let state = AppState::from_config(&config)?;
     let app = build_app(&config, state)?;
 
     let bind_address = config.bind_address();

@@ -2,7 +2,7 @@
 
 ## Error Response Shape
 
-유효성 검증 실패나 접근 거절은 다음 JSON 구조로 반환한다.
+입력 검증 실패, 인증 실패, 접근 거절은 다음 JSON 구조로 반환된다.
 
 ```json
 {
@@ -27,6 +27,8 @@ Response:
 
 ### `GET /api/documents`
 
+- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
+
 Response:
 
 ```json
@@ -42,9 +44,11 @@ Response:
 }
 ```
 
-현재 메모리에 생성된 room 기준으로 문서 목록을 반환한다.
+active room과 snapshot store에 남아 있는 persisted document catalog를 합쳐 문서 목록을 반환한다.
 
 ### `POST /api/documents`
+
+- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
 
 Request body:
 
@@ -56,7 +60,8 @@ Request body:
 
 - `title`은 선택값이다.
 - `title`이 비어 있거나 누락되면 기본 제목 `Document {uuid}`를 사용한다.
-- 서버가 새 UUID를 생성하고 해당 문서 room을 메모리에 등록한다.
+- 서버가 새 UUID를 생성하고 해당 문서 room을 메모리 및 snapshot store에 등록한다.
+- 응답의 `credentials.access_token`은 이후 문서 상세 조회, 삭제, WebSocket 연결에 사용한다.
 
 Response: `201 Created`
 
@@ -67,14 +72,20 @@ Response: `201 Created`
     "title": "Design notes",
     "created_at": "2026-04-17T14:00:00Z",
     "updated_at": "2026-04-17T14:00:00Z"
+  },
+  "credentials": {
+    "access_token": "11111111-1111-1111-1111-111111111111"
   }
 }
 ```
 
 ### `GET /api/documents/:id`
 
+- `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
-- 문서가 없으면 `404`와 JSON 에러 응답을 반환한다.
+- active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
+- 문서가 없으면 `404` JSON 에러를 반환한다.
+- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 - UUID 형식이 아니면 `400`과 JSON 에러 응답을 반환한다.
 
 Response:
@@ -92,9 +103,11 @@ Response:
 
 ### `DELETE /api/documents/:id`
 
+- `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 문서가 존재하면 room과 문서 메타데이터를 함께 제거한다.
-- 문서가 없으면 `404`와 JSON 에러 응답을 반환한다.
+- 문서가 없으면 `404` JSON 에러 응답을 반환한다.
+- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 
 Response: `204 No Content`
 
@@ -102,17 +115,44 @@ Response: `204 No Content`
 
 ### `GET /ws/:doc_id`
 
+- `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - `doc_id`는 UUID 형식이어야 한다.
 - 문서는 먼저 `POST /api/documents`로 생성되어 있어야 한다.
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
-- 현재 구현은 in-memory room registry를 사용한다.
+- active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
+- 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
+- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403` JSON 에러 응답을 반환한다.
 - 문서가 존재하지 않으면 업그레이드 전에 `404` JSON 에러 응답을 반환한다.
 - `Origin` 헤더가 없거나 허용되지 않으면 업그레이드 전에 `403` JSON 에러 응답을 반환한다.
 
 ## Frontend Contract Notes
 
-- 프런트엔드는 문서 진입 전에 `POST /api/documents`로 새 문서를 만들거나, 이미 생성된 ID에 대해 `GET /api/documents/:id`로 존재 여부를 확인한다.
-- WebSocket 연결 경로는 문서 ID 단위로 고정되고, 브라우저 origin은 `FRONTEND_ORIGIN`과 일치해야 한다.
-- 인증, 사용자 메타데이터, persistence 관련 필드는 아직 계약에 포함하지 않는다.
+- 프런트엔드는 관리 API 호출 시 `Authorization: Bearer <API_TOKEN>`을 넣어야 한다.
+- 문서 생성 응답의 `credentials.access_token`을 저장하고, 같은 문서의 상세 조회, 삭제, WebSocket 연결에 재사용해야 한다.
+- WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN`과 일치해야 한다.
+- 연결 후 게시하는 Yrs awareness state는 아래 구조를 표준으로 사용한다.
+
+```json
+{
+  "user": {
+    "id": "user-7",
+    "name": "Kim",
+    "color": "#1f6feb"
+  },
+  "selection": {
+    "anchor": 3,
+    "head": 11
+  },
+  "client": {
+    "id": "session-3",
+    "kind": "editor"
+  }
+}
+```
+
+- `user.id`, `user.name`, `client.id`, `client.kind`는 trim 후 빈 문자열이면 안 된다.
+- `user.color`는 `#RRGGBB` 형식의 hex color를 사용한다.
+- `selection`은 선택 사항이며, 커서 위치를 보내지 않을 때는 생략할 수 있다.
+- 외부 인증 연동과 사용자 프로필의 source of truth는 아직 별도 계약에 포함하지 않는다.

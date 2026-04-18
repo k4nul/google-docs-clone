@@ -30,6 +30,7 @@ pub trait SnapshotStore: Send + Sync {
     fn load_snapshot(&self, doc_id: &Uuid) -> Result<Option<DocumentSnapshot>, StorageError>;
     fn save_snapshot(&self, snapshot: DocumentSnapshot) -> Result<(), StorageError>;
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError>;
+    fn list_documents(&self) -> Result<Vec<Document>, StorageError>;
 }
 
 #[derive(Default)]
@@ -59,6 +60,14 @@ impl SnapshotStore for InMemorySnapshotStore {
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         self.snapshots.remove(doc_id);
         Ok(())
+    }
+
+    fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
+        Ok(self
+            .snapshots
+            .iter()
+            .map(|entry| entry.value().document.clone())
+            .collect())
     }
 }
 

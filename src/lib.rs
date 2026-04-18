@@ -1,4 +1,5 @@
 pub mod app;
+pub mod auth;
 pub mod collab;
 pub mod config;
 pub mod errors;

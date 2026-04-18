@@ -1,6 +1,10 @@
-use std::sync::{Arc, RwLock as StdRwLock};
+use std::sync::{
+    Arc, RwLock as StdRwLock,
+    atomic::{AtomicUsize, Ordering},
+};
 
 use dashmap::{DashMap, mapref::entry::Entry};
+use std::collections::BTreeMap;
 use tokio::sync::{OnceCell, RwLock};
 use uuid::Uuid;
 use yrs::{Doc, ReadTxn, StateVector, Transact, Update, sync::Awareness, updates::decoder::Decode};
@@ -15,6 +19,7 @@ pub struct Room {
     document: StdRwLock<Document>,
     awareness: AwarenessRef,
     broadcast_group: OnceCell<Arc<BroadcastGroup>>,
+    active_sessions: AtomicUsize,
 }
 
 impl Room {
@@ -25,6 +30,7 @@ impl Room {
             document: StdRwLock::new(document),
             awareness,
             broadcast_group: OnceCell::new(),
+            active_sessions: AtomicUsize::new(0),
         }
     }
 
@@ -44,6 +50,7 @@ impl Room {
             document: StdRwLock::new(snapshot.document),
             awareness,
             broadcast_group: OnceCell::new(),
+            active_sessions: AtomicUsize::new(0),
         })
     }
 
@@ -52,6 +59,13 @@ impl Room {
             .read()
             .expect("room document lock should not be poisoned")
             .clone()
+    }
+
+    pub fn authorizes(&self, token: &str) -> bool {
+        self.document
+            .read()
+            .expect("room document lock should not be poisoned")
+            .authorize(token)
     }
 
     pub fn snapshot(&self) -> Result<DocumentSnapshot, StorageError> {
@@ -81,6 +95,23 @@ impl Room {
 
     pub fn awareness(&self) -> AwarenessRef {
         self.awareness.clone()
+    }
+
+    pub fn active_sessions(&self) -> usize {
+        self.active_sessions.load(Ordering::SeqCst)
+    }
+
+    pub fn start_session(&self) -> usize {
+        self.active_sessions.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    pub fn end_session(&self) -> usize {
+        self.active_sessions
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |active| {
+                active.checked_sub(1)
+            })
+            .expect("room session count should not underflow")
+            - 1
     }
 
     pub async fn broadcast_group(&self) -> Arc<BroadcastGroup> {
@@ -156,12 +187,45 @@ impl RoomRegistry {
         }
     }
 
-    pub fn list_documents(&self) -> Vec<Document> {
+    pub fn persist_and_evict_if_idle(
+        &self,
+        doc_id: &Uuid,
+        room: &Arc<Room>,
+    ) -> Result<bool, StorageError> {
+        let remaining_sessions = room.end_session();
+        if remaining_sessions > 0 {
+            return Ok(false);
+        }
+
+        match self.rooms.entry(*doc_id) {
+            Entry::Occupied(entry) if Arc::ptr_eq(entry.get(), room) => {
+                self.snapshot_store.save_snapshot(room.snapshot()?)?;
+
+                if room.active_sessions() == 0 {
+                    entry.remove();
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            _ => Ok(false),
+        }
+    }
+
+    pub fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
         let mut documents = self
-            .rooms
-            .iter()
-            .map(|entry| entry.value().document())
-            .collect::<Vec<_>>();
+            .snapshot_store
+            .list_documents()?
+            .into_iter()
+            .map(|document| (document.id, document))
+            .collect::<BTreeMap<_, _>>();
+
+        for entry in self.rooms.iter() {
+            let document = entry.value().document();
+            documents.insert(document.id, document);
+        }
+
+        let mut documents = documents.into_values().collect::<Vec<_>>();
 
         documents.sort_by(|left, right| {
             left.created_at
@@ -169,7 +233,19 @@ impl RoomRegistry {
                 .then_with(|| left.id.cmp(&right.id))
         });
 
-        documents
+        Ok(documents)
+    }
+
+    pub fn hydrate_from_store(&self) -> Result<usize, StorageError> {
+        let mut hydrated = 0;
+
+        for document in self.snapshot_store.list_documents()? {
+            if self.get_or_restore(&document.id)?.is_some() {
+                hydrated += 1;
+            }
+        }
+
+        Ok(hydrated)
     }
 }
 
@@ -220,5 +296,121 @@ mod tests {
 
         assert_eq!(restored_room.document().id, document.id);
         assert_eq!(restored_value, "hello world");
+    }
+
+    #[test]
+    fn registry_evicts_idle_room_after_snapshot_persist() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Evicted".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        let awareness = room.awareness();
+        {
+            let doc = awareness.blocking_write().doc().clone();
+            let text = doc.get_or_insert_text("content");
+            let mut txn = doc.transact_mut();
+            text.insert(&mut txn, 0, "persist me");
+        }
+
+        assert_eq!(room.start_session(), 1);
+
+        let evicted = registry
+            .persist_and_evict_if_idle(&document.id, &room)
+            .expect("idle room eviction should succeed");
+
+        assert!(evicted);
+        assert!(registry.get(&document.id).is_none());
+
+        let restored_room = registry
+            .get_or_restore(&document.id)
+            .expect("snapshot lookup should succeed")
+            .expect("document should restore from snapshot");
+        let restored_doc = restored_room.awareness().blocking_read().doc().clone();
+        let restored_text = restored_doc.get_or_insert_text("content");
+        let restored_value = restored_text.get_string(&restored_doc.transact());
+
+        assert_eq!(restored_value, "persist me");
+    }
+
+    #[test]
+    fn registry_keeps_room_while_other_sessions_are_active() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store);
+        let document = registry
+            .create_document(Some("Shared".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        assert_eq!(room.start_session(), 1);
+        assert_eq!(room.start_session(), 2);
+
+        let evicted = registry
+            .persist_and_evict_if_idle(&document.id, &room)
+            .expect("room release should succeed");
+
+        assert!(!evicted);
+        assert!(registry.get(&document.id).is_some());
+        assert_eq!(room.active_sessions(), 1);
+    }
+
+    #[test]
+    fn registry_lists_documents_from_snapshot_store_after_eviction() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store);
+        let document = registry
+            .create_document(Some("Persisted catalog".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        assert_eq!(room.start_session(), 1);
+        let evicted = registry
+            .persist_and_evict_if_idle(&document.id, &room)
+            .expect("idle room eviction should succeed");
+
+        assert!(evicted);
+        assert!(registry.get(&document.id).is_none());
+
+        let documents = registry
+            .list_documents()
+            .expect("document catalog should load from snapshot store");
+
+        assert_eq!(documents.len(), 1);
+        assert_eq!(documents[0].id, document.id);
+        assert_eq!(documents[0].title, "Persisted catalog");
+    }
+
+    #[test]
+    fn registry_hydrates_rooms_from_snapshot_store_catalog() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Hydrated room".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        assert_eq!(room.start_session(), 1);
+        let evicted = registry
+            .persist_and_evict_if_idle(&document.id, &room)
+            .expect("idle room eviction should succeed");
+        assert!(evicted);
+
+        let restored_registry = RoomRegistry::new(snapshot_store);
+        let hydrated = restored_registry
+            .hydrate_from_store()
+            .expect("startup hydration should succeed");
+
+        assert_eq!(hydrated, 1);
+        assert!(restored_registry.get(&document.id).is_some());
     }
 }
