@@ -80,6 +80,8 @@ impl From<PersistedSnapshot> for DocumentSnapshot {
 pub enum StorageError {
     #[error("snapshot `{0}` is temporarily busy")]
     Busy(Uuid),
+    #[error("document `{0}` still has active collaboration sessions")]
+    DocumentBusy(Uuid),
     #[error("snapshot `{0}` was corrupt")]
     CorruptSnapshot(Uuid),
     #[error("snapshot storage I/O failed: {0}")]

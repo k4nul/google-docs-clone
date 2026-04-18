@@ -109,6 +109,8 @@ Response:
 - 문서가 없으면 `404` JSON 에러 응답을 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 
+If an active collaboration WebSocket session is still attached to the document, the delete request returns `409 Conflict` with the standard JSON error shape.
+
 Response: `204 No Content`
 
 ## WebSocket Path

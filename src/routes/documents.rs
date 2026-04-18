@@ -13,6 +13,7 @@ use crate::{
     models::access::DocumentCredentials,
     models::document::Document,
     state::AppState,
+    storage::StorageError,
 };
 
 #[derive(Debug, Serialize)]
@@ -99,8 +100,12 @@ pub async fn delete_document(
     state
         .rooms()
         .delete_document(&id)
-        .map_err(anyhow::Error::from)
-        .map_err(AppError::from)?
+        .map_err(|error| match error {
+            StorageError::DocumentBusy(doc_id) => AppError::Conflict(format!(
+                "document `{doc_id}` cannot be deleted while collaboration sessions are active"
+            )),
+            other => AppError::from(anyhow::Error::from(other)),
+        })?
         .ok_or_else(|| AppError::NotFound(format!("document `{id}` was not found")))?;
 
     Ok(StatusCode::NO_CONTENT)

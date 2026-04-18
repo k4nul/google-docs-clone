@@ -90,7 +90,17 @@ impl SnapshotStore for FileSnapshotStore {
                 continue;
             };
 
-            documents.push(self.read_snapshot(&path, &doc_id)?.document);
+            match self.read_snapshot(&path, &doc_id) {
+                Ok(snapshot) => documents.push(snapshot.document),
+                Err(StorageError::CorruptSnapshot(_)) => {
+                    tracing::warn!(
+                        doc_id = %doc_id,
+                        path = %path.display(),
+                        "skipping corrupt snapshot while building file-backed document catalog"
+                    );
+                }
+                Err(error) => return Err(error),
+            }
         }
 
         Ok(documents)

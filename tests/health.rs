@@ -11,7 +11,7 @@ use serde_json::Value;
 use std::{collections::HashMap, fs, sync::Arc, time::Duration};
 use uuid::Uuid;
 use yrs::{
-    Doc, GetString, StateVector, Text, Transact, Update,
+    Doc, GetString, ReadTxn, StateVector, Text, Transact, Update,
     sync::{AwarenessUpdate, Message, SyncMessage, awareness::AwarenessUpdateEntry},
     updates::{decoder::Decode, encoder::Encode},
 };
@@ -232,6 +232,94 @@ async fn delete_document_endpoint_removes_existing_document() {
         )
         .await;
     get_response.assert_status_not_found();
+}
+
+#[tokio::test]
+async fn delete_document_endpoint_rejects_documents_with_active_websocket_sessions() {
+    let config = test_config();
+    let state = AppState::from_config(&config).expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Busy delete".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let websocket = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    let delete_response = server
+        .delete(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    delete_response.assert_status(StatusCode::CONFLICT);
+    let payload = delete_response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(
+        payload["message"],
+        format!(
+            "document `{}` cannot be deleted while collaboration sessions are active",
+            document.id
+        )
+    );
+
+    websocket.close().await;
+}
+
+#[tokio::test]
+async fn delete_document_endpoint_allows_delete_after_websocket_session_closes() {
+    let config = test_config();
+    let state = AppState::from_config(&config).expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Delete after close".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let websocket = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    websocket.close().await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let delete_response = server
+        .delete(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+    delete_response.assert_status(StatusCode::NO_CONTENT);
+
+    let detail_response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+    detail_response.assert_status_not_found();
 }
 
 #[tokio::test]
@@ -773,6 +861,43 @@ async fn app_state_uses_file_snapshot_store_from_config() {
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
+#[tokio::test]
+async fn app_state_with_file_store_skips_corrupt_snapshots_during_startup() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("file-store-corrupt-startup");
+    config.snapshot_store = "file".to_owned();
+    config.snapshot_dir = snapshot_dir.to_string_lossy().into_owned();
+
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let valid_document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Healthy".to_owned()));
+    let valid_update = Doc::new()
+        .transact()
+        .encode_state_as_update_v1(&StateVector::default());
+    store
+        .save_snapshot(DocumentSnapshot::new(valid_document.clone(), valid_update))
+        .expect("valid snapshot should save");
+
+    let corrupt_doc_id = Uuid::new_v4();
+    fs::write(
+        snapshot_dir.join(format!("{corrupt_doc_id}.json")),
+        b"{not-json",
+    )
+    .expect("corrupt snapshot fixture should be written");
+
+    let state = AppState::from_config(&config)
+        .expect("startup hydration should continue past corrupt snapshots");
+    let hydrated_documents = state
+        .rooms()
+        .list_documents()
+        .expect("document catalog should still be available");
+
+    assert!(state.rooms().get(&valid_document.id).is_some());
+    assert_eq!(hydrated_documents, vec![valid_document]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
 #[test]
 fn file_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("file-store-unit");
@@ -796,6 +921,37 @@ fn file_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn file_snapshot_store_skips_corrupt_snapshots_when_listing_documents() {
+    let snapshot_dir = temp_snapshot_dir("file-store-corrupt-catalog");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Catalog".to_owned()));
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![7, 8, 9]))
+        .expect("valid snapshot should save");
+
+    let corrupt_doc_id = Uuid::new_v4();
+    fs::write(snapshot_dir.join(format!("{corrupt_doc_id}.json")), b"[]")
+        .expect("corrupt snapshot fixture should be written");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should skip corrupt snapshots");
+    let corrupt_snapshot_error = store
+        .load_snapshot(&corrupt_doc_id)
+        .expect_err("directly loading a corrupt snapshot should still fail");
+
+    assert_eq!(listed_documents, vec![document]);
+    assert!(matches!(
+        corrupt_snapshot_error,
+        backend::storage::StorageError::CorruptSnapshot(id) if id == corrupt_doc_id
+    ));
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

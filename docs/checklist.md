@@ -31,6 +31,17 @@
 
 ## Execution Log
 
+- 2026-04-18: 자동화 run에서 활성 협업 세션 삭제 충돌 방어와 corrupt file snapshot skip 변경 묶음을 다시 검증했고, `cargo fmt --check`, `cargo check`, `cargo test`를 모두 통과시켰다. 이어서 `fix(sync): guard busy document deletion and skip corrupt catalog snapshots` 커밋으로 마감하려고 `git add`를 재시도했지만 `.git/index.lock` 생성이 다시 `Permission denied`로 막혀 이번 run에서도 커밋은 blocked 상태다.
+
+- 2026-04-18: 자동화 run에서 백엔드 안정성 변경 묶음을 커밋 마감 대상으로 재검증했다. active WebSocket session 삭제 `409 conflict`, 세션 종료 후 삭제 허용, corrupt file snapshot skip 경로를 기준으로 `cargo fmt --check`, `cargo check`, `cargo test`를 다시 통과시켰다. 이어서 관련 변경만 선택적으로 `git add`를 시도했지만 `.git/index.lock` 생성이 `Permission denied`로 막혀 이번 run에서도 커밋은 blocked 상태다.
+
+- 2026-04-18: 자동화 run에서 남아 있던 백엔드 안정성 변경 묶음을 최종 검증했다. active WebSocket session이 붙은 문서 삭제 `409 conflict`, 세션 종료 후 삭제 허용, corrupt file snapshot이 startup hydrate와 `GET /api/documents` catalog를 깨뜨리지 않는 경로를 기준으로 `cargo fmt --check`, `cargo check`, `cargo test`를 모두 다시 통과시켰다. 이어서 `git add`와 `git commit`을 재시도했지만 `.git/index.lock` 생성이 `Permission denied`로 막혀 이번 run에서도 커밋은 blocked 상태다.
+
+- 2026-04-18: 자동화 run에서 활성 WebSocket 세션 종료 후 문서 삭제가 다시 허용되는지 회귀 테스트를 추가했다. `delete_document_endpoint_allows_delete_after_websocket_session_closes`로 session close 이후 `204`와 후속 `404`를 고정했고, `cargo fmt --check`, `cargo check`, 삭제 충돌/해제 테스트 2건을 통과시켰다. 이후 `.git/index.lock` 생성과 `git add`를 다시 시도했지만 `.git` 루트 deny ACE 때문에 `Permission denied`가 유지돼 커밋은 blocked 상태다.
+- 2026-04-18: 자동화 run에서 `.git/index.lock` 생성 거부를 다시 확인했다. `.git` ACL을 `.codex-temp/git-acl-backup.txt`로 백업했고 루트 `.git`에 남아 있는 명시적 deny ACE 제거를 시도했지만 `Access is denied`로 복구/커밋이 blocked 상태다. 대신 `cargo fmt --check`, `cargo check`, 활성 세션 삭제 충돌 테스트, room registry busy-delete unit test, corrupt snapshot startup/catalog 테스트를 재검증해 변경 자체는 녹색임을 확인했다.
+- 2026-04-18: `FileSnapshotStore` 카탈로그/하이드레이션 경로가 손상된 snapshot 파일을 warning과 함께 건너뛰도록 보강했다. 단일 corrupt file 때문에 앱 startup hydrate나 `GET /api/documents` 목록 조회 전체가 실패하지 않으며, 직접 `load_snapshot` 하는 경로에서는 기존처럼 corrupt snapshot 오류를 유지한다. 관련 file-store unit test와 startup hydration integration test를 추가했다.
+- 2026-04-18: 활성 WebSocket 세션이 남아 있는 문서 삭제를 `409 conflict`로 차단했다. `RoomRegistry::delete_document`가 active session count를 확인해 live collaboration room과 registry/snapshot 상태가 어긋나지 않도록 보호하고, 관련 unit/integration test와 README/API/architecture/conventions 문서를 함께 갱신했다.
+- 2026-04-18: 자동화 run에서 active WebSocket session 삭제 충돌 방어를 검증했다. room registry unit test와 delete endpoint integration test를 재실행했고, 활성 세션이 닫히기 전에는 snapshot/registry 상태를 건드리지 않는다는 점을 기준으로 커밋 준비 상태를 확인했다.
 - 2026-04-18: 자동화 run에서 file snapshot store 작업을 검증 완료했다. `cargo check`, `cargo fmt --check`, `cargo test`가 모두 통과했고 `SNAPSHOT_STORE=file` 설정 경로와 재시작 hydrate 테스트 결과를 기준으로 커밋 준비 상태를 확인했다.
 - 2026-04-18: `SNAPSHOT_STORE` (`memory`/`file`)와 `SNAPSHOT_DIR` 설정을 추가하고 `FileSnapshotStore`를 연결했다. 앱 시작 시 file snapshot catalog도 hydrate되며, snapshot round-trip unit test와 재시작 복구 integration test, `.env.example`, README, setup, architecture 문서를 함께 갱신했다.
 - 2026-04-18: Added `ValidatingProtocol` so `/ws/:doc_id` validates incoming awareness payloads against `AwarenessState`. Invalid JSON shape or field values are rejected before shared room awareness mutates, and unit/integration tests plus related docs were updated.

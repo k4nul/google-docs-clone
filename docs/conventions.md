@@ -17,6 +17,7 @@
 - 외부 실패 응답은 JSON `error` / `message` 형태로 고정하고 안정적인 메시지로 제한한다.
 - path 파라미터 검증 실패와 WebSocket origin 거절도 공통 에러 타입으로 매핑한다.
 - 인증 누락은 `401 unauthorized`, 토큰 불일치는 `403 forbidden`으로 구분한다.
+- 활성 협업 세션이 남아 있는 문서를 삭제하려는 요청은 `409 conflict`로 응답한다.
 
 ## Config Rules
 

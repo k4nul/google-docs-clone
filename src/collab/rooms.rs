@@ -150,6 +150,12 @@ impl RoomRegistry {
     }
 
     pub fn delete_document(&self, doc_id: &Uuid) -> Result<Option<Document>, StorageError> {
+        if let Some(room) = self.get(doc_id) {
+            if room.active_sessions() > 0 {
+                return Err(StorageError::DocumentBusy(*doc_id));
+            }
+        }
+
         let document = self.rooms.remove(doc_id).map(|(_, room)| room.document());
         self.snapshot_store.delete_snapshot(doc_id)?;
         Ok(document)
@@ -386,6 +392,32 @@ mod tests {
         assert_eq!(documents.len(), 1);
         assert_eq!(documents[0].id, document.id);
         assert_eq!(documents[0].title, "Persisted catalog");
+    }
+
+    #[test]
+    fn registry_rejects_delete_while_room_has_active_sessions() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Busy room".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        assert_eq!(room.start_session(), 1);
+
+        let error = registry
+            .delete_document(&document.id)
+            .expect_err("delete should fail while sessions are active");
+        assert!(matches!(error, StorageError::DocumentBusy(id) if id == document.id));
+        assert!(registry.get(&document.id).is_some());
+        assert!(
+            snapshot_store
+                .load_snapshot(&document.id)
+                .expect("snapshot lookup should succeed")
+                .is_some()
+        );
     }
 
     #[test]

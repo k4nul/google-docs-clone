@@ -14,6 +14,8 @@ pub enum AppError {
     BadRequest(String),
     #[error("configuration error: {0}")]
     Config(String),
+    #[error("conflict: {0}")]
+    Conflict(String),
     #[error("forbidden: {0}")]
     Forbidden(String),
     #[error("unauthorized: {0}")]
@@ -45,6 +47,14 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorBody {
                     error: "config_error",
+                    message,
+                }),
+            )
+                .into_response(),
+            AppError::Conflict(message) => (
+                StatusCode::CONFLICT,
+                Json(ErrorBody {
+                    error: "conflict",
                     message,
                 }),
             )
