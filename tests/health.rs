@@ -88,6 +88,29 @@ fn configure_shared_sqlite_collaboration(
     config.node_base_url = Some(node_base_url.to_owned());
 }
 
+fn configure_managed_coordination_with_shared_sqlite_snapshots(
+    config: &mut Config,
+    root: &std::path::Path,
+    node_id: &str,
+    node_base_url: &str,
+    managed_base_url: &str,
+    managed_auth_token: Option<&str>,
+) {
+    config.snapshot_store = "sqlite".to_owned();
+    config.snapshot_sqlite_path = root
+        .join("snapshots.sqlite3")
+        .to_string_lossy()
+        .into_owned();
+    config.room_locator = "managed".to_owned();
+    config.room_coordinator = "managed".to_owned();
+    config.room_coordination_managed_base_url = Some(managed_base_url.to_owned());
+    config.room_coordination_managed_auth_token = managed_auth_token.map(str::to_owned);
+    config.room_coordinator_heartbeat_interval_secs = 1;
+    config.room_coordinator_lease_ttl_secs = 3;
+    config.node_id = node_id.to_owned();
+    config.node_base_url = Some(node_base_url.to_owned());
+}
+
 fn admin_auth_header(config: &Config) -> String {
     format!("Bearer {}", config.api_token)
 }
@@ -442,6 +465,21 @@ async fn wait_for_sqlite_room_lease_release(sqlite_path: &std::path::Path, doc_i
     }
 
     panic!("sqlite room lease for `{doc_id}` should be released after handoff");
+}
+
+async fn wait_for_managed_room_lease_release(
+    state: &MockManagedCoordinationServiceState,
+    doc_id: Uuid,
+) {
+    for _ in 0..100 {
+        if state.lease(&doc_id).is_none() {
+            return;
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    panic!("managed room lease for `{doc_id}` should be released after handoff");
 }
 
 #[tokio::test]
@@ -1778,13 +1816,35 @@ async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff(
     let lease_path = shared_root.join("room-coordinator.sqlite3");
     wait_for_sqlite_room_lease_release(&lease_path, doc_uuid).await;
 
-    let detail_response = node_b_server
-        .get(&format!("/api/documents/{doc_id}"))
-        .add_header(
-            "Authorization",
-            document_auth_header(&access_token).as_str(),
-        )
-        .await;
+    let detail_response = {
+        let mut last_status = None;
+        let mut response = None;
+
+        for _ in 0..100 {
+            let next_response = node_b_server
+                .get(&format!("/api/documents/{doc_id}"))
+                .add_header(
+                    "Authorization",
+                    document_auth_header(&access_token).as_str(),
+                )
+                .await;
+            let status = next_response.status_code();
+            if status == StatusCode::OK {
+                response = Some(next_response);
+                break;
+            }
+
+            last_status = Some(status);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        response.unwrap_or_else(|| {
+            panic!(
+                "node-b detail restore should become available after managed handoff, last status was {:?}",
+                last_status
+            )
+        })
+    };
     detail_response.assert_status_ok();
 
     let mut node_b_client = node_b_server
@@ -1825,6 +1885,181 @@ async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff(
 
     node_b_client.close().await;
     fs::remove_dir_all(shared_root).expect("shared sqlite handoff directory should be cleaned up");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff() {
+    let shared_root = temp_snapshot_dir("managed-owner-handoff");
+    let harness = spawn_mock_managed_coordination_service(Some("managed-secret")).await;
+
+    let mut node_a_config = test_config();
+    configure_managed_coordination_with_shared_sqlite_snapshots(
+        &mut node_a_config,
+        &shared_root,
+        "node-a",
+        "http://node-a.internal:4300/",
+        harness.base_url.as_str(),
+        Some("managed-secret"),
+    );
+
+    let mut node_b_config = test_config();
+    configure_managed_coordination_with_shared_sqlite_snapshots(
+        &mut node_b_config,
+        &shared_root,
+        "node-b",
+        "http://node-b.internal:4301/",
+        harness.base_url.as_str(),
+        Some("managed-secret"),
+    );
+
+    let node_a_state =
+        AppState::from_config(&node_a_config).expect("node-a state should initialize");
+    let node_a_app = build_app(&node_a_config, node_a_state).expect("node-a app should build");
+    let node_a_server = TestServer::builder().http_transport().build(node_a_app);
+
+    let create_response = node_a_server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&node_a_config).as_str())
+        .json(&serde_json::json!({
+            "title": "Managed handoff document"
+        }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+
+    let payload = create_response.json::<Value>();
+    let doc_id = payload["document"]["id"]
+        .as_str()
+        .expect("created document id should be returned")
+        .to_owned();
+    let doc_uuid = Uuid::parse_str(&doc_id).expect("created document id should be a UUID");
+    let access_token = payload["credentials"]["access_token"]
+        .as_str()
+        .expect("document access token should be returned")
+        .to_owned();
+
+    let mut node_a_client = node_a_server
+        .get_websocket(&format!("/ws/{doc_id}"))
+        .add_header("Origin", node_a_config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    node_a_client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::SyncStep1(StateVector::default()))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+    let initial_sync = decode_sync_message(node_a_client.receive_bytes().await);
+    let SyncMessage::SyncStep2(initial_update) = initial_sync else {
+        panic!("expected SyncStep2 during initial node-a handshake");
+    };
+
+    let node_a_doc = Doc::new();
+    let node_a_text = node_a_doc.get_or_insert_text("content");
+    let mut node_a_txn = node_a_doc.transact_mut();
+    node_a_txn.apply_update(
+        Update::decode_v1(initial_update.as_slice()).expect("initial sync payload should decode"),
+    );
+    node_a_text.insert(&mut node_a_txn, 0, "hello managed handoff");
+    let client_update = node_a_txn.encode_update_v1();
+    drop(node_a_txn);
+
+    node_a_client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::Update(client_update))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+
+    let node_b_state =
+        AppState::from_config(&node_b_config).expect("node-b state should initialize");
+    assert!(
+        node_b_state.rooms().get(&doc_uuid).is_none(),
+        "distributed managed mode should not eagerly hydrate rooms on startup"
+    );
+
+    let node_b_app =
+        build_app(&node_b_config, node_b_state.clone()).expect("node-b app should build");
+    let node_b_server = TestServer::builder().http_transport().build(node_b_app);
+
+    let standby_response = node_b_server
+        .get(&format!("/api/documents/{doc_id}?probe=managed-standby"))
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await;
+    standby_response.assert_status(StatusCode::CONFLICT);
+    standby_response.assert_header("x-collab-owner-node-id", "node-a");
+    standby_response.assert_header("x-collab-owner-base-url", "http://node-a.internal:4300");
+    standby_response.assert_header(
+        "x-collab-redirect-location",
+        format!("http://node-a.internal:4300/api/documents/{doc_id}?probe=managed-standby"),
+    );
+
+    node_a_client.close().await;
+    wait_for_managed_room_lease_release(&harness.state, doc_uuid).await;
+
+    let detail_response = {
+        let mut detail_response = None;
+        let mut last_status = None;
+
+        for _ in 0..100 {
+            let response = node_b_server
+                .get(&format!("/api/documents/{doc_id}"))
+                .add_header(
+                    "Authorization",
+                    document_auth_header(&access_token).as_str(),
+                )
+                .await;
+            let status = response.status_code();
+            if status == StatusCode::OK {
+                detail_response = Some(response);
+                break;
+            }
+
+            last_status = Some(status);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        detail_response.unwrap_or_else(|| {
+            panic!(
+                "node-b detail restore should become available after managed handoff, last status was {:?}",
+                last_status
+            )
+        })
+    };
+    detail_response.assert_status_ok();
+
+    let restored_room = node_b_state
+        .rooms()
+        .get(&doc_uuid)
+        .expect("detail restore should hydrate the room on node-b");
+    let node_b_doc = Doc::new();
+    let node_b_text = node_b_doc.get_or_insert_text("content");
+    let restored_snapshot = restored_room
+        .snapshot()
+        .expect("restored room should snapshot after managed handoff");
+    let mut restored_txn = node_b_doc.transact_mut();
+    restored_txn.apply_update(
+        Update::decode_v1(restored_snapshot.update.as_slice())
+            .expect("managed handoff snapshot should decode"),
+    );
+    drop(restored_txn);
+
+    assert_eq!(
+        node_b_text.get_string(&node_b_doc.transact()),
+        "hello managed handoff"
+    );
+
+    fs::remove_dir_all(shared_root).expect("managed handoff directory should be cleaned up");
 }
 
 #[tokio::test]

@@ -134,7 +134,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 
 현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. 이제 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하면 ownership coordination 자체는 shared SQLite DB 없이도 분리할 수 있다. 다만 snapshot durability는 여전히 shared snapshot store가 필요하므로, 실제 handoff를 안전하게 쓰려면 `SNAPSHOT_STORE=sqlite` 같은 공용 durability 경계와 함께 구성해야 한다.
 
-현재 `blocked` 상태는 둘로 나눠 관리한다. managed coordination을 포함한 multi-host owner handoff rehearsal과 shared SQLite를 넘어서는 snapshot durability는 roadmap 차원의 blocked 항목이고, 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다.
+현재 `blocked` 상태는 둘로 나눠 관리한다. `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=sqlite`와 묶은 multi-host owner handoff rehearsal은 회귀 테스트로 검증됐고, 이제 roadmap 차원 blocked는 shared SQLite를 넘어서는 snapshot durability backend에 집중된다. 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다.
 
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url` 및 대응 헤더로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
@@ -149,7 +149,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
-- shared SQLite를 넘어선 multi-host owner handoff 검증 고도화
+- shared SQLite를 넘어선 snapshot durability backend rehearsal 추가
 - shared snapshot store를 확장할 external durability backend 추가
 
 ## Snapshot Restore / Eviction Policy
@@ -196,7 +196,8 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `stale_after_missed_heartbeats=2`다. 즉, owner는 TTL의 절반보다 짧은 간격으로 renew를 시도하고, 다른 노드는 마지막 `expires_at`이 지난 뒤에만 ownership takeover를 시도한다.
 - crash 복구 경로는 `owner crash -> renew 중단 -> expires_at 경과 -> 새 owner acquire -> snapshot restore -> room activate` 순서를 따른다. awareness는 재게시 허용 범위로 두고 내구성 복구 대상에는 포함하지 않는다.
 - 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약의 file-backed 준비 구현을 제공한다. canonical lease record, compare-and-release, background heartbeat renew, `expires_at` 기반 stale 판정은 로컬/shared filesystem 경계에서 검증할 수 있지만 여전히 best-effort rehearsal mode로만 사용해야 한다.
-- 현재 저장소의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑한 authoritative CAS 구현을 제공한다. 다만 shared SQLite DB 없이 동작하는 멀티 호스트 coordination backend는 여전히 future work다.
+- 현재 저장소의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑한 authoritative CAS 구현을 제공한다.
+- 현재 저장소의 `ManagedRoomCoordinator`/`ManagedRoomLocator`는 external lease service를 쓰는 multi-host coordination backend를 제공하며, `SNAPSHOT_STORE=sqlite`와 결합한 owner handoff rehearsal도 회귀 테스트로 검증됐다. 다만 shared snapshot durability 자체를 외부 backend로 분리하는 경로는 여전히 future work다.
 
 ## Static Room Owner Hints
 

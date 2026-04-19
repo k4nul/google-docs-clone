@@ -91,7 +91,7 @@
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - `SqliteRoomLocator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease row에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - `ManagedRoomLocator`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id` 응답을 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
-- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로 ownership coordination plane은 shared SQLite DB 밖으로도 분리할 수 있다. 다만 snapshot durability는 여전히 shared snapshot store가 필요하고, shared SQLite를 넘어서는 multi-host rehearsal은 여전히 blocked 상태다.
+- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로 ownership coordination plane은 shared SQLite DB 밖으로도 분리할 수 있다. `ManagedRoomCoordinator`/`ManagedRoomLocator`를 `SqliteSnapshotStore`와 결합한 multi-host handoff rehearsal도 회귀 테스트로 검증됐다. 다만 snapshot durability 자체를 shared SQLite 밖으로 분리하는 backend는 여전히 blocked 상태다.
 
 ## Authoritative Coordination Store Contract
 
@@ -138,4 +138,4 @@
 - 현재 코드베이스의 `FileRoomCoordinator`/`FileRoomLocator`는 위 계약의 filesystem rehearsal 구현을 제공한다.
 - 현 file 구현은 `lease_id`, `epoch`, optional `base_url`, `renewed_at`, `expires_at`를 기록하고 background heartbeat로 lease를 연장하지만, CAS 보장 범위가 shared filesystem과 단일 파일 교체에 한정된다.
 - 현재 코드베이스의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑해 transactional CAS를 제공한다.
-- 따라서 이 저장소에서 실제 handoff를 켜는 기본 경로는 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 조합이다. shared SQLite DB 없이 동작하는 외부 coordination backend는 여전히 future work다.
+- 따라서 이 저장소에서 실제 handoff를 켜는 기본 경로는 shared snapshot durability를 위한 `SNAPSHOT_STORE=sqlite`와, ownership plane 용도로 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 조합하는 형태다. shared snapshot durability 자체를 외부 backend로 분리하는 경로는 여전히 future work다.
