@@ -58,7 +58,7 @@
 
 ## Commit Rules
 
-- Codex 작업 브랜치는 일회성 작업 slug보다 역할 중심 이름을 우선한다. 현재 기본 협업 브랜치 이름은 `codex/backend-realtime-api`다.
+- Codex 작업 브랜치는 일회성 작업 slug보다 역할 중심 이름을 우선한다. 현재 기본 협업 브랜치 이름은 `backend-realtime-api`다.
 - 커밋 메시지 형식은 `type(scope): subject`를 사용한다.
 - `type`은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 허용한다.
 - `scope`는 백엔드 변경 의도를 드러내도록 `api`, `sync`, `yrs`, `auth`, `db`, `websocket`, `storage`, `config`, `docs`, `repo` 중에서 선택한다.
