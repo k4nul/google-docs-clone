@@ -11,7 +11,7 @@
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 memory/file/sqlite/s3/managed adapter
+- `src/storage`: snapshot store trait과 memory/file/sqlite/redb/s3/managed adapter
 
 ## Request Flow
 
@@ -61,7 +61,7 @@
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
 - 문서 삭제는 active WebSocket session 수가 0일 때만 허용하며, 세션이 남아 있으면 `409 conflict`로 거절한다.
-- 현재는 `InMemorySnapshotStore`, `FileSnapshotStore`, `SqliteSnapshotStore`, `S3SnapshotStore`, `ManagedSnapshotStore`가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
+- 현재는 `InMemorySnapshotStore`, `FileSnapshotStore`, `SqliteSnapshotStore`, `RedbSnapshotStore`, `S3SnapshotStore`, `ManagedSnapshotStore`가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 기본 local ownership 모드에서는 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 eager hydrate한다.
@@ -73,7 +73,7 @@
 - `SqliteSnapshotStore`는 `SNAPSHOT_SQLITE_PATH` DB 파일의 `snapshots` 테이블에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 DB catalog를 그대로 사용한다.
 - `S3SnapshotStore`는 `SNAPSHOT_S3_ENDPOINT` / `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 조합 아래의 S3-compatible object storage에 `<prefix><doc_id>.json` object를 저장하고, startup hydrate/list 경로는 bucket listing 뒤 matching object를 다시 load해 catalog를 구성한다.
 - `ManagedSnapshotStore`는 `SNAPSHOT_MANAGED_BASE_URL` 아래의 external durability service `GET /v1/snapshots`, `GET|PUT|DELETE /v1/snapshots/:doc_id`에 document metadata와 Yrs full-state update를 JSON으로 위임하고, startup hydrate/list 경로는 same service catalog를 사용한다.
-- `Config.snapshot_store`가 `memory`/`file`/`sqlite`/`s3`/`managed` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이, `sqlite` 모드에서는 `SNAPSHOT_SQLITE_PATH` DB row가, `s3` 모드에서는 `SNAPSHOT_S3_PREFIX<doc_id>.json` object key가, `managed` 모드에서는 `SNAPSHOT_MANAGED_BASE_URL/v1/snapshots/:doc_id` resource가 snapshot storage 단위가 된다.
+- `Config.snapshot_store`가 `memory`/`file`/`sqlite`/`redb`/`s3`/`managed` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이, `sqlite` 모드에서는 `SNAPSHOT_SQLITE_PATH` DB row가, `redb` 모드에서는 `SNAPSHOT_REDB_PATH` DB key가, `s3` 모드에서는 `SNAPSHOT_S3_PREFIX<doc_id>.json` object key가, `managed` 모드에서는 `SNAPSHOT_MANAGED_BASE_URL/v1/snapshots/:doc_id` resource가 snapshot storage 단위가 된다.
 
 ## Multi-Process Distribution Strategy
 
