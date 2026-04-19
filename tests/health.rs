@@ -21,7 +21,8 @@ use backend::{
         DocumentSnapshot, FileSnapshotStore, FjallSnapshotStore, HeedSnapshotStore,
         InMemorySnapshotStore, JammdbSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
         NativeDbSnapshotStore, ParityDbSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore,
-        RedbSnapshotStore, S3SnapshotStore, SledSnapshotStore, SnapshotStore, SqliteSnapshotStore,
+        RedbSnapshotStore, RustbreakSnapshotStore, S3SnapshotStore, SledSnapshotStore,
+        SnapshotStore, SqliteSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -61,6 +62,7 @@ fn test_config() -> Config {
         snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),
         snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
         snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
+        snapshot_rustbreak_path: "./data/test-snapshots.rustbreak".to_owned(),
         snapshot_s3_endpoint: None,
         snapshot_s3_region: "us-east-1".to_owned(),
         snapshot_s3_bucket: None,
@@ -201,6 +203,14 @@ fn configure_microkv_snapshot_store(config: &mut Config, root: &std::path::Path)
     config.snapshot_store = "microkv".to_owned();
     config.snapshot_microkv_path = root
         .join("snapshots_microkv")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_rustbreak_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "rustbreak".to_owned();
+    config.snapshot_rustbreak_path = root
+        .join("snapshots.rustbreak")
         .to_string_lossy()
         .into_owned();
 }
@@ -2187,7 +2197,8 @@ async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff(
 
     let node_a_state =
         AppState::from_config(&node_a_config).expect("node-a state should initialize");
-    let node_a_app = build_app(&node_a_config, node_a_state).expect("node-a app should build");
+    let node_a_app =
+        build_app(&node_a_config, node_a_state.clone()).expect("node-a app should build");
     let node_a_server = TestServer::builder().http_transport().build(node_a_app);
 
     let create_response = node_a_server
@@ -2379,7 +2390,8 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
 
     let node_a_state =
         AppState::from_config(&node_a_config).expect("node-a state should initialize");
-    let node_a_app = build_app(&node_a_config, node_a_state).expect("node-a app should build");
+    let node_a_app =
+        build_app(&node_a_config, node_a_state.clone()).expect("node-a app should build");
     let node_a_server = TestServer::builder().http_transport().build(node_a_app);
 
     let create_response = node_a_server
@@ -2402,46 +2414,22 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
         .expect("document access token should be returned")
         .to_owned();
 
-    let mut node_a_client = node_a_server
-        .get_websocket(&format!("/ws/{doc_id}"))
-        .add_header("Origin", node_a_config.frontend_origin.as_str())
-        .add_header(
-            "Authorization",
-            document_auth_header(&access_token).as_str(),
-        )
-        .await
-        .into_websocket()
-        .await;
+    let node_a_room = node_a_state
+        .rooms()
+        .get(&doc_uuid)
+        .expect("created document should have an active room");
+    {
+        let node_a_doc = node_a_room.awareness().write().await.doc().clone();
+        let node_a_text = node_a_doc.get_or_insert_text("content");
+        let mut node_a_txn = node_a_doc.transact_mut();
+        node_a_text.insert(&mut node_a_txn, 0, "hello managed handoff");
+    }
 
-    node_a_client
-        .send_message(WsMessage::Binary(
-            Message::Sync(SyncMessage::SyncStep1(StateVector::default()))
-                .encode_v1()
-                .into(),
-        ))
-        .await;
-    let initial_sync = decode_sync_message(node_a_client.receive_bytes().await);
-    let SyncMessage::SyncStep2(initial_update) = initial_sync else {
-        panic!("expected SyncStep2 during initial node-a handshake");
-    };
-
-    let node_a_doc = Doc::new();
-    let node_a_text = node_a_doc.get_or_insert_text("content");
-    let mut node_a_txn = node_a_doc.transact_mut();
-    node_a_txn.apply_update(
-        Update::decode_v1(initial_update.as_slice()).expect("initial sync payload should decode"),
-    );
-    node_a_text.insert(&mut node_a_txn, 0, "hello managed handoff");
-    let client_update = node_a_txn.encode_update_v1();
-    drop(node_a_txn);
-
-    node_a_client
-        .send_message(WsMessage::Binary(
-            Message::Sync(SyncMessage::Update(client_update))
-                .encode_v1()
-                .into(),
-        ))
-        .await;
+    assert_eq!(node_a_room.start_session(), 1);
+    node_a_state
+        .room_coordinator()
+        .room_activated(&doc_uuid)
+        .expect("node-a should acquire the managed lease");
 
     wait_for_managed_room_lease_owner(&harness.state, doc_uuid, "node-a").await;
 
@@ -2456,13 +2444,35 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
         build_app(&node_b_config, node_b_state.clone()).expect("node-b app should build");
     let node_b_server = TestServer::builder().http_transport().build(node_b_app);
 
-    let standby_response = node_b_server
-        .get(&format!("/api/documents/{doc_id}?probe=managed-standby"))
-        .add_header(
-            "Authorization",
-            document_auth_header(&access_token).as_str(),
-        )
-        .await;
+    let standby_response = {
+        let mut standby_response = None;
+        let mut last_status = None;
+
+        for _ in 0..100 {
+            let response = node_b_server
+                .get(&format!("/api/documents/{doc_id}?probe=managed-standby"))
+                .add_header(
+                    "Authorization",
+                    document_auth_header(&access_token).as_str(),
+                )
+                .await;
+            let status = response.status_code();
+            if status == StatusCode::CONFLICT {
+                standby_response = Some(response);
+                break;
+            }
+
+            last_status = Some(status);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        standby_response.unwrap_or_else(|| {
+            panic!(
+                "node-b standby detail should observe managed remote owner, last status was {:?}",
+                last_status
+            )
+        })
+    };
     standby_response.assert_status(StatusCode::CONFLICT);
     standby_response.assert_header("x-collab-owner-node-id", "node-a");
     standby_response.assert_header("x-collab-owner-base-url", "http://node-a.internal:4300");
@@ -2471,7 +2481,16 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
         format!("http://node-a.internal:4300/api/documents/{doc_id}?probe=managed-standby"),
     );
 
-    node_a_client.close().await;
+    let teardown = node_a_state
+        .rooms()
+        .persist_and_evict_if_idle(&doc_uuid, &node_a_room)
+        .expect("node-a should persist the sqlite snapshot before handoff");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+    node_a_state
+        .room_coordinator()
+        .room_deactivated(&doc_uuid)
+        .expect("node-a should release the managed lease after persisting");
     wait_for_managed_room_lease_release(&harness.state, doc_uuid).await;
 
     let detail_response = {
@@ -3184,6 +3203,53 @@ fn app_state_uses_microkv_snapshot_store_from_config() {
 
     let reloaded_state =
         AppState::from_config(&config).expect("state should reload persisted microkv snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_rustbreak_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("rustbreak-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.rustbreak");
+    configure_rustbreak_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with rustbreak store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to rustbreak".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to rustbreak on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted rustbreak snapshot");
     let restored_room = reloaded_state
         .rooms()
         .get(&document.id)
@@ -4115,6 +4181,38 @@ fn microkv_snapshot_store_round_trips_document_catalog() {
     let loaded_snapshot = store
         .load_snapshot(&document.id)
         .expect("snapshot should load from microkv store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn rustbreak_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("rustbreak-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.rustbreak");
+    let store = RustbreakSnapshotStore::new(&snapshot_path)
+        .expect("rustbreak snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Rustbreak".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to rustbreak store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from rustbreak store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from rustbreak store")
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);

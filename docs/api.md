@@ -64,7 +64,7 @@ Response:
 ```
 
 active room과 snapshot store에 남아 있는 persisted document catalog를 합쳐 문서 목록을 반환한다.
-- snapshot store는 현재 `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `s3`, `managed` durability backend를 지원하며, `heed` 모드에서는 `SNAPSHOT_HEED_PATH` LMDB catalog를 읽고, `jammdb` 모드에서는 `SNAPSHOT_JAMMDB_PATH` 파일 catalog를 읽고, `fjall` 모드에서는 `SNAPSHOT_FJALL_PATH` keyspace catalog를 읽고, `persy` 모드에서는 `SNAPSHOT_PERSY_PATH` index catalog를 읽고, `native_db` 모드에서는 `SNAPSHOT_NATIVE_DB_PATH` primary-key catalog를 읽고, `parity_db` 모드에서는 `SNAPSHOT_PARITY_DB_PATH` BTree catalog를 읽고, `pickledb` 모드에서는 `SNAPSHOT_PICKLEDB_PATH` DB catalog를 읽고, `microkv` 모드에서는 `SNAPSHOT_MICROKV_PATH` base path의 MicroKV catalog를 읽고, `redb` 모드에서는 `SNAPSHOT_REDB_PATH` 파일 catalog를 읽고, `sled` 모드에서는 `SNAPSHOT_SLED_PATH` DB catalog를 읽고, `s3` 모드에서는 `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 아래의 object catalog를 읽는다.
+- snapshot store는 현재 `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `s3`, `managed` durability backend를 지원하며, `heed` 모드에서는 `SNAPSHOT_HEED_PATH` LMDB catalog를 읽고, `jammdb` 모드에서는 `SNAPSHOT_JAMMDB_PATH` 파일 catalog를 읽고, `fjall` 모드에서는 `SNAPSHOT_FJALL_PATH` keyspace catalog를 읽고, `persy` 모드에서는 `SNAPSHOT_PERSY_PATH` index catalog를 읽고, `native_db` 모드에서는 `SNAPSHOT_NATIVE_DB_PATH` primary-key catalog를 읽고, `parity_db` 모드에서는 `SNAPSHOT_PARITY_DB_PATH` BTree catalog를 읽고, `pickledb` 모드에서는 `SNAPSHOT_PICKLEDB_PATH` DB catalog를 읽고, `microkv` 모드에서는 `SNAPSHOT_MICROKV_PATH` base path의 MicroKV catalog를 읽고, `redb` 모드에서는 `SNAPSHOT_REDB_PATH` 파일 catalog를 읽고, `sled` 모드에서는 `SNAPSHOT_SLED_PATH` DB catalog를 읽고, `rustbreak` 모드에서는 `SNAPSHOT_RUSTBREAK_PATH` 단일 파일 catalog를 읽고, `s3` 모드에서는 `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 아래의 object catalog를 읽는다.
 
 ### `POST /api/documents`
 
@@ -104,7 +104,7 @@ Response: `201 Created`
 - `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
-- snapshot restore source는 현재 `SNAPSHOT_STORE=file|sqlite|heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|s3|managed` 중 하나다.
+- snapshot restore source는 현재 `SNAPSHOT_STORE=file|sqlite|heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|rustbreak|s3|managed` 중 하나다.
 - 문서가 없으면 `404` JSON 에러를 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
@@ -154,7 +154,7 @@ Response: `204 No Content`
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
-- snapshot restore source는 현재 `SNAPSHOT_STORE=file|sqlite|heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|s3|managed` 중 하나다.
+- snapshot restore source는 현재 `SNAPSHOT_STORE=file|sqlite|heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|rustbreak|s3|managed` 중 하나다.
 - 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, `file`, `sqlite`, 또는 `managed` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
@@ -189,6 +189,7 @@ Response: `204 No Content`
 - `SNAPSHOT_STORE=pickledb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=microkv`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=sled`도 vendor-specific embedded database durability backend다.
+- `SNAPSHOT_STORE=rustbreak`도 vendor-specific embedded database durability backend다.
 - 필수 env는 `SNAPSHOT_HEED_PATH`다.
 - heed LMDB `snapshots` database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_JAMMDB_PATH`다.
@@ -209,6 +210,8 @@ Response: `204 No Content`
 - MicroKV는 파일 `<path>.kv`에 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_SLED_PATH`다.
 - sled DB는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- 필수 env는 `SNAPSHOT_RUSTBREAK_PATH`다.
+- rustbreak path database catalog는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_S3_ENDPOINT`, `SNAPSHOT_S3_REGION`, `SNAPSHOT_S3_BUCKET`, `SNAPSHOT_S3_ACCESS_KEY_ID`, `SNAPSHOT_S3_SECRET_ACCESS_KEY`다.
 - optional env는 `SNAPSHOT_S3_PREFIX`, `SNAPSHOT_S3_SESSION_TOKEN`, `SNAPSHOT_S3_TIMEOUT_SECS`, `SNAPSHOT_S3_PATH_STYLE`다.
 - object key는 `<SNAPSHOT_S3_PREFIX><doc_id>.json` 규칙을 사용하고, `GET /api/documents` catalog는 matching object를 개별 load해 문서 메타데이터를 복원한다.
