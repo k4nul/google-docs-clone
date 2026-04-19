@@ -105,11 +105,11 @@ pub struct FileRoomCoordinator {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct PersistedRoomCoordinatorState {
-    doc_id: Uuid,
-    node_id: String,
-    activated_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+pub(crate) struct PersistedRoomCoordinatorState {
+    pub(crate) doc_id: Uuid,
+    pub(crate) node_id: String,
+    pub(crate) activated_at: DateTime<Utc>,
+    pub(crate) updated_at: DateTime<Utc>,
 }
 
 impl FileRoomCoordinator {

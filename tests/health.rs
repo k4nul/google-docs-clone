@@ -475,6 +475,60 @@ async fn document_detail_endpoint_rejects_non_local_room_owner() {
 }
 
 #[tokio::test]
+async fn document_detail_endpoint_rejects_non_local_file_room_owner() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("file-room-locator");
+    config.room_locator = "file".to_owned();
+    config.room_coordinator_state_dir = coordinator_dir.display().to_string();
+    config.node_id = "node-a".to_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with file locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote file owner".to_owned()))
+        .expect("document should be created");
+
+    fs::write(
+        coordinator_dir.join(format!("{}.json", document.id)),
+        serde_json::to_vec(&serde_json::json!({
+            "doc_id": document.id,
+            "node_id": "node-b",
+            "activated_at": "2026-04-20T00:00:00Z",
+            "updated_at": "2026-04-20T00:00:00Z"
+        }))
+        .expect("file room state should serialize"),
+    )
+    .expect("file room state should be written");
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(
+        payload["message"],
+        format!(
+            "document `{}` is owned by another collaboration node",
+            document.id
+        )
+    );
+    assert_eq!(payload["owner"]["node_id"], "node-b");
+    assert!(payload["owner"]["base_url"].is_null());
+
+    fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
+}
+
+#[tokio::test]
 async fn websocket_endpoint_accepts_document_connections() {
     let config = test_config();
     let app = build_app(

@@ -22,7 +22,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
 - `SnapshotStore` trait 및 memory/file adapter
-- `RoomLocator` 경계와 기본 local/static ownership resolver
+- `RoomLocator` 경계와 config-driven `local`/`static`/`file` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file` session lifecycle hook
 
 ## 기술 스택
@@ -99,9 +99,9 @@ cargo run
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
 - `SNAPSHOT_STORE`: `memory` 또는 `file`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
-- `ROOM_LOCATOR`: `local` 또는 `static`
+- `ROOM_LOCATOR`: `local`, `static`, 또는 `file`
 - `ROOM_COORDINATOR`: `noop`, `logging`, 또는 `file`
-- `ROOM_COORDINATOR_STATE_DIR`: `ROOM_COORDINATOR=file`일 때 active room state JSON 파일을 저장할 디렉터리
+- `ROOM_COORDINATOR_STATE_DIR`: `ROOM_COORDINATOR=file`일 때 active room state JSON 파일을 저장하는 디렉터리이며, `ROOM_LOCATOR=file`은 같은 디렉터리를 읽는다
 - `NODE_ID`: 현재 collaboration node 식별자
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 문서별 owner 힌트 JSON 파일 경로
 
@@ -113,7 +113,7 @@ cargo run
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
 - 기본 in-memory snapshot store와 로컬 file snapshot store 지원
-- config-driven room coordinator dry-run logging/file state 모드 지원
+- config-driven room locator local/static/file 모드와 room coordinator dry-run logging/file state 모드 지원
 
 ## 비범위
 
@@ -128,13 +128,15 @@ cargo run
 
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url`로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
+`ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active room state를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `FileRoomCoordinator`가 같은 디렉터리에 남긴 state를 소비하는 best-effort resolver이며, 현재 포맷에는 `base_url`이 없으므로 conflict 응답에는 `owner.node_id`만 포함된다.
+
 ## 향후 확장 방향
 
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
-- `RoomLocator` 뒤에 외부 ownership resolver를 연결해 멀티 프로세스 진입 시 authoritative node를 결정
-- static owner hints 대신 lease/heartbeat 기반 coordination store를 연결해 실제 owner handoff 활성화
+- file-backed ownership resolver 대신 lease/heartbeat 갱신이 있는 authoritative coordination store를 연결해 stale owner state를 줄이기
+- shared filesystem state 대신 외부 coordination 저장소와 shared snapshot store를 연결해 실제 owner handoff 활성화
 
 ## Snapshot Restore / Eviction Policy
 
@@ -150,10 +152,12 @@ cargo run
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
+- `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`을 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으면 `409 conflict`와 `owner.node_id`를 반환한다.
 - `ROOM_COORDINATOR=noop`은 아무 side effect 없이 통과하고, `ROOM_COORDINATOR=logging`은 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남긴다.
 - `ROOM_COORDINATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 현재 active room owner 상태를 atomic write로 남기고, 마지막 세션 종료 뒤에는 해당 상태 파일을 제거한다.
+- `ROOM_LOCATOR=file`과 `ROOM_COORDINATOR=file`은 같은 `ROOM_COORDINATOR_STATE_DIR`를 공유해야 하며, 멀티 노드에서 쓰려면 각 노드가 같은 디렉터리를 읽고 쓸 수 있어야 한다.
 - WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 `RoomCoordinator` hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
-- future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
+- 현재 file-backed owner state에는 heartbeat가 없어 crash 뒤 stale `.json` state가 남을 수 있다. future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
 
 ## Static Room Owner Hints
 

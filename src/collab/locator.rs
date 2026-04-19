@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fs, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs,
+    io::ErrorKind,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use axum::http::Uri;
 use serde::Deserialize;
@@ -6,6 +12,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
+    collab::coordinator::PersistedRoomCoordinatorState,
     config::Config,
     errors::{AppError, AppResult},
 };
@@ -107,6 +114,12 @@ pub struct StaticRoomLocator {
     document_owners: HashMap<Uuid, RoomOwnerHint>,
 }
 
+#[derive(Debug)]
+pub struct FileRoomLocator {
+    current_node_id: String,
+    root: PathBuf,
+}
+
 #[derive(Debug, Deserialize)]
 struct StaticRoomOwnerHints {
     #[serde(default)]
@@ -152,6 +165,38 @@ impl StaticRoomLocator {
     }
 }
 
+impl FileRoomLocator {
+    pub fn new(
+        current_node_id: impl Into<String>,
+        root: impl Into<PathBuf>,
+    ) -> Result<Self, RoomLocatorError> {
+        let current_node_id = current_node_id.into();
+        let current_node_id = current_node_id.trim();
+        if current_node_id.is_empty() {
+            return Err(RoomLocatorError::Config(
+                "NODE_ID cannot be empty when ROOM_LOCATOR=file".to_owned(),
+            ));
+        }
+
+        let root = root.into();
+        fs::create_dir_all(&root).map_err(|error| {
+            RoomLocatorError::LookupFailed(format!(
+                "failed to create room coordinator state dir `{}`: {error}",
+                root.display()
+            ))
+        })?;
+
+        Ok(Self {
+            current_node_id: current_node_id.to_owned(),
+            root,
+        })
+    }
+
+    fn state_path(&self, doc_id: &Uuid) -> PathBuf {
+        self.root.join(format!("{doc_id}.json"))
+    }
+}
+
 impl RoomLocator for StaticRoomLocator {
     fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
         match self.document_owners.get(doc_id) {
@@ -159,6 +204,52 @@ impl RoomLocator for StaticRoomLocator {
                 Ok(ResolvedRoom::Remote(owner.clone()))
             }
             _ => Ok(ResolvedRoom::Local),
+        }
+    }
+}
+
+impl RoomLocator for FileRoomLocator {
+    fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+        let path = self.state_path(doc_id);
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(ResolvedRoom::Local),
+            Err(error) => {
+                return Err(RoomLocatorError::LookupFailed(format!(
+                    "{}: {error}",
+                    path.display()
+                )));
+            }
+        };
+
+        let state: PersistedRoomCoordinatorState =
+            serde_json::from_slice(&bytes).map_err(|error| {
+                RoomLocatorError::LookupFailed(format!("{}: {error}", path.display()))
+            })?;
+
+        if state.doc_id != *doc_id {
+            return Err(RoomLocatorError::LookupFailed(format!(
+                "{}: persisted coordinator state doc_id `{}` did not match requested doc_id `{doc_id}`",
+                path.display(),
+                state.doc_id
+            )));
+        }
+
+        let owner_node_id = state.node_id.trim();
+        if owner_node_id.is_empty() {
+            return Err(RoomLocatorError::LookupFailed(format!(
+                "{}: persisted coordinator state node_id cannot be empty",
+                path.display()
+            )));
+        }
+
+        if owner_node_id == self.current_node_id {
+            Ok(ResolvedRoom::Local)
+        } else {
+            Ok(ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: owner_node_id.to_owned(),
+                base_url: None,
+            }))
         }
     }
 }
@@ -184,8 +275,19 @@ pub fn room_locator_from_config(config: &Config) -> AppResult<Arc<dyn RoomLocato
             )?;
             Ok(Arc::new(locator))
         }
+        "file" => {
+            let locator = FileRoomLocator::new(
+                config.node_id.clone(),
+                config.room_coordinator_state_dir.clone(),
+            )
+            .map_err(|error| match error {
+                RoomLocatorError::Config(message) => AppError::Config(message),
+                other => AppError::from(anyhow::Error::from(other)),
+            })?;
+            Ok(Arc::new(locator))
+        }
         other => Err(AppError::Config(format!(
-            "ROOM_LOCATOR must be `local` or `static`, received `{other}`"
+            "ROOM_LOCATOR must be `local`, `static`, or `file`, received `{other}`"
         ))),
     }
 }
@@ -194,10 +296,18 @@ pub fn room_locator_from_config(config: &Config) -> AppResult<Arc<dyn RoomLocato
 mod tests {
     use super::*;
     use crate::config::DEFAULT_NODE_ID;
-    use std::path::PathBuf;
+    use chrono::Utc;
+    use std::{fs, path::PathBuf};
 
     fn temp_hints_path(test_name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("backend-{test_name}-{}.json", Uuid::new_v4()))
+    }
+
+    fn temp_state_dir(test_name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "backend-room-locator-{test_name}-{}",
+            Uuid::new_v4()
+        ))
     }
 
     #[test]
@@ -307,6 +417,119 @@ mod tests {
                 base_url: Some("https://node-b.internal:4000".to_owned()),
             })
         );
+    }
+
+    #[test]
+    fn file_room_locator_marks_other_node_document_as_remote() {
+        let doc_id = Uuid::new_v4();
+        let root = temp_state_dir("file-remote");
+        let locator =
+            FileRoomLocator::new("node-a", &root).expect("file locator should initialize");
+        let state_path = root.join(format!("{doc_id}.json"));
+        let now = Utc::now();
+
+        fs::write(
+            &state_path,
+            serde_json::to_vec(&PersistedRoomCoordinatorState {
+                doc_id,
+                node_id: " node-b ".to_owned(),
+                activated_at: now,
+                updated_at: now,
+            })
+            .expect("persisted state should serialize"),
+        )
+        .expect("persisted coordinator state should be written");
+
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("remote coordinator state should resolve"),
+            ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: "node-b".to_owned(),
+                base_url: None,
+            })
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn file_room_locator_marks_current_node_document_as_local() {
+        let doc_id = Uuid::new_v4();
+        let root = temp_state_dir("file-local");
+        let locator =
+            FileRoomLocator::new("node-a", &root).expect("file locator should initialize");
+        let state_path = root.join(format!("{doc_id}.json"));
+        let now = Utc::now();
+
+        fs::write(
+            &state_path,
+            serde_json::to_vec(&PersistedRoomCoordinatorState {
+                doc_id,
+                node_id: " node-a ".to_owned(),
+                activated_at: now,
+                updated_at: now,
+            })
+            .expect("persisted state should serialize"),
+        )
+        .expect("persisted coordinator state should be written");
+
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("local coordinator state should resolve"),
+            ResolvedRoom::Local
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn room_locator_from_config_loads_file_room_state() {
+        let doc_id = Uuid::new_v4();
+        let root = temp_state_dir("config-file");
+        let now = Utc::now();
+        fs::create_dir_all(&root).expect("test state dir should exist");
+        fs::write(
+            root.join(format!("{doc_id}.json")),
+            serde_json::to_vec(&PersistedRoomCoordinatorState {
+                doc_id,
+                node_id: "node-b".to_owned(),
+                activated_at: now,
+                updated_at: now,
+            })
+            .expect("persisted state should serialize"),
+        )
+        .expect("persisted coordinator state should be written");
+
+        let config = Config {
+            host: "127.0.0.1".to_owned(),
+            port: 4000,
+            frontend_origin: "http://localhost:3000".to_owned(),
+            rust_log: "backend=debug".to_owned(),
+            api_token: "test-admin-token".to_owned(),
+            snapshot_store: "memory".to_owned(),
+            snapshot_dir: "./data/test-snapshots".to_owned(),
+            room_locator: "file".to_owned(),
+            room_coordinator: "noop".to_owned(),
+            room_coordinator_state_dir: root.display().to_string(),
+            node_id: "node-a".to_owned(),
+            room_owner_hints_path: None,
+        };
+
+        let locator =
+            room_locator_from_config(&config).expect("config should produce a file room locator");
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("doc should resolve through config-backed file locator"),
+            ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: "node-b".to_owned(),
+                base_url: None,
+            })
+        );
+
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]
@@ -514,7 +737,7 @@ mod tests {
         match error {
             AppError::Config(message) => assert_eq!(
                 message,
-                "ROOM_LOCATOR must be `local` or `static`, received `unsupported`"
+                "ROOM_LOCATOR must be `local`, `static`, or `file`, received `unsupported`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }
