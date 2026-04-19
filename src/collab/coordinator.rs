@@ -1795,6 +1795,7 @@ mod tests {
             snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),
             snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
             snapshot_rustbreak_path: "./data/test-snapshots.rustbreak".to_owned(),
+            snapshot_yedb_path: "./data/test-snapshots.yedb".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

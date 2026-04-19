@@ -23,6 +23,7 @@ pub const DEFAULT_SNAPSHOT_MICROKV_PATH: &str = "./data/snapshots_microkv";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
 pub const DEFAULT_SNAPSHOT_SLED_PATH: &str = "./data/snapshots.sled";
 pub const DEFAULT_SNAPSHOT_RUSTBREAK_PATH: &str = "./data/snapshots.rustbreak";
+pub const DEFAULT_SNAPSHOT_YEDB_PATH: &str = "./data/snapshots.yedb";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
 pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
 pub const DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS: u64 = 5;
@@ -58,6 +59,7 @@ pub struct Config {
     pub snapshot_redb_path: String,
     pub snapshot_sled_path: String,
     pub snapshot_rustbreak_path: String,
+    pub snapshot_yedb_path: String,
     pub snapshot_s3_endpoint: Option<String>,
     pub snapshot_s3_region: String,
     pub snapshot_s3_bucket: Option<String>,
@@ -114,6 +116,7 @@ impl Config {
         let snapshot_sled_path = env_string("SNAPSHOT_SLED_PATH", DEFAULT_SNAPSHOT_SLED_PATH)?;
         let snapshot_rustbreak_path =
             env_string("SNAPSHOT_RUSTBREAK_PATH", DEFAULT_SNAPSHOT_RUSTBREAK_PATH)?;
+        let snapshot_yedb_path = env_string("SNAPSHOT_YEDB_PATH", DEFAULT_SNAPSHOT_YEDB_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
         let snapshot_s3_region = env_string("SNAPSHOT_S3_REGION", DEFAULT_SNAPSHOT_S3_REGION)?;
         let snapshot_s3_bucket = env_optional_string("SNAPSHOT_S3_BUCKET")?;
@@ -181,6 +184,7 @@ impl Config {
             snapshot_redb_path,
             snapshot_sled_path,
             snapshot_rustbreak_path,
+            snapshot_yedb_path,
             snapshot_s3_endpoint,
             snapshot_s3_region,
             snapshot_s3_bucket,

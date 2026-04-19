@@ -13,6 +13,7 @@ mod rustbreak_snapshot_store;
 mod s3_snapshot_store;
 mod sled_snapshot_store;
 mod sqlite_snapshot_store;
+mod yedb_snapshot_store;
 
 use std::{
     fs,
@@ -44,6 +45,7 @@ pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
+pub use yedb_snapshot_store::YedbSnapshotStore;
 
 #[derive(Debug, Clone)]
 pub struct DocumentSnapshot {
@@ -214,6 +216,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "rustbreak" => Ok(Arc::new(RustbreakSnapshotStore::new(
             &config.snapshot_rustbreak_path,
         )?)),
+        "yedb" => Ok(Arc::new(YedbSnapshotStore::new(
+            &config.snapshot_yedb_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -255,7 +260,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
