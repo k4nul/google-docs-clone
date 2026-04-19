@@ -42,6 +42,21 @@ cargo run
 
 기본 실행 주소는 `127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`으로 설정되어 있어 로컬 프런트엔드 개발 서버와 포트가 겹치지 않습니다.
 
+## 검증 흐름
+
+```bash
+./scripts/verify.sh core
+./scripts/preflight.sh publish
+./scripts/verify.sh websocket
+```
+
+- `./scripts/preflight.sh commit`는 `.git` 메타데이터 쓰기 가능 여부를 먼저 확인해 commit/stage 차단을 조기에 드러낸다.
+- `./scripts/preflight.sh publish`는 여기에 `github.com` DNS 확인을 더해 push 가능성을 사전에 확인한다.
+- `./scripts/preflight.sh websocket`는 socket bind가 필요한 WebSocket 검증 레인이 현재 러너에서 실행 가능한지 probe test로 확인한다.
+- `./scripts/verify.sh core`는 `cargo fmt --check`, `cargo check --locked`, 그리고 socket bind가 필요 없는 테스트만 실행한다. commit/push 가능 여부와는 분리돼 있어 sandbox 환경에서도 core 검증을 막지 않는다.
+- `./scripts/verify.sh websocket`는 socket bind가 필요한 WebSocket/삭제 통합 테스트만 분리 실행한다.
+- socket-required 테스트를 새로 추가하면 `scripts/verify.sh`의 core skip 목록과 websocket lane을 함께 갱신한다.
+
 ## API/WS 개요
 
 - HTTP base path: `/api`
@@ -59,6 +74,7 @@ cargo run
 |-- README.md
 |-- .env.example
 |-- docs/
+|-- scripts/
 |-- src/
 |   |-- app.rs
 |   |-- collab/
@@ -100,6 +116,8 @@ cargo run
 
 현재 문서화된 분산 전략 검토 결과도 실제 운영 범위는 여전히 단일 프로세스다. 외부 snapshot store와 room owner coordination 저장소가 준비되기 전까지는 한 `doc_id`를 하나의 프로세스만 소유해야 한다.
 
+현재 `blocked` 상태는 둘로 나눠 관리한다. 멀티 프로세스 room 분산 지원은 roadmap 차원의 blocked 항목이고, 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다.
+
 ## 향후 확장 방향
 
 - provider awareness payload 연동
@@ -116,7 +134,7 @@ cargo run
 - 문서가 삭제된 경우에는 snapshot과 active room을 함께 제거한다. 활성 WebSocket 세션이 남아 있으면 삭제를 거절하고 `409 conflict`를 반환한다.
 - `SNAPSHOT_STORE=file`일 때 손상된 snapshot 파일은 startup hydrate와 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛴다. 해당 문서를 직접 복구하려고 로드하면 여전히 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=file` 저장은 같은 디렉터리의 임시 파일 작성 후 `rename`으로 마무리해, 저장 도중 프로세스가 중단돼도 마지막 정상 snapshot을 바로 덮어쓰지 않도록 한다.
-- interrupted save가 남긴 `.tmp` 파일은 snapshot catalog/hydrate 대상에서 제외돼 다음 시작이나 목록 조회를 오염시키지 않는다.
+- interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되고, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 정리한다.
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
 

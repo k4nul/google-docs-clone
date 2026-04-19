@@ -21,9 +21,14 @@ cargo run
 ## Test
 
 ```bash
-cargo fmt --check
-cargo test
+./scripts/verify.sh core
+./scripts/preflight.sh publish
+./scripts/verify.sh websocket
 ```
+
+- `preflight.sh commit`/`publish`는 stage/commit/push 차단을 점검한다.
+- `verify.sh core`는 socket bind나 `.git` 쓰기 가능 여부와 무관한 검증만 실행한다.
+- `verify.sh websocket`는 WebSocket/삭제 통합 테스트처럼 socket bind가 필요한 검증만 실행한다.
 
 ## Environment Variables
 
@@ -43,5 +48,6 @@ cargo test
 4. `Authorization: Bearer <API_TOKEN>`으로 `POST /api/documents`를 호출해 문서를 만들고 응답의 `access_token`을 확보한다.
 5. 문서 상세 조회, 삭제, WebSocket 연결에는 `Authorization: Bearer <access_token>`을 사용한다.
 6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞춰 `/ws/:doc_id`에 접속한다.
-7. 작업 마무리 전 `cargo fmt --check`와 `cargo test`를 실행한다.
-8. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.
+7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
+8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
+9. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.

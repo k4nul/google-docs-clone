@@ -50,6 +50,9 @@
 - 통합 테스트는 앱 빌더를 통해 실제 Router를 띄운다.
 - 새 route를 추가하면 happy path 기준 smoke test를 함께 추가한다.
 - 공유 계약 모델을 추가하면 직렬화 shape와 기본 검증 규칙에 대한 unit test를 함께 둔다.
+- socket bind가 필요한 통합 테스트를 추가하면 `scripts/verify.sh`의 websocket lane과 core skip 목록을 함께 갱신한다.
+- 환경 제약으로 실패할 수 있는 검증은 `scripts/preflight.sh`로 조기 탐지 가능한 형태를 우선 제공한다.
+- `.git` 쓰기나 remote DNS처럼 publish 전용 조건은 `verify.sh core`에 섞지 말고 `preflight.sh commit`/`publish`로 분리한다.
 
 ## Commit Rules
 
