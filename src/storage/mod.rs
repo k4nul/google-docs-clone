@@ -1,4 +1,5 @@
 mod file_snapshot_store;
+mod fjall_snapshot_store;
 mod jammdb_snapshot_store;
 mod managed_snapshot_store;
 mod redb_snapshot_store;
@@ -22,6 +23,7 @@ use uuid::Uuid;
 use crate::{config::Config, models::document::Document};
 
 pub use file_snapshot_store::FileSnapshotStore;
+pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use jammdb_snapshot_store::JammdbSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
@@ -168,6 +170,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "jammdb" => Ok(Arc::new(JammdbSnapshotStore::new(
             &config.snapshot_jammdb_path,
         )?)),
+        "fjall" => Ok(Arc::new(FjallSnapshotStore::new(
+            &config.snapshot_fjall_path,
+        )?)),
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
         )?)),
@@ -215,7 +220,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `jammdb`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `jammdb`, `fjall`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
