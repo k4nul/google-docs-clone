@@ -164,8 +164,9 @@ cargo run
 
 - `documents`에 없는 문서는 현재 노드 소유로 간주한다.
 - `node_id`는 비어 있으면 안 된다.
-- `base_url`은 선택값이며, 있으면 absolute `http://` 또는 `https://` URL이어야 한다.
-- 유효한 `base_url`은 non-local owner conflict 응답의 `owner.base_url`에 그대로 실린다.
+- `node_id`와 `base_url`은 trim 후 저장된다.
+- `base_url`은 선택값이며, 있으면 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 한다.
+- 유효한 `base_url`은 canonical origin (`scheme://authority`) 형태로 non-local owner conflict 응답의 `owner.base_url`에 실린다.
 
 ## Awareness Metadata Contract
 
