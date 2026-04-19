@@ -18,7 +18,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::{
-    config::Config,
+    config::{Config, normalize_origin_url},
     errors::{AppError, AppResult},
 };
 
@@ -106,6 +106,7 @@ impl RoomCoordinator for LoggingRoomCoordinator {
 
 pub struct FileRoomCoordinator {
     node_id: Arc<str>,
+    base_url: Option<String>,
     root: PathBuf,
     heartbeat_interval: Duration,
     lease_ttl: Duration,
@@ -139,6 +140,7 @@ pub(crate) struct PersistedRoomCoordinatorState {
 impl FileRoomCoordinator {
     pub fn new(
         node_id: impl Into<String>,
+        base_url: Option<String>,
         root: impl Into<PathBuf>,
         heartbeat_interval: Duration,
         lease_ttl: Duration,
@@ -169,6 +171,12 @@ impl FileRoomCoordinator {
             ));
         }
 
+        let base_url = base_url
+            .as_deref()
+            .map(|value| normalize_origin_url(value, "NODE_BASE_URL"))
+            .transpose()
+            .map_err(RoomCoordinatorError::Operation)?;
+
         let root = root.into();
         fs::create_dir_all(&root).map_err(|error| {
             RoomCoordinatorError::Operation(format!(
@@ -179,6 +187,7 @@ impl FileRoomCoordinator {
 
         let coordinator = Self {
             node_id: Arc::<str>::from(node_id.to_owned()),
+            base_url,
             root,
             heartbeat_interval,
             lease_ttl,
@@ -425,7 +434,7 @@ impl FileRoomCoordinator {
         let state = PersistedRoomCoordinatorState {
             doc_id: *doc_id,
             node_id: self.node_id().to_owned(),
-            base_url: None,
+            base_url: self.base_url.clone(),
             lease_id: Some(lease_id),
             epoch,
             activated_at: now,
@@ -477,6 +486,7 @@ impl FileRoomCoordinator {
     ) -> Result<FileRoomLeaseHeartbeat, RoomCoordinatorError> {
         let coordinator = Self {
             node_id: Arc::clone(&self.node_id),
+            base_url: self.base_url.clone(),
             root: self.root.clone(),
             heartbeat_interval: self.heartbeat_interval,
             lease_ttl: self.lease_ttl,
@@ -655,12 +665,14 @@ pub fn logging_room_coordinator(node_id: impl Into<String>) -> Arc<dyn RoomCoord
 
 pub fn file_room_coordinator(
     node_id: impl Into<String>,
+    base_url: Option<String>,
     root: impl Into<PathBuf>,
     heartbeat_interval: Duration,
     lease_ttl: Duration,
 ) -> Result<Arc<dyn RoomCoordinator>, RoomCoordinatorError> {
     Ok(Arc::new(FileRoomCoordinator::new(
         node_id,
+        base_url,
         root,
         heartbeat_interval,
         lease_ttl,
@@ -673,6 +685,7 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
         "logging" => Ok(logging_room_coordinator(config.node_id.clone())),
         "file" => file_room_coordinator(
             config.node_id.clone(),
+            config.node_base_url.clone(),
             config.room_coordinator_state_dir.clone(),
             Duration::from_secs(config.room_coordinator_heartbeat_interval_secs),
             Duration::from_secs(config.room_coordinator_lease_ttl_secs),
@@ -716,6 +729,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 1,
             room_coordinator_lease_ttl_secs: 5,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: None,
         }
     }
@@ -747,6 +761,7 @@ mod tests {
         let root = temp_state_dir("persist-state");
         let coordinator = FileRoomCoordinator::new(
             "node-a",
+            Some("http://node-a.internal:4000/".to_owned()),
             &root,
             Duration::from_millis(25),
             Duration::from_millis(80),
@@ -767,7 +782,10 @@ mod tests {
         assert_eq!(state.node_id, "node-a");
         assert!(state.lease_id.is_some());
         assert_eq!(state.epoch, 1);
-        assert_eq!(state.base_url, None);
+        assert_eq!(
+            state.base_url,
+            Some("http://node-a.internal:4000".to_owned())
+        );
         let renewed_at = state.renewed_at.expect("lease should include renewed_at");
         assert!(renewed_at >= state.activated_at);
         assert!(state.expires_at.expect("lease should include expiry") > renewed_at);
@@ -799,6 +817,7 @@ mod tests {
         let root = temp_state_dir("heartbeat-renew");
         let coordinator = FileRoomCoordinator::new(
             "node-a",
+            None,
             &root,
             Duration::from_millis(20),
             Duration::from_millis(90),
@@ -853,6 +872,7 @@ mod tests {
         let root = temp_state_dir("reject-other-node");
         let coordinator = FileRoomCoordinator::new(
             "node-a",
+            None,
             &root,
             Duration::from_secs(1),
             Duration::from_secs(5),
@@ -906,6 +926,25 @@ mod tests {
             AppError::Config(message) => assert_eq!(
                 message,
                 "failed to initialize file room coordinator: room coordination failed: ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=file"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
+    }
+
+    #[test]
+    fn room_coordinator_from_config_rejects_invalid_node_base_url() {
+        let mut config = test_config("file");
+        config.node_base_url = Some("http://node-a.internal/path".to_owned());
+
+        let error = match room_coordinator_from_config(&config) {
+            Ok(_) => panic!("invalid node base url should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "failed to initialize file room coordinator: room coordination failed: NODE_BASE_URL must be an origin-only absolute http/https URL without path/query, received `http://node-a.internal/path`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }

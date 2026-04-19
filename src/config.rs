@@ -1,6 +1,6 @@
 use std::env;
 
-use axum::http::HeaderValue;
+use axum::http::{HeaderValue, Uri};
 
 use crate::errors::{AppError, AppResult};
 
@@ -35,6 +35,7 @@ pub struct Config {
     pub room_coordinator_heartbeat_interval_secs: u64,
     pub room_coordinator_lease_ttl_secs: u64,
     pub node_id: String,
+    pub node_base_url: Option<String>,
     pub room_owner_hints_path: Option<String>,
 }
 
@@ -66,6 +67,7 @@ impl Config {
             DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS,
         )?;
         let node_id = env_string("NODE_ID", DEFAULT_NODE_ID)?;
+        let node_base_url = env_optional_origin("NODE_BASE_URL")?;
         let room_owner_hints_path = env_optional_string("ROOM_OWNER_HINTS_PATH")?;
 
         Ok(Self {
@@ -83,6 +85,7 @@ impl Config {
             room_coordinator_heartbeat_interval_secs,
             room_coordinator_lease_ttl_secs,
             node_id,
+            node_base_url,
             room_owner_hints_path,
         })
     }
@@ -175,4 +178,49 @@ fn env_optional_string(key: &str) -> AppResult<Option<String>> {
             Err(AppError::Config(format!("{key} must be valid unicode")))
         }
     }
+}
+
+fn env_optional_origin(key: &str) -> AppResult<Option<String>> {
+    match env::var(key) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                Err(AppError::Config(format!("{key} cannot be empty")))
+            } else {
+                normalize_origin_url(trimmed, key)
+                    .map(Some)
+                    .map_err(AppError::Config)
+            }
+        }
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => {
+            Err(AppError::Config(format!("{key} must be valid unicode")))
+        }
+    }
+}
+
+pub fn normalize_origin_url(value: &str, field_name: &str) -> Result<String, String> {
+    let invalid_message = || {
+        format!(
+            "{field_name} must be an origin-only absolute http/https URL without path/query, received `{value}`"
+        )
+    };
+
+    let uri: Uri = value.parse().map_err(|_| invalid_message())?;
+    let Some(scheme) = uri.scheme_str() else {
+        return Err(invalid_message());
+    };
+    let Some(authority) = uri.authority() else {
+        return Err(invalid_message());
+    };
+
+    if !matches!(scheme, "http" | "https") || uri.query().is_some() {
+        return Err(invalid_message());
+    }
+
+    if !matches!(uri.path(), "" | "/") {
+        return Err(invalid_message());
+    }
+
+    Ok(format!("{scheme}://{authority}"))
 }

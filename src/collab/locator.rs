@@ -6,7 +6,6 @@ use std::{
     sync::Arc,
 };
 
-use axum::http::Uri;
 use chrono::Utc;
 use serde::Deserialize;
 use thiserror::Error;
@@ -14,7 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     collab::coordinator::PersistedRoomCoordinatorState,
-    config::Config,
+    config::{Config, normalize_origin_url},
     errors::{AppError, AppResult},
 };
 
@@ -57,35 +56,7 @@ impl RoomOwnerHint {
 }
 
 fn normalize_owner_base_url(base_url: &str) -> Result<String, RoomLocatorError> {
-    let invalid_message = || {
-        RoomLocatorError::Config(format!(
-            "room owner hint base_url must be an origin-only absolute http/https URL without path/query, received `{base_url}`"
-        ))
-    };
-
-    let uri: Uri = base_url.parse().map_err(|_| {
-        RoomLocatorError::Config(format!(
-            "room owner hint base_url must be an origin-only absolute http/https URL without path/query, received `{base_url}`"
-        ))
-    })?;
-
-    let Some(scheme) = uri.scheme_str() else {
-        return Err(invalid_message());
-    };
-
-    let Some(authority) = uri.authority() else {
-        return Err(invalid_message());
-    };
-
-    if !matches!(scheme, "http" | "https") || uri.query().is_some() {
-        return Err(invalid_message());
-    }
-
-    if !matches!(uri.path(), "" | "/") {
-        return Err(invalid_message());
-    }
-
-    Ok(format!("{scheme}://{authority}"))
+    normalize_origin_url(base_url, "room owner hint base_url").map_err(RoomLocatorError::Config)
 }
 
 #[derive(Debug, Error)]
@@ -580,6 +551,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: None,
         };
 
@@ -632,6 +604,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
 
@@ -667,6 +640,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: None,
         };
 
@@ -718,6 +692,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
 
@@ -771,6 +746,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
+            node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
 
@@ -807,6 +783,7 @@ mod tests {
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: DEFAULT_NODE_ID.to_owned(),
+            node_base_url: None,
             room_owner_hints_path: None,
         };
 

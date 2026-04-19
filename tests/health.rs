@@ -45,6 +45,7 @@ fn test_config() -> Config {
         room_coordinator_heartbeat_interval_secs: 10,
         room_coordinator_lease_ttl_secs: 30,
         node_id: "test-node".to_owned(),
+        node_base_url: None,
         room_owner_hints_path: None,
     }
 }
@@ -531,6 +532,54 @@ async fn document_detail_endpoint_rejects_non_local_file_room_owner() {
     );
     assert_eq!(payload["owner"]["node_id"], "node-b");
     assert!(payload["owner"]["base_url"].is_null());
+
+    fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_includes_base_url_for_non_local_file_room_owner() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("file-room-locator-with-base-url");
+    config.room_locator = "file".to_owned();
+    config.room_coordinator_state_dir = coordinator_dir.display().to_string();
+    config.node_id = "node-a".to_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with file locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote file owner with base url".to_owned()))
+        .expect("document should be created");
+
+    fs::write(
+        coordinator_dir.join(format!("{}.json", document.id)),
+        serde_json::to_vec(&serde_json::json!({
+            "doc_id": document.id,
+            "node_id": "node-b",
+            "base_url": "http://node-b.internal:5001/",
+            "activated_at": "2026-04-20T00:00:00Z",
+            "updated_at": "2026-04-20T00:00:00Z"
+        }))
+        .expect("file room state should serialize"),
+    )
+    .expect("file room state should be written");
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(payload["owner"]["node_id"], "node-b");
+    assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:5001");
 
     fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
 }
@@ -1285,6 +1334,7 @@ async fn app_state_uses_file_room_coordinator_from_config() {
     let coordinator_dir = temp_snapshot_dir("file-room-coordinator");
     config.room_coordinator = "file".to_owned();
     config.room_coordinator_state_dir = coordinator_dir.display().to_string();
+    config.node_base_url = Some("http://node-a.internal:4100/".to_owned());
 
     let state =
         AppState::from_config(&config).expect("state should initialize with file coordinator");
@@ -1303,11 +1353,14 @@ async fn app_state_uses_file_room_coordinator_from_config() {
         .room_coordinator()
         .room_activated(&document.id)
         .expect("file coordinator should persist active room state");
-    assert!(
-        coordinator_dir
-            .join(format!("{}.json", document.id))
-            .exists()
-    );
+    let state_path = coordinator_dir.join(format!("{}.json", document.id));
+    assert!(state_path.exists());
+
+    let persisted_state: Value = serde_json::from_slice(
+        &fs::read(&state_path).expect("file coordinator should persist active room state"),
+    )
+    .expect("file room coordinator state should deserialize");
+    assert_eq!(persisted_state["base_url"], "http://node-a.internal:4100");
 
     assert_eq!(room.start_session(), 1);
     let teardown = state
@@ -1322,11 +1375,7 @@ async fn app_state_uses_file_room_coordinator_from_config() {
         .room_coordinator()
         .room_deactivated(&document.id)
         .expect("file coordinator should remove active room state");
-    assert!(
-        !coordinator_dir
-            .join(format!("{}.json", document.id))
-            .exists()
-    );
+    assert!(!state_path.exists());
 
     fs::remove_dir_all(coordinator_dir).expect("test coordinator directory should be cleaned up");
 }

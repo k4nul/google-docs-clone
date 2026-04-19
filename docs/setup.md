@@ -48,6 +48,7 @@ cargo run
 - `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS`: `ROOM_COORDINATOR=file`일 때 lease heartbeat 갱신 간격(초)
 - `ROOM_COORDINATOR_LEASE_TTL_SECS`: `ROOM_COORDINATOR=file`일 때 lease 만료 TTL(초)
 - `NODE_ID`: 현재 collaboration node 식별자
+- `NODE_BASE_URL`: 현재 collaboration node를 다른 노드에 안내할 때 사용할 canonical origin-only base URL. `ROOM_COORDINATOR=file` lease state와 `ROOM_LOCATOR=file` conflict 응답의 `owner.base_url`에 반영된다.
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 owner hints JSON 파일 경로
 
 ## Static Room Locator File
@@ -72,7 +73,7 @@ cargo run
 
 - `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`을 읽어 active owner lease를 판정한다.
 - 이 모드는 `ROOM_COORDINATOR=file`이 남긴 state를 소비하는 전제이므로, 멀티 노드에서 사용하려면 각 노드가 같은 `ROOM_COORDINATOR_STATE_DIR`를 읽고 쓸 수 있어야 한다.
-- 현재 state 포맷에는 `base_url`이 없어서 non-local owner `409` 응답에는 `owner.node_id`만 들어간다.
+- `NODE_BASE_URL`이 설정된 노드가 `ROOM_COORDINATOR=file`을 사용하면 lease state에 canonical `base_url`도 기록되고, `ROOM_LOCATOR=file`의 non-local owner `409` 응답에도 `owner.base_url`이 함께 실린다.
 - current file-backed state는 canonical lease record (`doc_id`, `node_id`, optional `base_url`, `lease_id`, `epoch`, `acquired_at`, `renewed_at`, `expires_at`)를 저장하고, stale owner 판단은 `expires_at` 기준으로만 수행한다.
 - `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS`는 0보다 커야 하고 `ROOM_COORDINATOR_LEASE_TTL_SECS`보다 작아야 한다.
 - 이 구현은 shared filesystem 위에서만 best-effort로 동작한다. `SNAPSHOT_STORE=sqlite`로 snapshot을 DB-backed으로 바꿔도 authoritative handoff가 필요하면 여전히 외부 coordination 저장소가 추가로 필요하다.
@@ -98,5 +99,5 @@ cargo run
 6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞춰 `/ws/:doc_id`에 접속한다.
 7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
 8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
-9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`와 `owner` metadata가 반환되는지 확인한다. `ROOM_LOCATOR=file`을 쓰는 경우에는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json` state를 준비한 뒤 같은 응답이 `owner.node_id` 기준으로 반환되는지 확인한다.
+9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`와 `owner` metadata가 반환되는지 확인한다. `ROOM_LOCATOR=file`을 쓰는 경우에는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json` state를 준비한 뒤 같은 응답이 `owner.node_id`와 optional `owner.base_url` 기준으로 반환되는지 확인한다.
 10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file` 또는 `SNAPSHOT_STORE=sqlite`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.

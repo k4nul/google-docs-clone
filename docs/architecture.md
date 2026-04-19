@@ -54,7 +54,7 @@
 - `room_locator_from_config`는 현재 `LocalRoomLocator`, `StaticRoomLocator`, 또는 `FileRoomLocator`를 런타임에 선택한다.
 - `room_coordinator_from_config`는 현재 `NoopRoomCoordinator`, `LoggingRoomCoordinator`, 또는 `FileRoomCoordinator`를 런타임에 선택한다.
 - `LoggingRoomCoordinator`는 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남기는 dry-run 구현이며, 외부 lease/heartbeat coordinator가 붙기 전 운영 관측용 경계로 사용한다.
-- `FileRoomCoordinator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 canonical lease state를 atomic write로 남기고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 compare-and-release로 정리하는 file-backed 준비 구현이다.
+- `FileRoomCoordinator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 canonical lease state를 atomic write로 남기고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 compare-and-release로 정리하는 file-backed 준비 구현이다. `NODE_BASE_URL`이 있으면 canonical origin 형태의 `base_url`도 lease record에 포함한다.
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
@@ -85,7 +85,7 @@
 - 현재 저장소에는 이 경계를 구현한 기본 `LocalRoomLocator`, 문서별 owner hints를 읽는 `StaticRoomLocator`, 그리고 `FileRoomCoordinator` state를 읽는 `FileRoomLocator`가 들어가 있다.
 - 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`, dry-run `LoggingRoomCoordinator`, 그리고 local/shared filesystem에 lease state와 heartbeat를 남기는 `FileRoomCoordinator`가 들어가 있다.
 - `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
-- `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. 현재 state 포맷에는 `base_url`이 없으므로 best-effort owner signal로만 취급한다.
+- `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`가 있으므로 shared snapshot durability 후보는 생겼지만 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 authoritative owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
 
 ## Authoritative Coordination Store Contract
@@ -131,5 +131,5 @@
 ## Current Repository Boundary
 
 - 현재 코드베이스의 `FileRoomCoordinator`/`FileRoomLocator`는 위 계약의 filesystem rehearsal 구현을 제공한다.
-- 현 구현은 `lease_id`, `epoch`, `renewed_at`, `expires_at`를 기록하고 background heartbeat로 lease를 연장하지만, CAS 보장 범위가 shared filesystem과 단일 파일 교체에 한정되고 `base_url`/redirect 정보도 없다.
+- 현 구현은 `lease_id`, `epoch`, optional `base_url`, `renewed_at`, `expires_at`를 기록하고 background heartbeat로 lease를 연장하지만, CAS 보장 범위가 shared filesystem과 단일 파일 교체에 한정된다.
 - 따라서 이 저장소에서 실제 handoff를 켜는 작업은 여전히 blocked다. authoritative coordination backend와 shared snapshot store가 둘 다 준비된 뒤에만 런타임 활성화가 가능하다.
