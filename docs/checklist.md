@@ -24,7 +24,7 @@
 
 - bootstrap 범위의 백엔드 구현 작업은 모두 완료됐다.
 - 현재 브랜치 `backend-realtime-api`는 역할 중심 기본 협업 브랜치다. 이전 작업 slug 기반 브랜치 `storage-temp-handling`에서 이름만 정리해 이어받았고, 현재는 `origin/backend-realtime-api`와 동기화 상태를 기준으로 관리한다.
-- 최신 landed 변경은 `feat(sync): add static room owner hints` (`973308b`)이며, `RoomLocator`를 런타임 설정 경계로 확장하고 non-local owner 응답에 `owner.node_id` / optional `owner.base_url` metadata를 포함하도록 정리했다.
+- 최신 landed 변경은 `feat(sync): add room coordinator lifecycle hooks` (`c23bbdc`)이며, `RoomCoordinator` no-op 경계와 WebSocket first/last session lifecycle hook을 도입해 future lease/heartbeat coordinator가 snapshot persist 이후 handoff 지점을 붙일 수 있게 정리했다.
 - storage hardening 변경인 `fix(storage): save snapshots atomically and clean stale temp files` (`ee800ef`)와 `fix(storage): clean stale temp snapshots on startup` (`188e6f4`)도 현재 브랜치와 원격 브랜치에 반영돼 있다.
 - 현재 런타임은 여전히 단일 프로세스 owner 판정과 static owner hints 수준으로 유지되며, 실제 멀티 프로세스 활성화는 지원하지 않는다.
 - 다음 구현 후보는 외부 snapshot store와 owner coordination 저장소가 필요한 멀티 프로세스 room 분산 지원이며, 현재 저장소 범위에서는 roadmap blocked 상태다.
