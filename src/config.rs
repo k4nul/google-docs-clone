@@ -12,6 +12,7 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
+pub const DEFAULT_SNAPSHOT_MANAGED_TIMEOUT_SECS: u64 = 5;
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
 pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
@@ -31,6 +32,9 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_sqlite_path: String,
+    pub snapshot_managed_base_url: Option<String>,
+    pub snapshot_managed_auth_token: Option<String>,
+    pub snapshot_managed_timeout_secs: u64,
     pub room_locator: String,
     pub room_coordinator: String,
     pub room_coordinator_state_dir: String,
@@ -58,6 +62,12 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
+        let snapshot_managed_base_url = env_optional_http_base_url("SNAPSHOT_MANAGED_BASE_URL")?;
+        let snapshot_managed_auth_token = env_optional_string("SNAPSHOT_MANAGED_AUTH_TOKEN")?;
+        let snapshot_managed_timeout_secs = env_u64(
+            "SNAPSHOT_MANAGED_TIMEOUT_SECS",
+            DEFAULT_SNAPSHOT_MANAGED_TIMEOUT_SECS,
+        )?;
         let room_locator = env_string("ROOM_LOCATOR", DEFAULT_ROOM_LOCATOR)?;
         let room_coordinator = env_string("ROOM_COORDINATOR", DEFAULT_ROOM_COORDINATOR)?;
         let room_coordinator_state_dir = env_string(
@@ -97,6 +107,9 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_sqlite_path,
+            snapshot_managed_base_url,
+            snapshot_managed_auth_token,
+            snapshot_managed_timeout_secs,
             room_locator,
             room_coordinator,
             room_coordinator_state_dir,

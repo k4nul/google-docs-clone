@@ -1,10 +1,12 @@
 mod file_snapshot_store;
+mod managed_snapshot_store;
 mod sqlite_snapshot_store;
 
 use std::{
     fs,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 
 use chrono::{DateTime, Utc};
@@ -16,6 +18,7 @@ use uuid::Uuid;
 use crate::{config::Config, models::document::Document};
 
 pub use file_snapshot_store::FileSnapshotStore;
+pub use managed_snapshot_store::ManagedSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
 
 #[derive(Debug, Clone)]
@@ -154,8 +157,17 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "sqlite" => Ok(Arc::new(SqliteSnapshotStore::new(
             &config.snapshot_sqlite_path,
         )?)),
+        "managed" => Ok(Arc::new(ManagedSnapshotStore::new(
+            config.snapshot_managed_base_url.clone().ok_or_else(|| {
+                StorageError::Config(
+                    "SNAPSHOT_MANAGED_BASE_URL is required when SNAPSHOT_STORE=managed".to_owned(),
+                )
+            })?,
+            config.snapshot_managed_auth_token.clone(),
+            Duration::from_secs(config.snapshot_managed_timeout_secs),
+        )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, or `sqlite`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, or `managed`, received `{other}`"
         ))),
     }
 }

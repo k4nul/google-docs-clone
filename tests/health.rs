@@ -17,8 +17,8 @@ use backend::{
     errors::AppError,
     state::AppState,
     storage::{
-        DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore,
-        SqliteSnapshotStore,
+        DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, ManagedSnapshotStore,
+        SnapshotStore, SqliteSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -48,6 +48,9 @@ fn test_config() -> Config {
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
         snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
+        snapshot_managed_base_url: None,
+        snapshot_managed_auth_token: None,
+        snapshot_managed_timeout_secs: 5,
         room_locator: "local".to_owned(),
         room_coordinator: "noop".to_owned(),
         room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
@@ -86,6 +89,17 @@ fn configure_shared_sqlite_collaboration(
         .into_owned();
     config.node_id = node_id.to_owned();
     config.node_base_url = Some(node_base_url.to_owned());
+}
+
+fn configure_managed_snapshot_store(
+    config: &mut Config,
+    managed_base_url: &str,
+    managed_auth_token: Option<&str>,
+) {
+    config.snapshot_store = "managed".to_owned();
+    config.snapshot_managed_base_url = Some(managed_base_url.to_owned());
+    config.snapshot_managed_auth_token = managed_auth_token.map(str::to_owned);
+    config.snapshot_managed_timeout_secs = 5;
 }
 
 fn configure_managed_coordination_with_shared_sqlite_snapshots(
@@ -175,9 +189,47 @@ struct MockManagedReleaseRequest {
     epoch: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MockManagedSnapshotPayload {
+    document: MockManagedSnapshotDocument,
+    update: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MockManagedSnapshotDocument {
+    id: Uuid,
+    title: String,
+    created_at: chrono::DateTime<Utc>,
+    updated_at: chrono::DateTime<Utc>,
+    access_token: String,
+}
+
+#[derive(Debug, Serialize)]
+struct MockManagedSnapshotCatalogResponse {
+    documents: Vec<MockManagedSnapshotDocument>,
+}
+
+impl From<DocumentSnapshot> for MockManagedSnapshotPayload {
+    fn from(snapshot: DocumentSnapshot) -> Self {
+        let document = snapshot.document;
+        let access_token = document.access_token().to_owned();
+        Self {
+            document: MockManagedSnapshotDocument {
+                id: document.id,
+                title: document.title,
+                created_at: document.created_at,
+                updated_at: document.updated_at,
+                access_token,
+            },
+            update: snapshot.update,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct MockManagedCoordinationServiceState {
     leases: Arc<Mutex<HashMap<Uuid, MockManagedLeaseRecord>>>,
+    snapshots: Arc<Mutex<HashMap<Uuid, MockManagedSnapshotPayload>>>,
     auth_token: Option<String>,
 }
 
@@ -189,11 +241,20 @@ impl MockManagedCoordinationServiceState {
             .get(doc_id)
             .cloned()
     }
+
+    fn snapshot(&self, doc_id: &Uuid) -> Option<MockManagedSnapshotPayload> {
+        self.snapshots
+            .lock()
+            .expect("managed snapshot store should not be poisoned")
+            .get(doc_id)
+            .cloned()
+    }
 }
 
 struct MockManagedCoordinationHarness {
     state: MockManagedCoordinationServiceState,
     base_url: String,
+    snapshot_base_url: String,
     task: JoinHandle<()>,
 }
 
@@ -208,6 +269,7 @@ async fn spawn_mock_managed_coordination_service(
 ) -> MockManagedCoordinationHarness {
     let state = MockManagedCoordinationServiceState {
         leases: Arc::new(Mutex::new(HashMap::new())),
+        snapshots: Arc::new(Mutex::new(HashMap::new())),
         auth_token: auth_token.map(str::to_owned),
     };
     let app = Router::new()
@@ -223,6 +285,13 @@ async fn spawn_mock_managed_coordination_service(
         .route(
             "/coord/v1/leases/{doc_id}/release",
             post(mock_managed_release_lease),
+        )
+        .route("/snapshot/v1/snapshots", get(mock_managed_list_snapshots))
+        .route(
+            "/snapshot/v1/snapshots/{doc_id}",
+            get(mock_managed_get_snapshot)
+                .put(mock_managed_put_snapshot)
+                .delete(mock_managed_delete_snapshot),
         )
         .with_state(state.clone());
 
@@ -241,6 +310,7 @@ async fn spawn_mock_managed_coordination_service(
     MockManagedCoordinationHarness {
         state,
         base_url: format!("http://{addr}/coord"),
+        snapshot_base_url: format!("http://{addr}/snapshot"),
         task,
     }
 }
@@ -388,6 +458,84 @@ async fn mock_managed_release_lease(
     StatusCode::NO_CONTENT.into_response()
 }
 
+async fn mock_managed_list_snapshots(
+    State(state): State<MockManagedCoordinationServiceState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    let snapshots = state
+        .snapshots
+        .lock()
+        .expect("managed snapshot store should not be poisoned");
+    let documents = snapshots
+        .values()
+        .map(|snapshot| snapshot.document.clone())
+        .collect::<Vec<_>>();
+
+    (
+        StatusCode::OK,
+        Json(MockManagedSnapshotCatalogResponse { documents }),
+    )
+        .into_response()
+}
+
+async fn mock_managed_get_snapshot(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    match state.snapshot(&doc_id) {
+        Some(snapshot) => (StatusCode::OK, Json(snapshot)).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn mock_managed_put_snapshot(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<MockManagedSnapshotPayload>,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    if payload.document.id != doc_id {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    state
+        .snapshots
+        .lock()
+        .expect("managed snapshot store should not be poisoned")
+        .insert(doc_id, payload);
+    StatusCode::NO_CONTENT.into_response()
+}
+
+async fn mock_managed_delete_snapshot(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    state
+        .snapshots
+        .lock()
+        .expect("managed snapshot store should not be poisoned")
+        .remove(&doc_id);
+    StatusCode::NO_CONTENT.into_response()
+}
+
 impl RecordingRoomCoordinator {
     fn snapshot(&self) -> Vec<String> {
         self.events
@@ -480,6 +628,26 @@ async fn wait_for_managed_room_lease_release(
     }
 
     panic!("managed room lease for `{doc_id}` should be released after handoff");
+}
+
+async fn wait_for_managed_room_lease_owner(
+    state: &MockManagedCoordinationServiceState,
+    doc_id: Uuid,
+    expected_node_id: &str,
+) {
+    for _ in 0..100 {
+        if state
+            .lease(&doc_id)
+            .map(|lease| lease.node_id == expected_node_id)
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    panic!("managed room lease for `{doc_id}` should be owned by `{expected_node_id}`");
 }
 
 #[tokio::test]
@@ -1978,6 +2146,8 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
         ))
         .await;
 
+    wait_for_managed_room_lease_owner(&harness.state, doc_uuid, "node-a").await;
+
     let node_b_state =
         AppState::from_config(&node_b_config).expect("node-b state should initialize");
     assert!(
@@ -2240,6 +2410,70 @@ async fn app_state_uses_sqlite_snapshot_store_from_config() {
     assert!(snapshot_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_rejects_managed_snapshot_store_without_base_url() {
+    let mut config = test_config();
+    config.snapshot_store = "managed".to_owned();
+
+    let error = match AppState::from_config(&config) {
+        Ok(_) => panic!("managed snapshot store should require base url"),
+        Err(error) => error,
+    };
+
+    assert!(
+        error
+            .to_string()
+            .contains("SNAPSHOT_MANAGED_BASE_URL is required when SNAPSHOT_STORE=managed"),
+        "unexpected error: {error}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn app_state_uses_managed_snapshot_store_from_config() {
+    let harness = spawn_mock_managed_coordination_service(Some("snapshot-secret")).await;
+
+    let mut config = test_config();
+    configure_managed_snapshot_store(
+        &mut config,
+        &harness.snapshot_base_url,
+        Some("snapshot-secret"),
+    );
+
+    let state = AppState::from_config(&config)
+        .expect("state should initialize with managed snapshot store");
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to managed store".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to managed store on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    let persisted_snapshot = harness
+        .state
+        .snapshot(&document.id)
+        .expect("managed snapshot service should store the snapshot");
+    assert_eq!(persisted_snapshot.document.id, document.id);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted managed snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
 }
 
 #[tokio::test]
@@ -2682,6 +2916,39 @@ fn sqlite_snapshot_store_round_trips_document_catalog() {
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn managed_snapshot_store_round_trips_document_catalog() {
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime should initialize");
+    let harness = runtime.block_on(spawn_mock_managed_coordination_service(Some(
+        "snapshot-secret",
+    )));
+    let store = ManagedSnapshotStore::new(
+        &harness.snapshot_base_url,
+        Some("snapshot-secret".to_owned()),
+        Duration::from_secs(5),
+    )
+    .expect("managed snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Managed".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to managed store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from managed store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from managed store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 }
 
 #[test]
