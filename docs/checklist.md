@@ -23,7 +23,7 @@
 ## Current Status
 
 - bootstrap 범위의 백엔드 구현 작업은 모두 완료됐다.
-- 현재 브랜치 `codex/storage-temp-handling`은 `origin/codex/storage-temp-handling`과 동기화돼 있고, 이번 run 시작 시점 워크트리는 clean 상태였다.
+- 현재 브랜치 `codex/backend-realtime-api`는 역할 중심 기본 협업 브랜치다. 이전 작업 slug 기반 브랜치 `codex/storage-temp-handling`에서 이름만 정리해 이어받았고, 현재는 `origin/codex/backend-realtime-api`와 동기화 상태를 기준으로 관리한다.
 - 최신 landed 변경은 `feat(sync): add static room owner hints` (`973308b`)이며, `RoomLocator`를 런타임 설정 경계로 확장하고 non-local owner 응답에 `owner.node_id` / optional `owner.base_url` metadata를 포함하도록 정리했다.
 - storage hardening 변경인 `fix(storage): save snapshots atomically and clean stale temp files` (`ee800ef`)와 `fix(storage): clean stale temp snapshots on startup` (`188e6f4`)도 현재 브랜치와 원격 브랜치에 반영돼 있다.
 - 현재 런타임은 여전히 단일 프로세스 owner 판정과 static owner hints 수준으로 유지되며, 실제 멀티 프로세스 활성화는 지원하지 않는다.
@@ -42,6 +42,7 @@
 
 ## Execution Log
 
+- 2026-04-19: Codex 자동화가 예전 작업 slug 기반 브랜치 `codex/storage-temp-handling`을 계속 사용해 역할 이름과 어긋나는 문제를 정리했다. 현재 협업 브랜치 이름을 `codex/backend-realtime-api`로 변경했고, 이후 문서 기준도 역할 중심 브랜치명으로 맞췄다. repo 내부 검색으로는 이 이름을 생성하는 하드코딩 코드는 없었고, 저장소 안에는 checklist 기록만 남아 있었다. 따라서 repo 차원 조치는 현재 브랜치/원격 브랜치 이름 정리와 문서 규칙 추가로 제한했다.
 - 2026-04-19: 상태 문서 기준 미완료 다음 작업 1건을 checklist status reconciliation으로 확정했다. 이번 run에서는 `docs/checklist.md`의 `Current Status`를 최신 landed commit `973308b` 기준으로 갱신했고, 이미 landed 된 `FileSnapshotStore` atomic replace 변경을 계속 미완료로 반복 기록하던 stale execution log를 정리해 milestone 중심 로그로 압축했다. 검증은 `git status --short --branch`, `git log --oneline --decorate -n 12`, `git rev-list --left-right --count origin/codex/storage-temp-handling...HEAD`, `cargo fmt --check`, `./scripts/verify.sh core`, `git diff --check -- docs/checklist.md`로 수행했고 모두 통과했다. publish 계열 확인으로 `./scripts/preflight.sh publish`, `git add -- docs/checklist.md`, `git commit -m "docs(docs): reconcile checklist stale execution log"`, `git push origin codex/storage-temp-handling`를 sandboxed 실행으로 시도했을 때는 `.git/index.lock` 또는 `.git/codex-preflight-2.lock` 생성이 `Read-only file system`으로 차단됐고 push도 `Could not resolve host: github.com`으로 실패했다. 이 항목의 재발 방지 범위는 sandbox 차단 제거가 아니라 조기 탐지와 unrestricted fallback 분리이며, 이후 unrestricted 실행에서는 같은 commit/push가 정상 완료됐다.
 - 2026-04-19: `RoomLocator` 경계를 테스트 주입 수준에서 실제 런타임 설정 경계로 확장했다. `src/config.rs`에 `ROOM_LOCATOR`, `NODE_ID`, `ROOM_OWNER_HINTS_PATH`를 추가했고, `src/collab/locator.rs`에 file-backed `StaticRoomLocator`와 config factory를 구현했다. non-local owner는 이제 단순 `409` 문자열 대신 optional `owner.node_id` / `owner.base_url` metadata를 포함해 응답하며, `README.md`, `docs/setup.md`, `docs/api.md`, `docs/architecture.md`, `.env.example`도 새 계약에 맞춰 갱신했다.
 - 2026-04-19: `RoomLocator` ownership resolver 경계를 도입해 `src/state.rs`, `src/routes/documents.rs`, `src/collab/ws.rs`가 document room restore 전에 owner 판정을 먼저 통과하도록 연결했다. 관련 unit test와 document detail non-local owner rejection 회귀 테스트, architecture/API/conventions 문서를 함께 갱신했다.
