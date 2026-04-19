@@ -20,6 +20,12 @@
 - [x] 인증과 문서 접근 제어 추가
 - [x] frontend editor provider와 end-to-end 상호운용 테스트 추가
 
+## Current Status
+
+- bootstrap 범위의 백엔드 구현 작업은 모두 완료됐다.
+- `fix(storage): save snapshots atomically and clean stale temp files` (`ee800ef`)는 현재 브랜치 `codex/storage-temp-handling`과 `origin/codex/storage-temp-handling`에 이미 반영돼 있다.
+- 다음 구현 후보는 외부 snapshot store와 owner coordination 저장소가 필요한 멀티 프로세스 room 분산 지원이며, 현재 저장소 범위에서는 blocked 상태다.
+
 ## WS / Yrs Follow-up Items
 
 - [x] incoming awareness payload server validation added
@@ -30,6 +36,10 @@
 - [x] `yrs-axum` upstream 변화에 맞춘 provider compatibility 검증 자동화
 
 ## Execution Log
+
+- 2026-04-19: 상태 문서 기준 미완료 다음 작업 1건을 `FileSnapshotStore` 저장/복구 변경 묶음의 상태 정합성 복구로 확정했다. 이번 run에서는 체크리스트 상단에 `Current Status`를 추가해 bootstrap 범위 구현이 모두 완료됐고 `ee800ef fix(storage): save snapshots atomically and clean stale temp files`가 현재 로컬/원격 브랜치에 이미 반영돼 있음을 명시했다. 검증은 `git status --short --branch`, `git log --oneline --decorate -n 20`, `git rev-list --left-right --count origin/codex/storage-temp-handling...HEAD`, `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`, `git diff --check -- docs/checklist.md`로 수행했다. `cargo fmt --check`와 `cargo check --locked`는 통과했고 `cargo test --locked`는 `axum-test`가 `Cannot create socket address for use`로 실패해 WebSocket/삭제 통합 테스트 10건이 환경 제약으로 중단됐다. 이어서 `git add -- docs/checklist.md && git commit -m "docs(docs): reconcile checklist current status"`로 publish 마감을 시도했지만 `.git/index.lock` 생성이 다시 `Read-only file system`으로 차단됐다. 우회 경로 확인을 위해 GitHub 앱 저장소 목록도 재조회했으나 `System-Docs-H/Back-End`는 현재 연결 범위에 없어 원격 push 대체 경로 역시 blocked 상태다.
+
+- 2026-04-19: 상태 문서와 실제 저장소 상태의 불일치를 정리하는 1건을 수행했다. 반복적으로 blocked로 남아 있던 `FileSnapshotStore` temp snapshot hardening 작업은 이미 `e1fe403 fix(storage): harden temp snapshot handling` 커밋에 반영돼 있고, 현재 브랜치 `codex/storage-temp-handling`은 `git rev-list --left-right --count origin/codex/storage-temp-handling...HEAD` 기준 `0 0`으로 `origin/codex/storage-temp-handling`과 동기화돼 있음을 확인했다. 후속 `9c04589 chore(repo): ignore cron prompt file`까지 원격에 반영되어 현재 워크트리는 clean 상태였고, 이번 run의 변경 범위는 stale 실행 로그 정합성 복구를 위한 `docs/checklist.md` 1파일로 제한했다. 검증은 `git status --short`, `git log --oneline --decorate -n 12`, `git show --stat --name-only --format=fuller e1fe403`, `git rev-list --left-right --count origin/codex/storage-temp-handling...HEAD`, `git diff --check -- docs/checklist.md`, `cargo fmt --check`, `cargo check --locked`, `cargo test --locked`로 수행했다. `cargo check --locked`는 통과했고 `cargo test --locked`는 `axum-test`가 `Cannot create socket address for use`로 실패해 WebSocket/삭제 통합 테스트 10건이 환경 제약으로 중단됐다. 이어서 `git add -- docs/checklist.md && git commit -m "docs(docs): reconcile checklist execution log"`로 마감하려 했지만 `.git/index.lock` 생성이 다시 `Read-only file system`으로 차단됐다. publish 우회 경로도 확인했으나 `gh` CLI는 설치되어 있지 않았고 GitHub 앱에서도 `System-Docs-H/Back-End` 저장소가 검색되지 않아 이번 run의 커밋/푸시는 blocked 상태다. 이제 storage hardening 변경 묶음 자체는 blocked 항목이 아니라 landed 상태다.
 
 - 2026-04-19: 상태 문서 기준 미완료 다음 작업인 `FileSnapshotStore` atomic replace 저장 변경 묶음의 검증·publish 마감 1건만 다시 수행했다. 작업 범위는 기존과 동일하게 `README.md`, `docs/architecture.md`, `src/storage/file_snapshot_store.rs`, `tests/health.rs`, 그리고 이번 실행 로그를 남기는 `docs/checklist.md`로 유지했고 무관한 `.gitignore` 수정은 제외했다. 검증은 `cargo fmt --check`와 `git diff --check -- README.md docs/architecture.md docs/checklist.md src/storage/file_snapshot_store.rs tests/health.rs`를 통과했다. `cargo check --locked`와 `cargo test --locked file_snapshot_store_`는 `https://index.crates.io/config.json` 다운로드 단계에서 `Could not resolve host: index.crates.io`로 실패했고, `cargo check --locked --offline`와 `cargo test --locked --offline file_snapshot_store_`는 로컬 crates.io index에 `axum` 패키지가 없어 실패했다. publish 경로도 재확인했지만 `gh` CLI가 설치되어 있지 않았고, `git add -- README.md docs/architecture.md docs/checklist.md src/storage/file_snapshot_store.rs tests/health.rs` 및 `.git/index.lock` 생성은 모두 `Read-only file system`으로 차단됐다. 추가 우회 가능성 확인을 위해 GitHub 커넥터 접근 범위를 조회했으나 현재 세션에는 `System-Docs-H/Back-End` 저장소 권한이 없어 원격 커밋/푸시 대체 경로도 blocked 상태다.
 
