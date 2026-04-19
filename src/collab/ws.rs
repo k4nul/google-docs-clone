@@ -44,12 +44,18 @@ async fn serve_room_socket(
     doc_id: Uuid,
 ) {
     let active_sessions = room.start_session();
-    info!(%doc_id, active_sessions, "websocket collaboration session started");
+    info!(
+        %doc_id,
+        active_sessions,
+        coordinator_mode = coordinator.mode(),
+        "websocket collaboration session started"
+    );
 
     if active_sessions == 1 {
         if let Err(error) = coordinator.room_activated(&doc_id) {
             warn!(
                 %doc_id,
+                coordinator_mode = coordinator.mode(),
                 %error,
                 "failed to activate room coordinator for websocket collaboration session"
             );
@@ -89,6 +95,7 @@ async fn serve_room_socket(
             if let Err(error) = coordinator.room_deactivated(&doc_id) {
                 warn!(
                     %doc_id,
+                    coordinator_mode = coordinator.mode(),
                     %error,
                     "failed to deactivate room coordinator after websocket session"
                 );

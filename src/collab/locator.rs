@@ -337,6 +337,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             room_locator: "static".to_owned(),
+            room_coordinator: "noop".to_owned(),
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -367,6 +368,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             room_locator: "static".to_owned(),
+            room_coordinator: "noop".to_owned(),
             node_id: "node-a".to_owned(),
             room_owner_hints_path: None,
         };
@@ -413,6 +415,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             room_locator: "static".to_owned(),
+            room_coordinator: "noop".to_owned(),
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -461,6 +464,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             room_locator: "static".to_owned(),
+            room_coordinator: "noop".to_owned(),
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -492,6 +496,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             room_locator: "unsupported".to_owned(),
+            room_coordinator: "noop".to_owned(),
             node_id: DEFAULT_NODE_ID.to_owned(),
             room_owner_hints_path: None,
         };

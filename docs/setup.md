@@ -18,6 +18,7 @@ cargo run
 기본 `API_TOKEN`은 `dev-admin-token`이며, 개발 환경에서는 이 토큰으로 문서 생성/목록 API를 호출합니다.
 기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`를 함께 설정합니다.
 기본 `ROOM_LOCATOR`는 `local`이며, `static`으로 바꾸면 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 설정해 문서별 owner 힌트를 읽습니다.
+기본 `ROOM_COORDINATOR`는 `noop`이며, `logging`으로 바꾸면 room 활성/비활성 lifecycle을 `NODE_ID` 기준 tracing log로만 남깁니다.
 
 ## Test
 
@@ -41,6 +42,7 @@ cargo run
 - `SNAPSHOT_STORE`: `memory` 또는 `file`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `ROOM_LOCATOR`: `local` 또는 `static`
+- `ROOM_COORDINATOR`: `noop` 또는 `logging`
 - `NODE_ID`: 현재 collaboration node 식별자
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 owner hints JSON 파일 경로
 

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    collab::coordinator::{RoomCoordinator, noop_room_coordinator},
+    collab::coordinator::{RoomCoordinator, noop_room_coordinator, room_coordinator_from_config},
     collab::locator::{ResolvedRoom, RoomLocator, local_room_locator, room_locator_from_config},
     collab::rooms::RoomRegistry,
     config::{Config, DEFAULT_FRONTEND_ORIGIN},
@@ -94,7 +94,7 @@ impl AppState {
                 .map_err(anyhow::Error::from)
                 .map_err(AppError::from)?,
             room_locator_from_config(config)?,
-            noop_room_coordinator(),
+            room_coordinator_from_config(config)?,
         )
     }
 

@@ -35,6 +35,7 @@ fn test_config() -> Config {
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
         room_locator: "local".to_owned(),
+        room_coordinator: "noop".to_owned(),
         node_id: "test-node".to_owned(),
         room_owner_hints_path: None,
     }
@@ -79,6 +80,10 @@ impl RecordingRoomCoordinator {
 }
 
 impl RoomCoordinator for RecordingRoomCoordinator {
+    fn mode(&self) -> &'static str {
+        "recording"
+    }
+
     fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
         self.events
             .lock()
@@ -100,6 +105,10 @@ impl RoomCoordinator for RecordingRoomCoordinator {
 struct FailingRoomCoordinator;
 
 impl RoomCoordinator for FailingRoomCoordinator {
+    fn mode(&self) -> &'static str {
+        "failing"
+    }
+
     fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
         Err(RoomCoordinatorError::Operation(format!(
             "unable to acquire lease for {doc_id}"
@@ -1090,6 +1099,34 @@ async fn app_state_uses_file_snapshot_store_from_config() {
     assert!(snapshot_dir.join(format!("{}.json", document.id)).exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_uses_logging_room_coordinator_from_config() {
+    let mut config = test_config();
+    config.room_coordinator = "logging".to_owned();
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with logging coordinator");
+    assert_eq!(state.room_coordinator().mode(), "logging");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Logged room".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("logging coordinator should not affect snapshot persistence");
+
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
 }
 
 #[tokio::test]
