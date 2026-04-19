@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/sqlite/heed/jammdb/fjall/redb/sled/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/sqlite/heed/jammdb/fjall/persy/redb/sled/s3/managed snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 memory/file/sqlite/heed/jammdb/fjall/redb/sled/s3/managed adapter
+- `SnapshotStore` trait 및 memory/file/sqlite/heed/jammdb/fjall/persy/redb/sled/s3/managed adapter
 - `RoomLocator` 경계와 config-driven `local`/`static`/`file`/`sqlite`/`managed` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file`/`sqlite`/`managed` session lifecycle hook
 
@@ -99,12 +99,13 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `redb`, `sled`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `redb`, `sled`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `SNAPSHOT_SQLITE_PATH`: `SNAPSHOT_STORE=sqlite`일 때 snapshot SQLite DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: `SNAPSHOT_STORE=heed`일 때 snapshot heed DB 디렉터리 경로
 - `SNAPSHOT_JAMMDB_PATH`: `SNAPSHOT_STORE=jammdb`일 때 snapshot jammdb 파일 경로
 - `SNAPSHOT_FJALL_PATH`: `SNAPSHOT_STORE=fjall`일 때 snapshot fjall DB 디렉터리 경로
+- `SNAPSHOT_PERSY_PATH`: `SNAPSHOT_STORE=persy`일 때 snapshot persy 파일 경로
 - `SNAPSHOT_REDB_PATH`: `SNAPSHOT_STORE=redb`일 때 snapshot redb 파일 경로
 - `SNAPSHOT_SLED_PATH`: `SNAPSHOT_STORE=sled`일 때 snapshot sled DB 디렉터리 경로
 - `SNAPSHOT_S3_ENDPOINT`: `SNAPSHOT_STORE=s3`일 때 S3-compatible object storage endpoint
@@ -139,7 +140,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
-- 기본 in-memory snapshot store와 로컬 file/sqlite/heed/jammdb/fjall/redb/sled, S3-compatible object storage, external managed snapshot store 지원
+- 기본 in-memory snapshot store와 로컬 file/sqlite/heed/jammdb/fjall/persy/redb/sled, S3-compatible object storage, external managed snapshot store 지원
 - config-driven room locator local/static/file/sqlite/managed 모드와 room coordinator dry-run logging/file/sqlite/managed state 모드 지원
 
 ## 비범위
@@ -148,9 +149,9 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서 수정용 REST API
 - 추가 vendor-specific database durability backend
 
-현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`는 같은 `SnapshotStore` 경계를 vendor-specific embedded database durability로 확장해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
+현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`는 같은 `SnapshotStore` 경계를 vendor-specific embedded database durability로 확장해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
 
-현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 vendor-specific embedded database durability backend인 heed/jammdb/fjall/redb/sled, S3-compatible object storage durability backend, shared SQLite를 넘어서는 external durability backend 자체, managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
+현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 vendor-specific embedded database durability backend인 heed/jammdb/fjall/persy/redb/sled, S3-compatible object storage durability backend, shared SQLite를 넘어서는 external durability backend 자체, managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
 
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url` 및 대응 헤더로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
@@ -183,6 +184,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=heed`이면 snapshot과 문서 토큰이 `SNAPSHOT_HEED_PATH` heed LMDB 디렉터리의 `snapshots` database에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 heed catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=jammdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_JAMMDB_PATH` jammdb 파일의 `snapshots` bucket에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 jammdb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=fjall`이면 snapshot과 문서 토큰이 `SNAPSHOT_FJALL_PATH` fjall DB 디렉터리의 `snapshots` keyspace에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 fjall catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=persy`이면 snapshot과 문서 토큰이 `SNAPSHOT_PERSY_PATH` persy 파일의 `snapshots` segment와 `snapshots_by_doc_id` index에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 persy catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=redb`이면 snapshot과 문서 토큰이 `SNAPSHOT_REDB_PATH` redb 파일의 `snapshots` 테이블에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 redb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=sled`이면 snapshot과 문서 토큰이 `SNAPSHOT_SLED_PATH` sled DB 디렉터리의 key-value 엔트리에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 sled catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=s3`이면 snapshot과 문서 토큰이 `SNAPSHOT_S3_ENDPOINT` / `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 조합의 S3 object key `<prefix><doc_id>.json`에 저장된다. startup hydrate는 bucket listing 뒤 각 object를 읽어 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
@@ -191,6 +193,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `HeedSnapshotStore`는 LMDB-backed named database upsert로 기존 snapshot을 교체하며, 손상된 snapshot payload는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `JammdbSnapshotStore`는 single-file B+ tree bucket upsert로 기존 snapshot을 교체하며, 손상된 snapshot payload는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `FjallSnapshotStore`는 LSM-tree keyspace upsert 뒤 `PersistMode::SyncAll`로 journal을 동기화해 기존 snapshot을 교체하며, 손상된 snapshot payload는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
+- `PersySnapshotStore`는 single-file copy-on-write segment update와 `doc_id -> record_id` replace index를 함께 사용해 기존 snapshot을 교체하며, 손상된 snapshot payload나 dangling index entry는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `RedbSnapshotStore`는 key-value upsert로 기존 snapshot을 교체하며, 손상된 snapshot payload는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.

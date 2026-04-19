@@ -3,6 +3,7 @@ mod fjall_snapshot_store;
 mod heed_snapshot_store;
 mod jammdb_snapshot_store;
 mod managed_snapshot_store;
+mod persy_snapshot_store;
 mod redb_snapshot_store;
 mod s3_snapshot_store;
 mod sled_snapshot_store;
@@ -28,6 +29,7 @@ pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use heed_snapshot_store::HeedSnapshotStore;
 pub use jammdb_snapshot_store::JammdbSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
+pub use persy_snapshot_store::PersySnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
@@ -178,6 +180,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "fjall" => Ok(Arc::new(FjallSnapshotStore::new(
             &config.snapshot_fjall_path,
         )?)),
+        "persy" => Ok(Arc::new(PersySnapshotStore::new(
+            &config.snapshot_persy_path,
+        )?)),
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
         )?)),
@@ -225,7 +230,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
