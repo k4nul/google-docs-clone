@@ -260,6 +260,7 @@ dependencies = [
  "s3",
  "serde",
  "serde_json",
+ "siamesedb",
  "sled",
  "thiserror 2.0.18",
  "tokio",
@@ -2399,6 +2400,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
+name = "rabuf"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9712349a6eee0bf4e080b54a5a43f053876c709429a7bf03fc28c6f7e8c4b959"
+
+[[package]]
 name = "rand"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3087,6 +3094,16 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "siamesedb"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40cf7378351d32ccdfe984218df60dccf06a6f7da4e304aea8e944f0840d95ba"
+dependencies = [
+ "rabuf",
+ "vu64",
+]
 
 [[package]]
 name = "signal-hook-registry"
@@ -3789,6 +3806,12 @@ name = "vsimd"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
+
+[[package]]
+name = "vu64"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99730d1707658514522f13e96962d7c143592c4ab26ff351366c274051049cea"
 
 [[package]]
 name = "walkdir"
