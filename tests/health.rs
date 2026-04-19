@@ -42,6 +42,7 @@ fn test_config() -> Config {
         room_locator: "local".to_owned(),
         room_coordinator: "noop".to_owned(),
         room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+        room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
         room_coordinator_heartbeat_interval_secs: 10,
         room_coordinator_lease_ttl_secs: 30,
         node_id: "test-node".to_owned(),
@@ -582,6 +583,161 @@ async fn document_detail_endpoint_includes_base_url_for_non_local_file_room_owne
     assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:5001");
 
     fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_rejects_non_local_sqlite_room_owner() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("sqlite-room-locator");
+    let sqlite_path = coordinator_dir.join("room-coordinator.sqlite3");
+    config.room_locator = "sqlite".to_owned();
+    config.room_coordinator_sqlite_path = sqlite_path.to_string_lossy().into_owned();
+    config.node_id = "node-a".to_owned();
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with sqlite locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote sqlite owner".to_owned()))
+        .expect("document should be created");
+
+    let connection = rusqlite::Connection::open(&sqlite_path).expect("sqlite file should open");
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS room_leases (
+                doc_id TEXT PRIMARY KEY,
+                node_id TEXT NOT NULL,
+                base_url TEXT,
+                lease_id TEXT NOT NULL,
+                epoch INTEGER NOT NULL,
+                activated_at TEXT NOT NULL,
+                renewed_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            );",
+        )
+        .expect("sqlite schema should initialize");
+    let now = Utc::now();
+    connection
+        .execute(
+            "INSERT INTO room_leases (
+                doc_id,
+                node_id,
+                base_url,
+                lease_id,
+                epoch,
+                activated_at,
+                renewed_at,
+                expires_at
+            ) VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![
+                document.id.to_string(),
+                "node-b",
+                Uuid::new_v4().to_string(),
+                2_i64,
+                now.to_rfc3339(),
+                now.to_rfc3339(),
+                (now + ChronoDuration::seconds(30)).to_rfc3339(),
+            ],
+        )
+        .expect("sqlite room lease should be written");
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(payload["owner"]["node_id"], "node-b");
+    assert!(payload["owner"]["base_url"].is_null());
+
+    fs::remove_dir_all(coordinator_dir).expect("test sqlite directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_includes_base_url_for_non_local_sqlite_room_owner() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("sqlite-room-locator-with-base-url");
+    let sqlite_path = coordinator_dir.join("room-coordinator.sqlite3");
+    config.room_locator = "sqlite".to_owned();
+    config.room_coordinator_sqlite_path = sqlite_path.to_string_lossy().into_owned();
+    config.node_id = "node-a".to_owned();
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with sqlite locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote sqlite owner with base url".to_owned()))
+        .expect("document should be created");
+
+    let connection = rusqlite::Connection::open(&sqlite_path).expect("sqlite file should open");
+    connection
+        .execute_batch(
+            "CREATE TABLE IF NOT EXISTS room_leases (
+                doc_id TEXT PRIMARY KEY,
+                node_id TEXT NOT NULL,
+                base_url TEXT,
+                lease_id TEXT NOT NULL,
+                epoch INTEGER NOT NULL,
+                activated_at TEXT NOT NULL,
+                renewed_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            );",
+        )
+        .expect("sqlite schema should initialize");
+    let now = Utc::now();
+    connection
+        .execute(
+            "INSERT INTO room_leases (
+                doc_id,
+                node_id,
+                base_url,
+                lease_id,
+                epoch,
+                activated_at,
+                renewed_at,
+                expires_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                document.id.to_string(),
+                "node-b",
+                "http://node-b.internal:5100/",
+                Uuid::new_v4().to_string(),
+                3_i64,
+                now.to_rfc3339(),
+                now.to_rfc3339(),
+                (now + ChronoDuration::seconds(30)).to_rfc3339(),
+            ],
+        )
+        .expect("sqlite room lease should be written");
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(payload["owner"]["node_id"], "node-b");
+    assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:5100");
+
+    fs::remove_dir_all(coordinator_dir).expect("test sqlite directory should be cleaned up");
 }
 
 #[tokio::test]
@@ -1376,6 +1532,79 @@ async fn app_state_uses_file_room_coordinator_from_config() {
         .room_deactivated(&document.id)
         .expect("file coordinator should remove active room state");
     assert!(!state_path.exists());
+
+    fs::remove_dir_all(coordinator_dir).expect("test coordinator directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_uses_sqlite_room_coordinator_from_config() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("sqlite-room-coordinator");
+    let sqlite_path = coordinator_dir.join("room-coordinator.sqlite3");
+    config.room_coordinator = "sqlite".to_owned();
+    config.room_coordinator_sqlite_path = sqlite_path.to_string_lossy().into_owned();
+    config.node_base_url = Some("http://node-a.internal:4200/".to_owned());
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with sqlite coordinator");
+    assert_eq!(state.room_coordinator().mode(), "sqlite");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Sqlite coordinated room".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    state
+        .room_coordinator()
+        .room_activated(&document.id)
+        .expect("sqlite coordinator should persist active room state");
+    let connection = rusqlite::Connection::open(&sqlite_path).expect("sqlite file should open");
+    let persisted_state: Value = connection
+        .query_row(
+            "SELECT json_object(
+                'doc_id', doc_id,
+                'node_id', node_id,
+                'base_url', base_url,
+                'lease_id', lease_id,
+                'epoch', epoch,
+                'activated_at', activated_at,
+                'renewed_at', renewed_at,
+                'expires_at', expires_at
+            )
+             FROM room_leases
+             WHERE doc_id = ?1",
+            [document.id.to_string()],
+            |row| row.get::<_, String>(0),
+        )
+        .map(|json| serde_json::from_str(&json).expect("sqlite room lease json should parse"))
+        .expect("sqlite coordinator should persist active room state");
+    assert_eq!(persisted_state["base_url"], "http://node-a.internal:4200");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("sqlite coordinator should not affect snapshot persistence");
+
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    state
+        .room_coordinator()
+        .room_deactivated(&document.id)
+        .expect("sqlite coordinator should remove active room state");
+    let remaining: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM room_leases WHERE doc_id = ?1",
+            [document.id.to_string()],
+            |row| row.get(0),
+        )
+        .expect("sqlite coordinator should query room lease count");
+    assert_eq!(remaining, 0);
 
     fs::remove_dir_all(coordinator_dir).expect("test coordinator directory should be cleaned up");
 }

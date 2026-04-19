@@ -12,6 +12,7 @@ use std::{
 };
 
 use chrono::{DateTime, TimeDelta, Utc};
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{info, warn};
@@ -27,6 +28,8 @@ pub enum RoomCoordinatorError {
     #[error("room coordination failed: {0}")]
     Operation(String),
 }
+
+const SQLITE_ROOM_COORDINATOR_BUSY_TIMEOUT_SECS: u64 = 5;
 
 pub trait RoomCoordinator: Send + Sync {
     fn mode(&self) -> &'static str;
@@ -120,6 +123,15 @@ struct FileRoomLeaseHeartbeat {
     thread: Option<JoinHandle<()>>,
 }
 
+pub struct SqliteRoomCoordinator {
+    node_id: Arc<str>,
+    base_url: Option<String>,
+    path: PathBuf,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
+    heartbeats: Mutex<HashMap<Uuid, FileRoomLeaseHeartbeat>>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct PersistedRoomCoordinatorState {
     pub(crate) doc_id: Uuid,
@@ -135,6 +147,66 @@ pub(crate) struct PersistedRoomCoordinatorState {
     pub(crate) renewed_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug)]
+struct SqliteRoomCoordinatorRow {
+    doc_id: String,
+    node_id: String,
+    base_url: Option<String>,
+    lease_id: String,
+    epoch: i64,
+    activated_at: String,
+    renewed_at: String,
+    expires_at: String,
+}
+
+fn parse_room_coordinator_timestamp(
+    value: &str,
+    doc_id: Uuid,
+) -> Result<DateTime<Utc>, RoomCoordinatorError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|_| {
+            RoomCoordinatorError::Operation(format!(
+                "persisted coordinator state for document `{doc_id}` contains an invalid RFC3339 timestamp"
+            ))
+        })
+}
+
+fn sqlite_room_coordinator_state_from_row(
+    row: SqliteRoomCoordinatorRow,
+) -> Result<PersistedRoomCoordinatorState, RoomCoordinatorError> {
+    let doc_id = Uuid::parse_str(&row.doc_id).map_err(|_| {
+        RoomCoordinatorError::Operation(format!(
+            "persisted sqlite room lease row contains an invalid doc_id `{}`",
+            row.doc_id
+        ))
+    })?;
+    let lease_id = Uuid::parse_str(&row.lease_id).map_err(|_| {
+        RoomCoordinatorError::Operation(format!(
+            "persisted sqlite room lease row for document `{doc_id}` contains an invalid lease_id"
+        ))
+    })?;
+    let epoch = u64::try_from(row.epoch).map_err(|_| {
+        RoomCoordinatorError::Operation(format!(
+            "persisted sqlite room lease row for document `{doc_id}` contains a negative epoch"
+        ))
+    })?;
+    let activated_at = parse_room_coordinator_timestamp(&row.activated_at, doc_id)?;
+    let renewed_at = parse_room_coordinator_timestamp(&row.renewed_at, doc_id)?;
+    let expires_at = parse_room_coordinator_timestamp(&row.expires_at, doc_id)?;
+
+    Ok(PersistedRoomCoordinatorState {
+        doc_id,
+        node_id: row.node_id,
+        base_url: row.base_url,
+        lease_id: Some(lease_id),
+        epoch,
+        activated_at,
+        renewed_at: Some(renewed_at),
+        expires_at: Some(expires_at),
+    })
 }
 
 impl FileRoomCoordinator {
@@ -545,6 +617,503 @@ impl FileRoomCoordinator {
     }
 }
 
+impl SqliteRoomCoordinator {
+    pub fn new(
+        node_id: impl Into<String>,
+        base_url: Option<String>,
+        path: impl Into<PathBuf>,
+        heartbeat_interval: Duration,
+        lease_ttl: Duration,
+    ) -> Result<Self, RoomCoordinatorError> {
+        let node_id = node_id.into();
+        let node_id = node_id.trim();
+        if node_id.is_empty() {
+            return Err(RoomCoordinatorError::Operation(
+                "NODE_ID cannot be empty when ROOM_COORDINATOR=sqlite".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be greater than zero when ROOM_COORDINATOR=sqlite".to_owned(),
+            ));
+        }
+
+        if lease_ttl.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_LEASE_TTL_SECS must be greater than zero when ROOM_COORDINATOR=sqlite".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval >= lease_ttl {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=sqlite".to_owned(),
+            ));
+        }
+
+        let base_url = base_url
+            .as_deref()
+            .map(|value| normalize_origin_url(value, "NODE_BASE_URL"))
+            .transpose()
+            .map_err(RoomCoordinatorError::Operation)?;
+
+        let path = path.into();
+        if path.as_os_str().is_empty() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_SQLITE_PATH cannot be empty when ROOM_COORDINATOR=sqlite"
+                    .to_owned(),
+            ));
+        }
+
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            fs::create_dir_all(parent).map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to create sqlite room coordinator parent dir `{}`: {error}",
+                    parent.display()
+                ))
+            })?;
+        }
+
+        let coordinator = Self {
+            node_id: Arc::<str>::from(node_id.to_owned()),
+            base_url,
+            path,
+            heartbeat_interval,
+            lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
+        };
+        let connection = coordinator.open_connection()?;
+        coordinator.initialize_schema(&connection)?;
+
+        Ok(coordinator)
+    }
+
+    pub fn node_id(&self) -> &str {
+        &self.node_id
+    }
+
+    pub fn heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    pub fn lease_ttl(&self) -> Duration {
+        self.lease_ttl
+    }
+
+    fn open_connection(&self) -> Result<Connection, RoomCoordinatorError> {
+        let connection = Connection::open(&self.path).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to open sqlite room coordinator database `{}`: {error}",
+                self.path.display()
+            ))
+        })?;
+        connection
+            .busy_timeout(Duration::from_secs(
+                SQLITE_ROOM_COORDINATOR_BUSY_TIMEOUT_SECS,
+            ))
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to configure sqlite room coordinator busy timeout `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+        Ok(connection)
+    }
+
+    fn initialize_schema(&self, connection: &Connection) -> Result<(), RoomCoordinatorError> {
+        connection
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS room_leases (
+                    doc_id TEXT PRIMARY KEY,
+                    node_id TEXT NOT NULL,
+                    base_url TEXT,
+                    lease_id TEXT NOT NULL,
+                    epoch INTEGER NOT NULL,
+                    activated_at TEXT NOT NULL,
+                    renewed_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );",
+            )
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to initialize sqlite room coordinator schema `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+        Ok(())
+    }
+
+    fn load_state_from_connection(
+        &self,
+        connection: &Connection,
+        doc_id: &Uuid,
+    ) -> Result<Option<PersistedRoomCoordinatorState>, RoomCoordinatorError> {
+        let row = connection
+            .query_row(
+                "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
+                 FROM room_leases
+                 WHERE doc_id = ?1",
+                [doc_id.to_string()],
+                |row| {
+                    Ok(SqliteRoomCoordinatorRow {
+                        doc_id: row.get(0)?,
+                        node_id: row.get(1)?,
+                        base_url: row.get(2)?,
+                        lease_id: row.get(3)?,
+                        epoch: row.get(4)?,
+                        activated_at: row.get(5)?,
+                        renewed_at: row.get(6)?,
+                        expires_at: row.get(7)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to read sqlite room lease `{}` for document `{doc_id}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        row.map(sqlite_room_coordinator_state_from_row).transpose()
+    }
+
+    #[cfg(test)]
+    fn load_state(
+        &self,
+        doc_id: &Uuid,
+    ) -> Result<Option<PersistedRoomCoordinatorState>, RoomCoordinatorError> {
+        let connection = self.open_connection()?;
+        self.initialize_schema(&connection)?;
+        self.load_state_from_connection(&connection, doc_id)
+    }
+
+    fn lease_ttl_delta(&self) -> Result<TimeDelta, RoomCoordinatorError> {
+        TimeDelta::from_std(self.lease_ttl).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to convert lease TTL to chrono duration: {error}"
+            ))
+        })
+    }
+
+    fn acquire_lease(
+        &self,
+        doc_id: &Uuid,
+    ) -> Result<PersistedRoomCoordinatorState, RoomCoordinatorError> {
+        let mut connection = self.open_connection()?;
+        self.initialize_schema(&connection)?;
+        let transaction = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to start sqlite lease acquire transaction `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        let now = Utc::now();
+        let existing = self.load_state_from_connection(&transaction, doc_id)?;
+
+        if let Some(existing_state) = existing.as_ref() {
+            let owner_node_id = existing_state.node_id.trim();
+            if owner_node_id.is_empty() {
+                return Err(RoomCoordinatorError::Operation(format!(
+                    "persisted sqlite coordinator lease for document `{doc_id}` has an empty node_id"
+                )));
+            }
+
+            if owner_node_id != self.node_id() {
+                let is_active = existing_state
+                    .expires_at
+                    .map(|expires_at| expires_at > now)
+                    .unwrap_or(true);
+                if is_active {
+                    return Err(RoomCoordinatorError::Operation(format!(
+                        "document `{doc_id}` is already leased by node `{owner_node_id}`"
+                    )));
+                }
+            }
+        }
+
+        let lease_id = Uuid::new_v4();
+        let epoch = existing
+            .as_ref()
+            .map(|state| state.epoch.saturating_add(1))
+            .unwrap_or(1);
+        let expires_at = now + self.lease_ttl_delta()?;
+        let state = PersistedRoomCoordinatorState {
+            doc_id: *doc_id,
+            node_id: self.node_id().to_owned(),
+            base_url: self.base_url.clone(),
+            lease_id: Some(lease_id),
+            epoch,
+            activated_at: now,
+            renewed_at: Some(now),
+            expires_at: Some(expires_at),
+        };
+
+        transaction
+            .execute(
+                "INSERT INTO room_leases (
+                    doc_id,
+                    node_id,
+                    base_url,
+                    lease_id,
+                    epoch,
+                    activated_at,
+                    renewed_at,
+                    expires_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                ON CONFLICT(doc_id) DO UPDATE SET
+                    node_id = excluded.node_id,
+                    base_url = excluded.base_url,
+                    lease_id = excluded.lease_id,
+                    epoch = excluded.epoch,
+                    activated_at = excluded.activated_at,
+                    renewed_at = excluded.renewed_at,
+                    expires_at = excluded.expires_at",
+                params![
+                    state.doc_id.to_string(),
+                    state.node_id.clone(),
+                    state.base_url.clone(),
+                    lease_id.to_string(),
+                    i64::try_from(state.epoch).map_err(|_| {
+                        RoomCoordinatorError::Operation(format!(
+                            "lease epoch for document `{doc_id}` exceeded sqlite INTEGER range"
+                        ))
+                    })?,
+                    state.activated_at.to_rfc3339(),
+                    state
+                        .renewed_at
+                        .expect("newly acquired lease should include renewed_at")
+                        .to_rfc3339(),
+                    state
+                        .expires_at
+                        .expect("newly acquired lease should include expires_at")
+                        .to_rfc3339(),
+                ],
+            )
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to persist sqlite room lease `{}` for document `{doc_id}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        transaction.commit().map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to commit sqlite lease acquire transaction `{}`: {error}",
+                self.path.display()
+            ))
+        })?;
+
+        Ok(state)
+    }
+
+    fn renew_lease(
+        &self,
+        doc_id: &Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<bool, RoomCoordinatorError> {
+        let mut connection = self.open_connection()?;
+        self.initialize_schema(&connection)?;
+        let transaction = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to start sqlite lease renew transaction `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        let Some(mut state) = self.load_state_from_connection(&transaction, doc_id)? else {
+            return Ok(false);
+        };
+
+        if state.node_id.trim() != self.node_id() {
+            return Ok(false);
+        }
+
+        if state.lease_id != Some(lease_id) || state.epoch != epoch {
+            return Ok(false);
+        }
+
+        let now = Utc::now();
+        state.renewed_at = Some(now);
+        state.expires_at = Some(now + self.lease_ttl_delta()?);
+
+        transaction
+            .execute(
+                "UPDATE room_leases
+                 SET base_url = ?2,
+                     renewed_at = ?3,
+                     expires_at = ?4
+                 WHERE doc_id = ?1
+                   AND node_id = ?5
+                   AND lease_id = ?6
+                   AND epoch = ?7",
+                params![
+                    doc_id.to_string(),
+                    state.base_url.clone(),
+                    state
+                        .renewed_at
+                        .expect("renewed lease should include renewed_at")
+                        .to_rfc3339(),
+                    state
+                        .expires_at
+                        .expect("renewed lease should include expires_at")
+                        .to_rfc3339(),
+                    self.node_id(),
+                    lease_id.to_string(),
+                    i64::try_from(epoch).map_err(|_| {
+                        RoomCoordinatorError::Operation(format!(
+                            "lease epoch for document `{doc_id}` exceeded sqlite INTEGER range"
+                        ))
+                    })?,
+                ],
+            )
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to renew sqlite room lease `{}` for document `{doc_id}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        let renewed = transaction.changes() > 0;
+        transaction.commit().map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to commit sqlite lease renew transaction `{}`: {error}",
+                self.path.display()
+            ))
+        })?;
+
+        Ok(renewed)
+    }
+
+    fn release_lease(
+        &self,
+        doc_id: &Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<bool, RoomCoordinatorError> {
+        let mut connection = self.open_connection()?;
+        self.initialize_schema(&connection)?;
+        let transaction = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to start sqlite lease release transaction `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        transaction
+            .execute(
+                "DELETE FROM room_leases
+                 WHERE doc_id = ?1
+                   AND node_id = ?2
+                   AND lease_id = ?3
+                   AND epoch = ?4",
+                params![
+                    doc_id.to_string(),
+                    self.node_id(),
+                    lease_id.to_string(),
+                    i64::try_from(epoch).map_err(|_| {
+                        RoomCoordinatorError::Operation(format!(
+                            "lease epoch for document `{doc_id}` exceeded sqlite INTEGER range"
+                        ))
+                    })?,
+                ],
+            )
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to release sqlite room lease `{}` for document `{doc_id}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        let released = transaction.changes() > 0;
+        transaction.commit().map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to commit sqlite lease release transaction `{}`: {error}",
+                self.path.display()
+            ))
+        })?;
+
+        Ok(released)
+    }
+
+    fn spawn_heartbeat(
+        &self,
+        doc_id: Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<FileRoomLeaseHeartbeat, RoomCoordinatorError> {
+        let coordinator = Self {
+            node_id: Arc::clone(&self.node_id),
+            base_url: self.base_url.clone(),
+            path: self.path.clone(),
+            heartbeat_interval: self.heartbeat_interval,
+            lease_ttl: self.lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
+        };
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_signal = Arc::clone(&stop);
+
+        let thread = thread::Builder::new()
+            .name(format!("sqlite-room-lease-heartbeat-{doc_id}"))
+            .spawn(move || {
+                while !stop_signal.load(Ordering::Relaxed) {
+                    thread::sleep(coordinator.heartbeat_interval);
+
+                    if stop_signal.load(Ordering::Relaxed) {
+                        break;
+                    }
+
+                    match coordinator.renew_lease(&doc_id, lease_id, epoch) {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            warn!(
+                                coordinator_mode = coordinator.mode(),
+                                node_id = coordinator.node_id(),
+                                %doc_id,
+                                lease_id = %lease_id,
+                                epoch,
+                                "stopped sqlite room lease heartbeat because the active lease changed"
+                            );
+                            break;
+                        }
+                        Err(error) => warn!(
+                            coordinator_mode = coordinator.mode(),
+                            node_id = coordinator.node_id(),
+                            %doc_id,
+                            lease_id = %lease_id,
+                            epoch,
+                            %error,
+                            "failed to renew sqlite room lease heartbeat"
+                        ),
+                    }
+                }
+            })
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to spawn sqlite room lease heartbeat thread for `{doc_id}`: {error}"
+                ))
+            })?;
+
+        Ok(FileRoomLeaseHeartbeat {
+            lease_id,
+            epoch,
+            stop,
+            thread: Some(thread),
+        })
+    }
+}
+
 impl RoomCoordinator for FileRoomCoordinator {
     fn mode(&self) -> &'static str {
         "file"
@@ -655,6 +1224,97 @@ impl Drop for FileRoomCoordinator {
     }
 }
 
+impl RoomCoordinator for SqliteRoomCoordinator {
+    fn mode(&self) -> &'static str {
+        "sqlite"
+    }
+
+    fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        let state = self.acquire_lease(doc_id)?;
+        let lease_id = state
+            .lease_id
+            .expect("newly acquired sqlite lease should always have an id");
+        let heartbeat = self.spawn_heartbeat(*doc_id, lease_id, state.epoch)?;
+
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("sqlite room coordinator heartbeat registry should not be poisoned");
+        if heartbeats.contains_key(doc_id) {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread {
+                let _ = thread.join();
+            }
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` already has an active lease heartbeat on this node"
+            )));
+        }
+        heartbeats.insert(*doc_id, heartbeat);
+
+        info!(
+            coordinator_mode = self.mode(),
+            node_id = self.node_id(),
+            %doc_id,
+            lease_id = %lease_id,
+            epoch = state.epoch,
+            expires_at = %state
+                .expires_at
+                .expect("newly acquired sqlite lease should always have an expiry"),
+            path = %self.path.display(),
+            "persisted sqlite-backed room lease state"
+        );
+        Ok(())
+    }
+
+    fn room_deactivated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        let heartbeat = self
+            .heartbeats
+            .lock()
+            .expect("sqlite room coordinator heartbeat registry should not be poisoned")
+            .remove(doc_id);
+
+        let Some(mut heartbeat) = heartbeat else {
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` does not have an active lease heartbeat on this node"
+            )));
+        };
+
+        heartbeat.stop.store(true, Ordering::Relaxed);
+        if let Some(thread) = heartbeat.thread.take() {
+            let _ = thread.join();
+        }
+
+        let released = self.release_lease(doc_id, heartbeat.lease_id, heartbeat.epoch)?;
+        info!(
+            coordinator_mode = self.mode(),
+            node_id = self.node_id(),
+            %doc_id,
+            lease_id = %heartbeat.lease_id,
+            epoch = heartbeat.epoch,
+            released,
+            path = %self.path.display(),
+            "released sqlite-backed room lease state"
+        );
+        Ok(())
+    }
+}
+
+impl Drop for SqliteRoomCoordinator {
+    fn drop(&mut self) {
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("sqlite room coordinator heartbeat registry should not be poisoned");
+
+        for (_doc_id, heartbeat) in heartbeats.iter_mut() {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread.take() {
+                let _ = thread.join();
+            }
+        }
+    }
+}
+
 pub fn noop_room_coordinator() -> Arc<dyn RoomCoordinator> {
     Arc::new(NoopRoomCoordinator)
 }
@@ -679,6 +1339,22 @@ pub fn file_room_coordinator(
     )?))
 }
 
+pub fn sqlite_room_coordinator(
+    node_id: impl Into<String>,
+    base_url: Option<String>,
+    path: impl Into<PathBuf>,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
+) -> Result<Arc<dyn RoomCoordinator>, RoomCoordinatorError> {
+    Ok(Arc::new(SqliteRoomCoordinator::new(
+        node_id,
+        base_url,
+        path,
+        heartbeat_interval,
+        lease_ttl,
+    )?))
+}
+
 pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCoordinator>> {
     match config.room_coordinator.trim().to_ascii_lowercase().as_str() {
         "noop" => Ok(noop_room_coordinator()),
@@ -695,8 +1371,20 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
                 "failed to initialize file room coordinator: {error}"
             ))
         }),
+        "sqlite" => sqlite_room_coordinator(
+            config.node_id.clone(),
+            config.node_base_url.clone(),
+            config.room_coordinator_sqlite_path.clone(),
+            Duration::from_secs(config.room_coordinator_heartbeat_interval_secs),
+            Duration::from_secs(config.room_coordinator_lease_ttl_secs),
+        )
+        .map_err(|error| {
+            AppError::Config(format!(
+                "failed to initialize sqlite room coordinator: {error}"
+            ))
+        }),
         other => Err(AppError::Config(format!(
-            "ROOM_COORDINATOR must be `noop`, `logging`, or `file`, received `{other}`"
+            "ROOM_COORDINATOR must be `noop`, `logging`, `file`, or `sqlite`, received `{other}`"
         ))),
     }
 }
@@ -709,6 +1397,13 @@ mod tests {
     fn temp_state_dir(test_name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
             "backend-room-coordinator-{test_name}-{}",
+            Uuid::new_v4()
+        ))
+    }
+
+    fn temp_sqlite_path(test_name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "backend-room-coordinator-{test_name}-{}.sqlite3",
             Uuid::new_v4()
         ))
     }
@@ -726,6 +1421,7 @@ mod tests {
             room_locator: "local".to_owned(),
             room_coordinator: room_coordinator.to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 1,
             room_coordinator_lease_ttl_secs: 5,
             node_id: "node-a".to_owned(),
@@ -813,6 +1509,66 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_room_coordinator_persists_and_clears_active_room_state() {
+        let path = temp_sqlite_path("sqlite-persist-state");
+        let coordinator = SqliteRoomCoordinator::new(
+            "node-a",
+            Some("http://node-a.internal:4000/".to_owned()),
+            &path,
+            Duration::from_millis(25),
+            Duration::from_millis(80),
+        )
+        .expect("sqlite room coordinator should initialize");
+        let doc_id = Uuid::new_v4();
+
+        coordinator
+            .room_activated(&doc_id)
+            .expect("sqlite coordinator should persist active room state");
+
+        let state = coordinator
+            .load_state(&doc_id)
+            .expect("sqlite coordinator should load persisted room state")
+            .expect("sqlite coordinator should persist a room lease row");
+        assert_eq!(state.doc_id, doc_id);
+        assert_eq!(state.node_id, "node-a");
+        assert!(state.lease_id.is_some());
+        assert_eq!(state.epoch, 1);
+        assert_eq!(
+            state.base_url,
+            Some("http://node-a.internal:4000".to_owned())
+        );
+        let renewed_at = state.renewed_at.expect("lease should include renewed_at");
+        assert!(renewed_at >= state.activated_at);
+        assert!(state.expires_at.expect("lease should include expiry") > renewed_at);
+
+        coordinator
+            .room_deactivated(&doc_id)
+            .expect("sqlite coordinator should remove active room state");
+        assert!(
+            coordinator
+                .load_state(&doc_id)
+                .expect("sqlite coordinator should query room lease state")
+                .is_none()
+        );
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn room_coordinator_from_config_loads_sqlite_mode() {
+        let path = temp_sqlite_path("config-sqlite-mode");
+        let mut config = test_config("sqlite");
+        config.room_coordinator_sqlite_path = path.display().to_string();
+
+        let coordinator = room_coordinator_from_config(&config)
+            .expect("config should produce a sqlite room coordinator");
+
+        assert_eq!(coordinator.mode(), "sqlite");
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
     fn file_room_coordinator_heartbeat_renews_lease_expiry() {
         let root = temp_state_dir("heartbeat-renew");
         let coordinator = FileRoomCoordinator::new(
@@ -868,6 +1624,62 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_room_coordinator_heartbeat_renews_lease_expiry() {
+        let path = temp_sqlite_path("sqlite-heartbeat-renew");
+        let coordinator = SqliteRoomCoordinator::new(
+            "node-a",
+            None,
+            &path,
+            Duration::from_millis(20),
+            Duration::from_millis(90),
+        )
+        .expect("sqlite room coordinator should initialize");
+        let doc_id = Uuid::new_v4();
+
+        coordinator
+            .room_activated(&doc_id)
+            .expect("sqlite coordinator should acquire room lease");
+
+        let initial_state = coordinator
+            .load_state(&doc_id)
+            .expect("sqlite coordinator should load initial room lease state")
+            .expect("sqlite coordinator should persist room lease state");
+        let initial_renewed_at = initial_state
+            .renewed_at
+            .expect("initial state should include renewed_at");
+        let initial_expires_at = initial_state
+            .expires_at
+            .expect("state row should include lease expiry");
+
+        thread::sleep(Duration::from_millis(60));
+
+        let renewed_state = coordinator
+            .load_state(&doc_id)
+            .expect("sqlite coordinator should load renewed room lease state")
+            .expect("sqlite coordinator should keep room lease state");
+        assert_eq!(renewed_state.lease_id, initial_state.lease_id);
+        assert_eq!(renewed_state.epoch, initial_state.epoch);
+        assert!(
+            renewed_state
+                .renewed_at
+                .expect("renewed state should include renewed_at")
+                > initial_renewed_at
+        );
+        assert!(
+            renewed_state
+                .expires_at
+                .expect("renewed state should include lease expiry")
+                > initial_expires_at
+        );
+
+        coordinator
+            .room_deactivated(&doc_id)
+            .expect("sqlite coordinator should release room lease");
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
     fn file_room_coordinator_rejects_active_lease_from_other_node() {
         let root = temp_state_dir("reject-other-node");
         let coordinator = FileRoomCoordinator::new(
@@ -912,6 +1724,60 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_room_coordinator_rejects_active_lease_from_other_node() {
+        let path = temp_sqlite_path("sqlite-reject-other-node");
+        let coordinator = SqliteRoomCoordinator::new(
+            "node-a",
+            None,
+            &path,
+            Duration::from_secs(1),
+            Duration::from_secs(5),
+        )
+        .expect("sqlite room coordinator should initialize");
+        let doc_id = Uuid::new_v4();
+        let now = Utc::now();
+        let connection = Connection::open(&path).expect("sqlite file should be writable");
+        coordinator
+            .initialize_schema(&connection)
+            .expect("sqlite schema should initialize");
+        connection
+            .execute(
+                "INSERT INTO room_leases (
+                    doc_id,
+                    node_id,
+                    base_url,
+                    lease_id,
+                    epoch,
+                    activated_at,
+                    renewed_at,
+                    expires_at
+                ) VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    doc_id.to_string(),
+                    "node-b",
+                    Uuid::new_v4().to_string(),
+                    7_i64,
+                    now.to_rfc3339(),
+                    now.to_rfc3339(),
+                    (now + TimeDelta::seconds(30)).to_rfc3339(),
+                ],
+            )
+            .expect("active sqlite lease should be written");
+
+        let error = coordinator
+            .room_activated(&doc_id)
+            .expect_err("active lease from another node should reject acquisition");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "room coordination failed: document `{doc_id}` is already leased by node `node-b`"
+            )
+        );
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
     fn room_coordinator_from_config_rejects_invalid_file_timing() {
         let mut config = test_config("file");
         config.room_coordinator_heartbeat_interval_secs = 30;
@@ -926,6 +1792,26 @@ mod tests {
             AppError::Config(message) => assert_eq!(
                 message,
                 "failed to initialize file room coordinator: room coordination failed: ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=file"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
+    }
+
+    #[test]
+    fn room_coordinator_from_config_rejects_invalid_sqlite_timing() {
+        let mut config = test_config("sqlite");
+        config.room_coordinator_heartbeat_interval_secs = 30;
+        config.room_coordinator_lease_ttl_secs = 30;
+
+        let error = match room_coordinator_from_config(&config) {
+            Ok(_) => panic!("invalid sqlite lease timing should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "failed to initialize sqlite room coordinator: room coordination failed: ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=sqlite"
             ),
             other => panic!("expected config error, received {other:?}"),
         }
@@ -960,7 +1846,7 @@ mod tests {
         match error {
             AppError::Config(message) => assert_eq!(
                 message,
-                "ROOM_COORDINATOR must be `noop`, `logging`, or `file`, received `unsupported`"
+                "ROOM_COORDINATOR must be `noop`, `logging`, `file`, or `sqlite`, received `unsupported`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }

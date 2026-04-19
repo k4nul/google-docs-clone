@@ -15,6 +15,7 @@ pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
 pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
+pub const DEFAULT_ROOM_COORDINATOR_SQLITE_PATH: &str = "./data/room-coordinator.sqlite3";
 pub const DEFAULT_ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS: u64 = 10;
 pub const DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS: u64 = 30;
 pub const DEFAULT_NODE_ID: &str = "local-node";
@@ -32,6 +33,7 @@ pub struct Config {
     pub room_locator: String,
     pub room_coordinator: String,
     pub room_coordinator_state_dir: String,
+    pub room_coordinator_sqlite_path: String,
     pub room_coordinator_heartbeat_interval_secs: u64,
     pub room_coordinator_lease_ttl_secs: u64,
     pub node_id: String,
@@ -58,6 +60,10 @@ impl Config {
             "ROOM_COORDINATOR_STATE_DIR",
             DEFAULT_ROOM_COORDINATOR_STATE_DIR,
         )?;
+        let room_coordinator_sqlite_path = env_string(
+            "ROOM_COORDINATOR_SQLITE_PATH",
+            DEFAULT_ROOM_COORDINATOR_SQLITE_PATH,
+        )?;
         let room_coordinator_heartbeat_interval_secs = env_u64(
             "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS",
             DEFAULT_ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS,
@@ -82,6 +88,7 @@ impl Config {
             room_locator,
             room_coordinator,
             room_coordinator_state_dir,
+            room_coordinator_sqlite_path,
             room_coordinator_heartbeat_interval_secs,
             room_coordinator_lease_ttl_secs,
             node_id,

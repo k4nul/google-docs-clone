@@ -7,6 +7,7 @@ use std::{
 };
 
 use chrono::Utc;
+use rusqlite::{Connection, OptionalExtension};
 use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
@@ -59,6 +60,51 @@ fn normalize_owner_base_url(base_url: &str) -> Result<String, RoomLocatorError> 
     normalize_origin_url(base_url, "room owner hint base_url").map_err(RoomLocatorError::Config)
 }
 
+fn parse_room_coordinator_timestamp(
+    value: &str,
+    doc_id: Uuid,
+) -> Result<chrono::DateTime<Utc>, RoomLocatorError> {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|_| {
+            RoomLocatorError::LookupFailed(format!(
+                "persisted sqlite coordinator state for document `{doc_id}` contains an invalid RFC3339 timestamp"
+            ))
+        })
+}
+
+fn sqlite_room_coordinator_state_from_row(
+    row: SqliteRoomCoordinatorRow,
+) -> Result<PersistedRoomCoordinatorState, RoomLocatorError> {
+    let doc_id = Uuid::parse_str(&row.doc_id).map_err(|_| {
+        RoomLocatorError::LookupFailed(format!(
+            "persisted sqlite room lease row contains an invalid doc_id `{}`",
+            row.doc_id
+        ))
+    })?;
+    let lease_id = Uuid::parse_str(&row.lease_id).map_err(|_| {
+        RoomLocatorError::LookupFailed(format!(
+            "persisted sqlite room lease row for document `{doc_id}` contains an invalid lease_id"
+        ))
+    })?;
+    let epoch = u64::try_from(row.epoch).map_err(|_| {
+        RoomLocatorError::LookupFailed(format!(
+            "persisted sqlite room lease row for document `{doc_id}` contains a negative epoch"
+        ))
+    })?;
+
+    Ok(PersistedRoomCoordinatorState {
+        doc_id,
+        node_id: row.node_id,
+        base_url: row.base_url,
+        lease_id: Some(lease_id),
+        epoch,
+        activated_at: parse_room_coordinator_timestamp(&row.activated_at, doc_id)?,
+        renewed_at: Some(parse_room_coordinator_timestamp(&row.renewed_at, doc_id)?),
+        expires_at: Some(parse_room_coordinator_timestamp(&row.expires_at, doc_id)?),
+    })
+}
+
 #[derive(Debug, Error)]
 pub enum RoomLocatorError {
     #[error("room ownership locator is misconfigured: {0}")]
@@ -92,10 +138,28 @@ pub struct FileRoomLocator {
     root: PathBuf,
 }
 
+#[derive(Debug)]
+pub struct SqliteRoomLocator {
+    current_node_id: String,
+    path: PathBuf,
+}
+
 #[derive(Debug, Deserialize)]
 struct StaticRoomOwnerHints {
     #[serde(default)]
     documents: HashMap<Uuid, RoomOwnerHint>,
+}
+
+#[derive(Debug)]
+struct SqliteRoomCoordinatorRow {
+    doc_id: String,
+    node_id: String,
+    base_url: Option<String>,
+    lease_id: String,
+    epoch: i64,
+    activated_at: String,
+    renewed_at: String,
+    expires_at: String,
 }
 
 impl StaticRoomLocator {
@@ -166,6 +230,89 @@ impl FileRoomLocator {
 
     fn state_path(&self, doc_id: &Uuid) -> PathBuf {
         self.root.join(format!("{doc_id}.json"))
+    }
+}
+
+impl SqliteRoomLocator {
+    pub fn new(
+        current_node_id: impl Into<String>,
+        path: impl Into<PathBuf>,
+    ) -> Result<Self, RoomLocatorError> {
+        let current_node_id = current_node_id.into();
+        let current_node_id = current_node_id.trim();
+        if current_node_id.is_empty() {
+            return Err(RoomLocatorError::Config(
+                "NODE_ID cannot be empty when ROOM_LOCATOR=sqlite".to_owned(),
+            ));
+        }
+
+        let path = path.into();
+        if path.as_os_str().is_empty() {
+            return Err(RoomLocatorError::Config(
+                "ROOM_COORDINATOR_SQLITE_PATH cannot be empty when ROOM_LOCATOR=sqlite".to_owned(),
+            ));
+        }
+
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            fs::create_dir_all(parent).map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to create sqlite room coordinator parent dir `{}`: {error}",
+                    parent.display()
+                ))
+            })?;
+        }
+
+        let locator = Self {
+            current_node_id: current_node_id.to_owned(),
+            path,
+        };
+        let connection = locator.open_connection()?;
+        locator.initialize_schema(&connection)?;
+        Ok(locator)
+    }
+
+    fn open_connection(&self) -> Result<Connection, RoomLocatorError> {
+        let connection = Connection::open(&self.path).map_err(|error| {
+            RoomLocatorError::LookupFailed(format!(
+                "failed to open sqlite room coordinator database `{}`: {error}",
+                self.path.display()
+            ))
+        })?;
+        connection
+            .busy_timeout(std::time::Duration::from_secs(5))
+            .map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to configure sqlite room coordinator busy timeout `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+        Ok(connection)
+    }
+
+    fn initialize_schema(&self, connection: &Connection) -> Result<(), RoomLocatorError> {
+        connection
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS room_leases (
+                    doc_id TEXT PRIMARY KEY,
+                    node_id TEXT NOT NULL,
+                    base_url TEXT,
+                    lease_id TEXT NOT NULL,
+                    epoch INTEGER NOT NULL,
+                    activated_at TEXT NOT NULL,
+                    renewed_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );",
+            )
+            .map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to initialize sqlite room coordinator schema `{}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+        Ok(())
     }
 }
 
@@ -241,6 +388,79 @@ impl RoomLocator for FileRoomLocator {
     }
 }
 
+impl RoomLocator for SqliteRoomLocator {
+    fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+        let connection = self.open_connection()?;
+        self.initialize_schema(&connection)?;
+        let row = connection
+            .query_row(
+                "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
+                 FROM room_leases
+                 WHERE doc_id = ?1",
+                [doc_id.to_string()],
+                |row| {
+                    Ok(SqliteRoomCoordinatorRow {
+                        doc_id: row.get(0)?,
+                        node_id: row.get(1)?,
+                        base_url: row.get(2)?,
+                        lease_id: row.get(3)?,
+                        epoch: row.get(4)?,
+                        activated_at: row.get(5)?,
+                        renewed_at: row.get(6)?,
+                        expires_at: row.get(7)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to read sqlite room lease `{}` for document `{doc_id}`: {error}",
+                    self.path.display()
+                ))
+            })?;
+
+        let Some(state) = row
+            .map(sqlite_room_coordinator_state_from_row)
+            .transpose()?
+        else {
+            return Ok(ResolvedRoom::Local);
+        };
+
+        let owner_node_id = state.node_id.trim();
+        if owner_node_id.is_empty() {
+            return Err(RoomLocatorError::LookupFailed(format!(
+                "persisted sqlite coordinator state for document `{doc_id}` has an empty node_id"
+            )));
+        }
+
+        if state
+            .expires_at
+            .map(|expires_at| expires_at <= Utc::now())
+            .unwrap_or(false)
+        {
+            return Ok(ResolvedRoom::Local);
+        }
+
+        let base_url = match state.base_url.as_deref() {
+            Some(base_url) => Some(normalize_owner_base_url(base_url).map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to normalize sqlite room lease owner base_url for document `{doc_id}`: {error}"
+                ))
+            })?),
+            None => None,
+        };
+
+        if owner_node_id == self.current_node_id {
+            Ok(ResolvedRoom::Local)
+        } else {
+            Ok(ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: owner_node_id.to_owned(),
+                base_url,
+            }))
+        }
+    }
+}
+
 pub fn local_room_locator() -> Arc<dyn RoomLocator> {
     Arc::new(LocalRoomLocator)
 }
@@ -273,8 +493,19 @@ pub fn room_locator_from_config(config: &Config) -> AppResult<Arc<dyn RoomLocato
             })?;
             Ok(Arc::new(locator))
         }
+        "sqlite" => {
+            let locator = SqliteRoomLocator::new(
+                config.node_id.clone(),
+                config.room_coordinator_sqlite_path.clone(),
+            )
+            .map_err(|error| match error {
+                RoomLocatorError::Config(message) => AppError::Config(message),
+                other => AppError::from(anyhow::Error::from(other)),
+            })?;
+            Ok(Arc::new(locator))
+        }
         other => Err(AppError::Config(format!(
-            "ROOM_LOCATOR must be `local`, `static`, or `file`, received `{other}`"
+            "ROOM_LOCATOR must be `local`, `static`, `file`, or `sqlite`, received `{other}`"
         ))),
     }
 }
@@ -293,6 +524,13 @@ mod tests {
     fn temp_state_dir(test_name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
             "backend-room-locator-{test_name}-{}",
+            Uuid::new_v4()
+        ))
+    }
+
+    fn temp_sqlite_path(test_name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "backend-room-locator-{test_name}-{}.sqlite3",
             Uuid::new_v4()
         ))
     }
@@ -480,6 +718,100 @@ mod tests {
     }
 
     #[test]
+    fn sqlite_room_locator_marks_other_node_document_as_remote() {
+        let doc_id = Uuid::new_v4();
+        let path = temp_sqlite_path("sqlite-remote");
+        let locator =
+            SqliteRoomLocator::new("node-a", &path).expect("sqlite locator should initialize");
+        let connection = Connection::open(&path).expect("sqlite file should be writable");
+        locator
+            .initialize_schema(&connection)
+            .expect("sqlite schema should initialize");
+        let now = Utc::now();
+        connection
+            .execute(
+                "INSERT INTO room_leases (
+                    doc_id,
+                    node_id,
+                    base_url,
+                    lease_id,
+                    epoch,
+                    activated_at,
+                    renewed_at,
+                    expires_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    doc_id.to_string(),
+                    " node-b ",
+                    "http://node-b.internal:4000/",
+                    Uuid::new_v4().to_string(),
+                    1_i64,
+                    now.to_rfc3339(),
+                    now.to_rfc3339(),
+                    (now + chrono::TimeDelta::seconds(30)).to_rfc3339(),
+                ],
+            )
+            .expect("sqlite room lease should be written");
+
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("remote sqlite coordinator state should resolve"),
+            ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: "node-b".to_owned(),
+                base_url: Some("http://node-b.internal:4000".to_owned()),
+            })
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn sqlite_room_locator_treats_expired_remote_lease_as_local() {
+        let doc_id = Uuid::new_v4();
+        let path = temp_sqlite_path("sqlite-expired-remote");
+        let locator =
+            SqliteRoomLocator::new("node-a", &path).expect("sqlite locator should initialize");
+        let connection = Connection::open(&path).expect("sqlite file should be writable");
+        locator
+            .initialize_schema(&connection)
+            .expect("sqlite schema should initialize");
+        let now = Utc::now();
+        connection
+            .execute(
+                "INSERT INTO room_leases (
+                    doc_id,
+                    node_id,
+                    base_url,
+                    lease_id,
+                    epoch,
+                    activated_at,
+                    renewed_at,
+                    expires_at
+                ) VALUES (?1, ?2, NULL, ?3, ?4, ?5, ?6, ?7)",
+                rusqlite::params![
+                    doc_id.to_string(),
+                    "node-b",
+                    Uuid::new_v4().to_string(),
+                    4_i64,
+                    now.to_rfc3339(),
+                    now.to_rfc3339(),
+                    (now - chrono::TimeDelta::seconds(1)).to_rfc3339(),
+                ],
+            )
+            .expect("expired sqlite room lease should be written");
+
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("expired remote sqlite coordinator state should resolve locally"),
+            ResolvedRoom::Local
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
     fn file_room_locator_treats_expired_remote_lease_as_local() {
         let doc_id = Uuid::new_v4();
         let root = temp_state_dir("file-expired-remote");
@@ -512,6 +844,86 @@ mod tests {
         );
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn room_locator_from_config_loads_sqlite_room_state() {
+        let doc_id = Uuid::new_v4();
+        let path = temp_sqlite_path("config-sqlite");
+        let connection = Connection::open(&path).expect("sqlite file should be writable");
+        connection
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS room_leases (
+                    doc_id TEXT PRIMARY KEY,
+                    node_id TEXT NOT NULL,
+                    base_url TEXT,
+                    lease_id TEXT NOT NULL,
+                    epoch INTEGER NOT NULL,
+                    activated_at TEXT NOT NULL,
+                    renewed_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );",
+            )
+            .expect("sqlite schema should initialize");
+        let now = Utc::now();
+        connection
+            .execute(
+                "INSERT INTO room_leases (
+                    doc_id,
+                    node_id,
+                    base_url,
+                    lease_id,
+                    epoch,
+                    activated_at,
+                    renewed_at,
+                    expires_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    doc_id.to_string(),
+                    "node-b",
+                    "https://node-b.internal:4100/",
+                    Uuid::new_v4().to_string(),
+                    3_i64,
+                    now.to_rfc3339(),
+                    now.to_rfc3339(),
+                    (now + chrono::TimeDelta::seconds(30)).to_rfc3339(),
+                ],
+            )
+            .expect("sqlite room lease should be written");
+
+        let config = Config {
+            host: "127.0.0.1".to_owned(),
+            port: 4000,
+            frontend_origin: "http://localhost:3000".to_owned(),
+            rust_log: "backend=debug".to_owned(),
+            api_token: "test-admin-token".to_owned(),
+            snapshot_store: "memory".to_owned(),
+            snapshot_dir: "./data/test-snapshots".to_owned(),
+            snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
+            room_locator: "sqlite".to_owned(),
+            room_coordinator: "noop".to_owned(),
+            room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: path.display().to_string(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
+            node_id: "node-a".to_owned(),
+            node_base_url: None,
+            room_owner_hints_path: None,
+        };
+
+        let locator =
+            room_locator_from_config(&config).expect("config should produce a sqlite room locator");
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("doc should resolve through sqlite locator"),
+            ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: "node-b".to_owned(),
+                base_url: Some("https://node-b.internal:4100".to_owned()),
+            })
+        );
+
+        let _ = fs::remove_file(path);
     }
 
     #[test]
@@ -548,6 +960,7 @@ mod tests {
             room_locator: "file".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: root.display().to_string(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
@@ -601,6 +1014,7 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
@@ -637,6 +1051,7 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
@@ -689,6 +1104,7 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
@@ -743,6 +1159,7 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
@@ -780,6 +1197,7 @@ mod tests {
             room_locator: "unsupported".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
             node_id: DEFAULT_NODE_ID.to_owned(),
@@ -795,7 +1213,7 @@ mod tests {
         match error {
             AppError::Config(message) => assert_eq!(
                 message,
-                "ROOM_LOCATOR must be `local`, `static`, or `file`, received `unsupported`"
+                "ROOM_LOCATOR must be `local`, `static`, `file`, or `sqlite`, received `unsupported`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }
