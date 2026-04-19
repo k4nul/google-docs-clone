@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs, path::Path, sync::Arc};
 
+use axum::http::Uri;
 use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
@@ -36,10 +37,34 @@ impl RoomOwnerHint {
                     "room owner hint base_url cannot be empty".to_owned(),
                 ));
             }
+
+            validate_owner_base_url(base_url)?;
         }
 
         Ok(())
     }
+}
+
+fn validate_owner_base_url(base_url: &str) -> Result<(), RoomLocatorError> {
+    let uri: Uri = base_url.parse().map_err(|_| {
+        RoomLocatorError::Config(format!(
+            "room owner hint base_url must be an absolute http/https URL, received `{base_url}`"
+        ))
+    })?;
+
+    let Some(scheme) = uri.scheme_str() else {
+        return Err(RoomLocatorError::Config(format!(
+            "room owner hint base_url must be an absolute http/https URL, received `{base_url}`"
+        )));
+    };
+
+    if !matches!(scheme, "http" | "https") || uri.authority().is_none() {
+        return Err(RoomLocatorError::Config(format!(
+            "room owner hint base_url must be an absolute http/https URL, received `{base_url}`"
+        )));
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Error)]
@@ -136,9 +161,12 @@ pub fn room_locator_from_config(config: &Config) -> AppResult<Arc<dyn RoomLocato
                     "ROOM_OWNER_HINTS_PATH is required when ROOM_LOCATOR=static".to_owned(),
                 )
             })?;
-            let locator = StaticRoomLocator::from_json_file(config.node_id.clone(), path)
-                .map_err(anyhow::Error::from)
-                .map_err(AppError::from)?;
+            let locator = StaticRoomLocator::from_json_file(config.node_id.clone(), path).map_err(
+                |error| match error {
+                    RoomLocatorError::Config(message) => AppError::Config(message),
+                    other => AppError::from(anyhow::Error::from(other)),
+                },
+            )?;
             Ok(Arc::new(locator))
         }
         other => Err(AppError::Config(format!(
@@ -220,6 +248,27 @@ mod tests {
     }
 
     #[test]
+    fn static_room_locator_rejects_invalid_owner_base_url() {
+        let doc_id = Uuid::new_v4();
+        let error = StaticRoomLocator::new(
+            "node-a",
+            HashMap::from([(
+                doc_id,
+                RoomOwnerHint {
+                    node_id: "node-b".to_owned(),
+                    base_url: Some("node-b.internal:4000".to_owned()),
+                },
+            )]),
+        )
+        .expect_err("relative owner base_url should be rejected");
+
+        assert_eq!(
+            error.to_string(),
+            "room ownership locator is misconfigured: room owner hint base_url must be an absolute http/https URL, received `node-b.internal:4000`"
+        );
+    }
+
+    #[test]
     fn room_locator_from_config_loads_static_owner_hints_file() {
         let doc_id = Uuid::new_v4();
         let hints_path = temp_hints_path("static-room-locator");
@@ -293,6 +342,54 @@ mod tests {
             ),
             other => panic!("expected config error, received {other:?}"),
         }
+    }
+
+    #[test]
+    fn room_locator_from_config_rejects_invalid_owner_base_url() {
+        let doc_id = Uuid::new_v4();
+        let hints_path = temp_hints_path("static-room-locator-invalid-base-url");
+        fs::write(
+            &hints_path,
+            format!(
+                r#"{{
+  "documents": {{
+    "{doc_id}": {{
+      "node_id": "node-b",
+      "base_url": "ftp://node-b.internal:4000"
+    }}
+  }}
+}}"#
+            ),
+        )
+        .expect("static room locator hints file should be written");
+
+        let config = Config {
+            host: "127.0.0.1".to_owned(),
+            port: 4000,
+            frontend_origin: "http://localhost:3000".to_owned(),
+            rust_log: "backend=debug".to_owned(),
+            api_token: "test-admin-token".to_owned(),
+            snapshot_store: "memory".to_owned(),
+            snapshot_dir: "./data/test-snapshots".to_owned(),
+            room_locator: "static".to_owned(),
+            node_id: "node-a".to_owned(),
+            room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
+        };
+
+        let error = match room_locator_from_config(&config) {
+            Ok(_) => panic!("invalid owner base_url should fail config loading"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "room owner hint base_url must be an absolute http/https URL, received `ftp://node-b.internal:4000`"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
+
+        fs::remove_file(hints_path).expect("static room locator hints file should be removed");
     }
 
     #[test]
