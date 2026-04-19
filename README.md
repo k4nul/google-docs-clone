@@ -22,6 +22,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
 - `SnapshotStore` trait 및 memory/file adapter
+- `RoomLocator` 경계와 기본 local/static ownership resolver
 
 ## 기술 스택
 
@@ -97,6 +98,9 @@ cargo run
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
 - `SNAPSHOT_STORE`: `memory` 또는 `file`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
+- `ROOM_LOCATOR`: `local` 또는 `static`
+- `NODE_ID`: 현재 collaboration node 식별자
+- `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 문서별 owner 힌트 JSON 파일 경로
 
 ## 현재 범위
 
@@ -118,18 +122,21 @@ cargo run
 
 현재 `blocked` 상태는 둘로 나눠 관리한다. 멀티 프로세스 room 분산 지원은 roadmap 차원의 blocked 항목이고, 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다.
 
+`ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url`로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
+
 ## 향후 확장 방향
 
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
-- `RoomLocator` 성격의 ownership resolver를 추가해 멀티 프로세스 진입 시 authoritative node를 먼저 결정
+- `RoomLocator` 뒤에 외부 ownership resolver를 연결해 멀티 프로세스 진입 시 authoritative node를 결정
+- static owner hints 대신 lease/heartbeat 기반 coordination store를 연결해 실제 owner handoff 활성화
 
 ## Snapshot Restore / Eviction Policy
 
 - 문서 생성 시 초기 snapshot을 저장하고 active room을 메모리에 등록한다.
 - `GET /api/documents`는 active room이 없어도 snapshot store에 남아 있는 문서를 카탈로그로 반환한다.
-- `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
+- `GET /api/documents/:id`와 `GET /ws/:doc_id`는 먼저 `RoomLocator`로 현재 노드 ownership을 확인한 뒤, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
 - WebSocket 세션이 종료될 때마다 room의 active session 수를 감소시키고, 마지막 세션이 닫히면 최신 snapshot을 저장한 뒤 room을 메모리에서 제거한다.
 - 문서가 삭제된 경우에는 snapshot과 active room을 함께 제거한다. 활성 WebSocket 세션이 남아 있으면 삭제를 거절하고 `409 conflict`를 반환한다.
 - `SNAPSHOT_STORE=file`일 때 손상된 snapshot 파일은 startup hydrate와 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛴다. 해당 문서를 직접 복구하려고 로드하면 여전히 corrupt snapshot 오류로 취급한다.
@@ -137,6 +144,27 @@ cargo run
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되고, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 정리한다.
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
+- 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
+- `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
+
+## Static Room Owner Hints
+
+`ROOM_LOCATOR=static`일 때 `ROOM_OWNER_HINTS_PATH`는 아래 구조의 JSON 파일을 가리킨다.
+
+```json
+{
+  "documents": {
+    "00000000-0000-0000-0000-000000000000": {
+      "node_id": "node-b",
+      "base_url": "http://127.0.0.1:5001"
+    }
+  }
+}
+```
+
+- `documents`에 없는 문서는 현재 노드 소유로 간주한다.
+- `node_id`는 비어 있으면 안 된다.
+- `base_url`은 선택값이며, 있으면 non-local owner conflict 응답의 `owner.base_url`에 그대로 실린다.
 
 ## Awareness Metadata Contract
 

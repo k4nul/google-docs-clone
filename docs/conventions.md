@@ -33,6 +33,7 @@
 - HTTP route는 `src/routes` 아래에 둔다.
 - WebSocket 협업 엔트리포인트는 `src/collab/ws.rs`에 둔다.
 - route handler는 가능한 한 얇게 유지하고 상태 조회/생성은 registry 계층에 위임한다.
+- 문서 detail/delete나 WebSocket처럼 room-affined 요청은 `get_or_restore` 전에 `RoomLocator` 경계를 먼저 통과시킨다.
 - awareness payload 계약은 `src/models/awareness.rs`에 두고, 클라이언트가 그대로 재사용할 수 있는 camelCase JSON shape를 유지한다.
 
 ## Logging / Tracing Rules
@@ -42,6 +43,7 @@
 - 마지막 WebSocket 세션 종료 후 snapshot 저장과 idle room eviction 결과도 문서 ID와 함께 기록한다.
 - WebSocket origin 거절도 문서 ID와 함께 기록한다.
 - 다중 프로세스 확장 전까지는 "문서당 단일 owner 프로세스" 가정을 깨는 우회 구현을 넣지 않는다.
+- `StaticRoomLocator`의 owner hints는 운영 힌트일 뿐이며, lease/heartbeat 기반 coordination store를 대체하는 것으로 간주하지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules

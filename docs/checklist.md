@@ -24,8 +24,9 @@
 
 - bootstrap 범위의 백엔드 구현 작업은 모두 완료됐다.
 - `fix(storage): save snapshots atomically and clean stale temp files` (`ee800ef`)는 현재 브랜치 `codex/storage-temp-handling`과 `origin/codex/storage-temp-handling`에 이미 반영돼 있다.
+- `RoomLocator` ownership 경계와 기본 `LocalRoomLocator`/`StaticRoomLocator`가 route/WS 진입 전에 연결돼 있으며, 현재 런타임은 여전히 단일 프로세스 owner 판정과 static owner hints 수준으로 유지된다.
 - 다음 구현 후보는 외부 snapshot store와 owner coordination 저장소가 필요한 멀티 프로세스 room 분산 지원이며, 현재 저장소 범위에서는 blocked 상태다.
-- 최근 변경은 `FileSnapshotStore` startup stale `.tmp` cleanup 보강과 sandbox-safe verification workflow 분리이며, 둘 다 현재 브랜치에서 검증 완료 상태다.
+- 최근 변경은 `RoomLocator` ownership 경계 도입과 기존 `FileSnapshotStore` 안정화/검증 workflow 정리이며, 현재 브랜치에서 core 검증 완료 상태다.
 - sandboxed run에서 commit/push/WebSocket 통합 테스트는 여전히 실행 환경 차단이 있을 수 있으므로, publish 전에는 `./scripts/preflight.sh publish`, socket 검증 전에는 `./scripts/preflight.sh websocket` 또는 unrestricted 실행으로 다시 확인한다.
 
 ## WS / Yrs Follow-up Items
@@ -36,8 +37,12 @@
 - [x] snapshot 복구 시점과 room eviction 정책 정의
 - [x] 다중 프로세스 환경에서 room 분산 전략 검토
 - [x] `yrs-axum` upstream 변화에 맞춘 provider compatibility 검증 자동화
+- [x] `RoomLocator` ownership resolver 경계를 route/WS restore 전에 도입
+- [x] config-driven `StaticRoomLocator`와 owner hint 응답 계약 추가
 
 ## Execution Log
+
+- 2026-04-19: 상태 문서 기준 미완료 다음 작업 1건을 `RoomLocator` ownership resolver 경계 도입으로 확정했다. 이번 run에서는 `src/collab/locator.rs`에 기본 `LocalRoomLocator`와 확장용 `RoomLocator` trait을 추가했고, `src/state.rs`, `src/routes/documents.rs`, `src/collab/ws.rs`가 document room restore 전에 locator를 통과하도록 연결했다. `src/collab/ws.rs`에는 upgrade 이전 ownership/auth/restore 경계를 묶는 helper와 unit test를 추가했고, `tests/health.rs`에는 document detail 경로의 non-local owner rejection 회귀 테스트를 추가했다. `README.md`, `docs/architecture.md`, `docs/api.md`, `docs/conventions.md`도 새 경계에 맞게 동기화했다. 검증은 `cargo fmt --check`, `cargo check --locked`, `cargo test --locked non_local_room_owner`, `cargo test --locked local_room_locator_marks_every_document_as_local`, `./scripts/verify.sh core`, `./scripts/preflight.sh websocket`, `git diff --check -- README.md docs/architecture.md docs/api.md docs/checklist.md docs/conventions.md src/collab/locator.rs src/collab/mod.rs src/collab/ws.rs src/routes/documents.rs src/state.rs tests/health.rs`로 수행했다. `cargo fmt --check`, `cargo check --locked`, locator 관련 targeted tests, `./scripts/verify.sh core`, `git diff --check`는 통과했고, `./scripts/preflight.sh websocket`는 `runner cannot bind socket addresses`로 실패해 socket-required websocket lane은 이번 run에서 environment blocked 상태다. 이어서 `./scripts/preflight.sh commit`, `./scripts/preflight.sh publish`, `git add -- README.md docs/api.md docs/architecture.md docs/checklist.md docs/conventions.md src/collab/locator.rs src/collab/mod.rs src/collab/ws.rs src/routes/documents.rs src/state.rs tests/health.rs`, `git commit -m "refactor(sync): introduce room locator boundary"`, `git push origin codex/storage-temp-handling`를 순서대로 시도했지만 `.git/index.lock` 생성이 `Read-only file system`으로 차단됐고, push는 `Could not resolve host: github.com`으로 실패해 commit/push는 이번 run에서도 environment blocked 상태다.
 
 - 2026-04-19: 환경 차단과 코드 검증 경계를 더 분명히 하기 위해 `scripts/preflight.sh`의 stage/commit 확인 모드를 `commit`으로 명확히 분리했고, `scripts/verify.sh core`에서 `.git`/DNS preflight 의존성을 제거했다. 이어서 `README.md`, `docs/setup.md`, `docs/conventions.md`를 같은 흐름으로 갱신해 core 검증과 publish/socket 환경 점검을 분리 문서화했다. 검증은 `./scripts/verify.sh core`를 sandbox 안에서, `cargo test --locked`, `git push origin codex/storage-temp-handling`를 unrestricted 실행으로 다시 확인하는 방식으로 수행했다. 결과적으로 core 검증은 sandbox 안에서도 진행 가능해졌고, 전체 테스트와 push는 unrestricted 실행에서 정상 통과해 이전 차단이 저장소 결함이 아니라 sandbox 제약임을 재확인했다.
 
@@ -138,3 +143,4 @@
 - 2026-04-18: 단일 프로세스 `RoomRegistry`를 유지한 상태에서 다중 프로세스 room 분산 전략을 문서화했다. 한 문서당 단일 owner 프로세스, 공용 snapshot store, lease 기반 ownership handoff, `RoomLocator` 확장 포인트를 architecture/README/conventions에 정리했고, 외부 저장소 전까지는 단일 프로세스 배포를 운영 규칙으로 명시했다.
 - 2026-04-18: `SnapshotStore::list_documents` 경계를 추가해 `GET /api/documents`가 active room과 persisted snapshot catalog를 함께 반환하도록 정리했다. idle eviction 이후에도 문서 목록에서 메타데이터가 유지되도록 unit/integration test와 README/API/architecture 문서를 함께 갱신했다.
 - 2026-04-18: 앱 시작 시 `RoomRegistry::hydrate_from_store`로 snapshot catalog를 선로딩하도록 정리했다. `AppState::with_snapshot_store`가 초기화 중 저장된 문서를 room registry에 복원하고, unit/integration test 및 README/architecture 문서를 함께 갱신했다.
+- 2026-04-19: `RoomLocator` 경계를 테스트 주입 수준에서 실제 런타임 설정 경계로 확장했다. `src/config.rs`에 `ROOM_LOCATOR`, `NODE_ID`, `ROOM_OWNER_HINTS_PATH`를 추가했고, `src/collab/locator.rs`에 file-backed `StaticRoomLocator`와 config factory를 구현했다. non-local owner는 이제 단순 `409` 문자열 대신 optional `owner.node_id` / `owner.base_url` metadata를 포함해 응답하며, `README.md`, `docs/setup.md`, `docs/api.md`, `docs/architecture.md`, `.env.example`도 새 계약에 맞춰 갱신했다. 검증은 `cargo check --locked`, `cargo test --locked room_locator_from_config_`, `cargo test --locked non_local_room_owner`로 시작했고, 이후 core/full verification으로 이어간다.

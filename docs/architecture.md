@@ -18,7 +18,8 @@
 2. `app.rs`가 `AppState`와 라우트를 조합해 `Router`를 만든다.
 3. `/api/*` 요청은 `routes` 모듈로 들어간다.
 4. 문서 목록/생성은 관리용 `API_TOKEN`을 검증하고, 문서 상세/삭제는 문서별 `access_token`을 검증한다.
-5. route handler는 `AppState`를 통해 registry를 조회하고 JSON 응답을 반환한다.
+5. 문서 단위 room에 닿는 요청은 `AppState`의 `RoomLocator` 경계로 현재 노드 ownership을 먼저 확인한다.
+6. route handler는 `AppState`를 통해 registry를 조회하고 JSON 응답을 반환한다.
 
 ## WebSocket / Collab Flow
 
@@ -27,12 +28,13 @@
 1. 클라이언트가 `GET /ws/:doc_id`로 업그레이드를 요청한다.
 2. `collab/ws.rs`가 `doc_id` 형식을 검증하고 `Origin` 헤더가 `FRONTEND_ORIGIN`과 일치하는지 확인한다.
 3. 같은 핸들러가 `Authorization: Bearer <access_token>`을 검증한다.
-4. 검증이 통과하면 `doc_id`에 해당하는 room을 조회하거나 snapshot store에서 on-demand로 복구한다.
-5. room은 `Yrs Doc`, `Awareness`, lazy `BroadcastGroup`을 가진다.
-6. 클라이언트는 연결 직후 awareness state를 `user`, optional `selection`, `client` 구조로 게시한다.
-7. 업그레이드된 socket은 `AxumSink` / `AxumStream`으로 감싸진다.
-8. `BroadcastGroup::subscribe`가 해당 문서의 협업 세션을 처리한다.
-9. 마지막 WebSocket 세션이 종료되면 room snapshot을 저장하고 idle room을 registry에서 제거한다.
+4. 같은 경계가 `RoomLocator`로 현재 노드 ownership을 확인한다.
+5. 검증이 통과하면 `doc_id`에 해당하는 room을 조회하거나 snapshot store에서 on-demand로 복구한다.
+6. room은 `Yrs Doc`, `Awareness`, lazy `BroadcastGroup`을 가진다.
+7. 클라이언트는 연결 직후 awareness state를 `user`, optional `selection`, `client` 구조로 게시한다.
+8. 업그레이드된 socket은 `AxumSink` / `AxumStream`으로 감싸진다.
+9. `BroadcastGroup::subscribe`가 해당 문서의 협업 세션을 처리한다.
+10. 마지막 WebSocket 세션이 종료되면 room snapshot을 저장하고 idle room을 registry에서 제거한다.
 
 ## Room Registry Structure
 
@@ -46,6 +48,8 @@
 ## Persistence Extension Points
 
 - `SnapshotStore` trait이 `load/save/delete` 경계를 정의하고, `RoomRegistry`가 이 trait에만 의존한다.
+- `RoomLocator` trait이 "현재 프로세스가 이 문서의 authoritative owner인가"라는 진입 경계를 정의하고, `AppState`가 route/WS 진입 전에 이 trait만 호출한다.
+- `room_locator_from_config`는 현재 `LocalRoomLocator` 또는 file-backed `StaticRoomLocator`를 런타임에 선택한다.
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
@@ -71,4 +75,6 @@
 - awareness는 durability 대상이 아니므로 owner handoff 시 재게시를 허용하고, 문서 본문 CRDT update와 분리해 취급한다.
 - cross-node fan-out이 필요해지는 시점 전까지는 한 room의 WebSocket 세션을 모두 owner node에 붙이는 방식이 가장 단순하다. node 간 pub/sub 복제는 ownership 우회가 아니라 장애 복구 보조 경로로만 고려한다.
 - 구현 확장 포인트는 `RoomRegistry` 앞단에 `RoomLocator` 또는 동등한 ownership resolver를 두고, 현재 `get_or_restore` 호출 전에 authoritative node 결정을 끼워 넣는 형태가 가장 경계에 맞다.
+- 현재 저장소에는 이 경계를 구현한 기본 `LocalRoomLocator`와 file-backed `StaticRoomLocator`가 들어가 있다.
+- `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
 - 현재는 `InMemorySnapshotStore`와 로컬 `FileSnapshotStore`만 있으므로 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
