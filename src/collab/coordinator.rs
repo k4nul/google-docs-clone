@@ -1791,6 +1791,7 @@ mod tests {
             snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
             snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
+            snapshot_pickledb_path: "./data/test-snapshots.pickledb".to_owned(),
             snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),

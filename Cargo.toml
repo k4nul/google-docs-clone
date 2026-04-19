@@ -17,6 +17,7 @@ native_db = "0.8.2"
 native_model = "=0.4.20"
 parity-db = "0.5.4"
 persy = "1.7.1"
+pickledb = "0.5.1"
 redb = "2"
 rusqlite = { version = "0.37", features = ["bundled"] }
 s3 = { version = "0.1.27", default-features = false, features = ["blocking", "rustls"] }

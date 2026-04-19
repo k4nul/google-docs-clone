@@ -191,6 +191,7 @@ dependencies = [
  "native_model",
  "parity-db",
  "persy",
+ "pickledb",
  "redb 2.6.3",
  "rusqlite",
  "s3",
@@ -1940,6 +1941,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67eabc2ef2a60eb7faa00097bd1ffdb5bd28e62bf39990626a582201b7a754e5"
 dependencies = [
  "siphasher",
+]
+
+[[package]]
+name = "pickledb"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c53a5ade47760e8cc4986bdc5e72daeffaaaee64cbc374f9cfe0a00c1cd87b1f"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
