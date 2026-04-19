@@ -1,3 +1,4 @@
+mod btree_store_snapshot_store;
 mod file_snapshot_store;
 mod fjall_snapshot_store;
 mod heed_snapshot_store;
@@ -30,6 +31,7 @@ use uuid::Uuid;
 
 use crate::{config::Config, models::document::Document};
 
+pub use btree_store_snapshot_store::BtreeStoreSnapshotStore;
 pub use file_snapshot_store::FileSnapshotStore;
 pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use heed_snapshot_store::HeedSnapshotStore;
@@ -219,6 +221,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "yedb" => Ok(Arc::new(YedbSnapshotStore::new(
             &config.snapshot_yedb_path,
         )?)),
+        "btree_store" => Ok(Arc::new(BtreeStoreSnapshotStore::new(
+            &config.snapshot_btree_store_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -260,7 +265,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

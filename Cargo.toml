@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
+btree-store = "0.1.4"
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6"
 dotenvy = "0.15"
