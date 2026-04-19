@@ -52,8 +52,9 @@
 - `RoomLocator` trait이 "현재 프로세스가 이 문서의 authoritative owner인가"라는 진입 경계를 정의하고, `AppState`가 route/WS 진입 전에 이 trait만 호출한다.
 - `RoomCoordinator` trait이 "이 문서 room이 현재 노드에서 active 상태로 전이/종료되는 시점"을 정의하고, WebSocket 첫 세션 시작 및 마지막 세션 종료 뒤에만 hook이 호출된다.
 - `room_locator_from_config`는 현재 `LocalRoomLocator` 또는 file-backed `StaticRoomLocator`를 런타임에 선택한다.
-- `room_coordinator_from_config`는 현재 `NoopRoomCoordinator` 또는 `LoggingRoomCoordinator`를 런타임에 선택한다.
+- `room_coordinator_from_config`는 현재 `NoopRoomCoordinator`, `LoggingRoomCoordinator`, 또는 `FileRoomCoordinator`를 런타임에 선택한다.
 - `LoggingRoomCoordinator`는 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남기는 dry-run 구현이며, 외부 lease/heartbeat coordinator가 붙기 전 운영 관측용 경계로 사용한다.
+- `FileRoomCoordinator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 active room owner 상태를 atomic write로 남기고 마지막 세션 종료 뒤 제거하는 file-backed 준비 구현이다.
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
@@ -81,6 +82,6 @@
 - 구현 확장 포인트는 `RoomRegistry` 앞단에 `RoomLocator` 또는 동등한 ownership resolver를 두고, 현재 `get_or_restore` 호출 전에 authoritative node 결정을 끼워 넣는 형태가 가장 경계에 맞다.
 - lease/heartbeat 기반 coordination store는 별도 `RoomCoordinator` 구현으로 붙여 첫 세션 시작 시 activate, 마지막 세션 종료 후 snapshot persist 성공 시 deactivate를 담당하게 두는 것이 현재 경계에 맞다.
 - 현재 저장소에는 이 경계를 구현한 기본 `LocalRoomLocator`와 file-backed `StaticRoomLocator`가 들어가 있다.
-- 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`와 dry-run `LoggingRoomCoordinator`만 들어가 있으며, 실제 lease 저장소나 heartbeat loop는 아직 연결되지 않았다.
+- 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`, dry-run `LoggingRoomCoordinator`, 그리고 local/shared filesystem에 active room state를 남기는 `FileRoomCoordinator`가 들어가 있으며, 실제 lease 저장소나 heartbeat loop는 아직 연결되지 않았다.
 - `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
 - 현재는 `InMemorySnapshotStore`와 로컬 `FileSnapshotStore`만 있으므로 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.

@@ -23,7 +23,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - `yrs-axum` 기반 broadcast group 연결
 - `SnapshotStore` trait 및 memory/file adapter
 - `RoomLocator` 경계와 기본 local/static ownership resolver
-- `RoomCoordinator` 경계와 config-driven `noop`/`logging` session lifecycle hook
+- `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file` session lifecycle hook
 
 ## 기술 스택
 
@@ -100,7 +100,8 @@ cargo run
 - `SNAPSHOT_STORE`: `memory` 또는 `file`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `ROOM_LOCATOR`: `local` 또는 `static`
-- `ROOM_COORDINATOR`: `noop` 또는 `logging`
+- `ROOM_COORDINATOR`: `noop`, `logging`, 또는 `file`
+- `ROOM_COORDINATOR_STATE_DIR`: `ROOM_COORDINATOR=file`일 때 active room state JSON 파일을 저장할 디렉터리
 - `NODE_ID`: 현재 collaboration node 식별자
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 문서별 owner 힌트 JSON 파일 경로
 
@@ -112,7 +113,7 @@ cargo run
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
 - 기본 in-memory snapshot store와 로컬 file snapshot store 지원
-- config-driven room coordinator dry-run logging 모드 지원
+- config-driven room coordinator dry-run logging/file state 모드 지원
 
 ## 비범위
 
@@ -150,6 +151,7 @@ cargo run
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
 - `ROOM_COORDINATOR=noop`은 아무 side effect 없이 통과하고, `ROOM_COORDINATOR=logging`은 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남긴다.
+- `ROOM_COORDINATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 현재 active room owner 상태를 atomic write로 남기고, 마지막 세션 종료 뒤에는 해당 상태 파일을 제거한다.
 - WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 `RoomCoordinator` hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
 - future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
 

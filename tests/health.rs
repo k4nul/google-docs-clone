@@ -36,6 +36,7 @@ fn test_config() -> Config {
         snapshot_dir: "./data/test-snapshots".to_owned(),
         room_locator: "local".to_owned(),
         room_coordinator: "noop".to_owned(),
+        room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
         node_id: "test-node".to_owned(),
         room_owner_hints_path: None,
     }
@@ -1127,6 +1128,58 @@ async fn app_state_uses_logging_room_coordinator_from_config() {
 
     assert!(teardown.evicted);
     assert_eq!(teardown.remaining_sessions, 0);
+}
+
+#[tokio::test]
+async fn app_state_uses_file_room_coordinator_from_config() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("file-room-coordinator");
+    config.room_coordinator = "file".to_owned();
+    config.room_coordinator_state_dir = coordinator_dir.display().to_string();
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with file coordinator");
+    assert_eq!(state.room_coordinator().mode(), "file");
+
+    let document = state
+        .rooms()
+        .create_document(Some("File coordinated room".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    state
+        .room_coordinator()
+        .room_activated(&document.id)
+        .expect("file coordinator should persist active room state");
+    assert!(
+        coordinator_dir
+            .join(format!("{}.json", document.id))
+            .exists()
+    );
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("file coordinator should not affect snapshot persistence");
+
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    state
+        .room_coordinator()
+        .room_deactivated(&document.id)
+        .expect("file coordinator should remove active room state");
+    assert!(
+        !coordinator_dir
+            .join(format!("{}.json", document.id))
+            .exists()
+    );
+
+    fs::remove_dir_all(coordinator_dir).expect("test coordinator directory should be cleaned up");
 }
 
 #[tokio::test]

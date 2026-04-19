@@ -139,7 +139,7 @@ Response: `204 No Content`
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
-- 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop` 또는 `logging` 모드로만 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
+- 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, 또는 `file` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403` JSON 에러 응답을 반환한다.

@@ -13,6 +13,7 @@ pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
+pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
 pub const DEFAULT_NODE_ID: &str = "local-node";
 
 #[derive(Debug, Clone)]
@@ -26,6 +27,7 @@ pub struct Config {
     pub snapshot_dir: String,
     pub room_locator: String,
     pub room_coordinator: String,
+    pub room_coordinator_state_dir: String,
     pub node_id: String,
     pub room_owner_hints_path: Option<String>,
 }
@@ -43,6 +45,10 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let room_locator = env_string("ROOM_LOCATOR", DEFAULT_ROOM_LOCATOR)?;
         let room_coordinator = env_string("ROOM_COORDINATOR", DEFAULT_ROOM_COORDINATOR)?;
+        let room_coordinator_state_dir = env_string(
+            "ROOM_COORDINATOR_STATE_DIR",
+            DEFAULT_ROOM_COORDINATOR_STATE_DIR,
+        )?;
         let node_id = env_string("NODE_ID", DEFAULT_NODE_ID)?;
         let room_owner_hints_path = env_optional_string("ROOM_OWNER_HINTS_PATH")?;
 
@@ -56,6 +62,7 @@ impl Config {
             snapshot_dir,
             room_locator,
             room_coordinator,
+            room_coordinator_state_dir,
             node_id,
             room_owner_hints_path,
         })
