@@ -899,7 +899,7 @@ async fn app_state_with_file_store_skips_corrupt_snapshots_during_startup() {
 }
 
 #[tokio::test]
-async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_startup() {
+async fn app_state_with_file_store_cleans_matching_stale_temp_snapshots_during_startup() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("file-store-stale-temp-startup");
     config.snapshot_store = "file".to_owned();
@@ -920,8 +920,8 @@ async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_
     fs::write(&stale_temp_path, br#"{"partial":true}"#)
         .expect("stale temp snapshot fixture should be written");
 
-    let state =
-        AppState::from_config(&config).expect("startup hydration should ignore stale temp files");
+    let state = AppState::from_config(&config)
+        .expect("startup hydration should clean stale temp files and restore valid snapshots");
     let hydrated_documents = state
         .rooms()
         .list_documents()
@@ -929,13 +929,13 @@ async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_
 
     assert!(state.rooms().get(&valid_document.id).is_some());
     assert_eq!(hydrated_documents, vec![valid_document]);
-    assert!(stale_temp_path.exists());
+    assert!(!stale_temp_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
 #[tokio::test]
-async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_startup() {
+async fn app_state_with_file_store_cleans_orphan_stale_temp_snapshots_during_startup() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("file-store-orphan-stale-temp-startup");
     config.snapshot_store = "file".to_owned();
@@ -948,7 +948,7 @@ async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_st
         .expect("stale temp snapshot fixture should be written");
 
     let state =
-        AppState::from_config(&config).expect("startup hydration should ignore orphan temp files");
+        AppState::from_config(&config).expect("startup hydration should clean orphan temp files");
     let hydrated_documents = state
         .rooms()
         .list_documents()
@@ -956,7 +956,7 @@ async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_st
 
     assert!(state.rooms().get(&orphan_doc_id).is_none());
     assert!(hydrated_documents.is_empty());
-    assert!(stale_temp_path.exists());
+    assert!(!stale_temp_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

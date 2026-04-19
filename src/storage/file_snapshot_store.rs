@@ -22,7 +22,17 @@ impl FileSnapshotStore {
         let root = root.into();
         ensure_snapshot_dir(&root)?;
 
-        Ok(Self { root })
+        let store = Self { root };
+        let cleaned_temp_snapshots = store.cleanup_stale_temp_snapshots()?;
+        if cleaned_temp_snapshots > 0 {
+            tracing::info!(
+                root = %store.root.display(),
+                cleaned_temp_snapshots,
+                "removed stale temp snapshots during file snapshot store initialization"
+            );
+        }
+
+        Ok(store)
     }
 
     fn snapshot_path(&self, doc_id: &Uuid) -> PathBuf {
@@ -36,6 +46,10 @@ impl FileSnapshotStore {
 
     fn temp_snapshot_prefix(&self, doc_id: &Uuid) -> String {
         format!("{doc_id}.json.")
+    }
+
+    fn is_temp_snapshot_file_name(file_name: &str) -> bool {
+        file_name.ends_with(".tmp") && file_name.contains(".json.")
     }
 
     fn read_snapshot(&self, path: &Path, doc_id: &Uuid) -> Result<DocumentSnapshot, StorageError> {
@@ -55,8 +69,7 @@ impl FileSnapshotStore {
         }
     }
 
-    fn matching_temp_snapshot_paths(&self, doc_id: &Uuid) -> Result<Vec<PathBuf>, StorageError> {
-        let temp_prefix = self.temp_snapshot_prefix(doc_id);
+    fn stale_temp_snapshot_paths(&self) -> Result<Vec<PathBuf>, StorageError> {
         let mut paths = Vec::new();
 
         for entry in fs::read_dir(&self.root)
@@ -68,16 +81,47 @@ impl FileSnapshotStore {
                 continue;
             };
 
-            if path.extension().and_then(|value| value.to_str()) != Some("tmp") {
-                continue;
+            if Self::is_temp_snapshot_file_name(file_name) {
+                paths.push(path);
             }
+        }
 
+        Ok(paths)
+    }
+
+    fn matching_temp_snapshot_paths(&self, doc_id: &Uuid) -> Result<Vec<PathBuf>, StorageError> {
+        let temp_prefix = self.temp_snapshot_prefix(doc_id);
+        let mut paths = Vec::new();
+
+        for path in self.stale_temp_snapshot_paths()? {
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+                continue;
+            };
             if file_name.starts_with(&temp_prefix) {
                 paths.push(path);
             }
         }
 
         Ok(paths)
+    }
+
+    fn cleanup_stale_temp_snapshots(&self) -> Result<usize, StorageError> {
+        let mut removed = 0;
+
+        for path in self.stale_temp_snapshot_paths()? {
+            match self.remove_file_if_exists(&path) {
+                Ok(()) => removed += 1,
+                Err(error) => {
+                    tracing::warn!(
+                        path = %path.display(),
+                        %error,
+                        "failed to remove stale temp snapshot during file snapshot store initialization"
+                    );
+                }
+            }
+        }
+
+        Ok(removed)
     }
 
     fn write_snapshot_atomically(
