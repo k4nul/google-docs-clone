@@ -19,6 +19,7 @@ pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
 pub const DEFAULT_SNAPSHOT_NATIVE_DB_PATH: &str = "./data/snapshots.native_db";
 pub const DEFAULT_SNAPSHOT_PARITY_DB_PATH: &str = "./data/snapshots.parity_db";
 pub const DEFAULT_SNAPSHOT_PICKLEDB_PATH: &str = "./data/snapshots.pickledb";
+pub const DEFAULT_SNAPSHOT_MICROKV_PATH: &str = "./data/snapshots_microkv";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
 pub const DEFAULT_SNAPSHOT_SLED_PATH: &str = "./data/snapshots.sled";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
@@ -52,6 +53,7 @@ pub struct Config {
     pub snapshot_native_db_path: String,
     pub snapshot_parity_db_path: String,
     pub snapshot_pickledb_path: String,
+    pub snapshot_microkv_path: String,
     pub snapshot_redb_path: String,
     pub snapshot_sled_path: String,
     pub snapshot_s3_endpoint: Option<String>,
@@ -104,6 +106,8 @@ impl Config {
             env_string("SNAPSHOT_PARITY_DB_PATH", DEFAULT_SNAPSHOT_PARITY_DB_PATH)?;
         let snapshot_pickledb_path =
             env_string("SNAPSHOT_PICKLEDB_PATH", DEFAULT_SNAPSHOT_PICKLEDB_PATH)?;
+        let snapshot_microkv_path =
+            env_string("SNAPSHOT_MICROKV_PATH", DEFAULT_SNAPSHOT_MICROKV_PATH)?;
         let snapshot_redb_path = env_string("SNAPSHOT_REDB_PATH", DEFAULT_SNAPSHOT_REDB_PATH)?;
         let snapshot_sled_path = env_string("SNAPSHOT_SLED_PATH", DEFAULT_SNAPSHOT_SLED_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
@@ -169,6 +173,7 @@ impl Config {
             snapshot_native_db_path,
             snapshot_parity_db_path,
             snapshot_pickledb_path,
+            snapshot_microkv_path,
             snapshot_redb_path,
             snapshot_sled_path,
             snapshot_s3_endpoint,

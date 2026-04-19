@@ -3,6 +3,7 @@ mod fjall_snapshot_store;
 mod heed_snapshot_store;
 mod jammdb_snapshot_store;
 mod managed_snapshot_store;
+mod microkv_snapshot_store;
 mod native_db_snapshot_store;
 mod parity_db_snapshot_store;
 mod persy_snapshot_store;
@@ -32,6 +33,7 @@ pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use heed_snapshot_store::HeedSnapshotStore;
 pub use jammdb_snapshot_store::JammdbSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
+pub use microkv_snapshot_store::MicroKvSnapshotStore;
 pub use native_db_snapshot_store::NativeDbSnapshotStore;
 pub use parity_db_snapshot_store::ParityDbSnapshotStore;
 pub use persy_snapshot_store::PersySnapshotStore;
@@ -198,6 +200,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "pickledb" => Ok(Arc::new(PickleDbSnapshotStore::new(
             &config.snapshot_pickledb_path,
         )?)),
+        "microkv" => Ok(Arc::new(MicroKvSnapshotStore::new(
+            &config.snapshot_microkv_path,
+        )?)),
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
         )?)),
@@ -245,7 +250,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
