@@ -86,3 +86,49 @@
 - `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있으면 non-local owner로 간주한다. 현재 state 포맷에는 `base_url`이 없고 heartbeat도 없으므로 best-effort owner signal로만 취급한다.
 - 현재는 `InMemorySnapshotStore`와 로컬 `FileSnapshotStore`만 있으므로 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
+
+## Authoritative Coordination Store Contract
+
+- future external backend는 `RoomCoordinator`가 쓰는 write path와 `RoomLocator`가 읽는 lookup path를 동일한 lease record로 맞춰야 한다.
+- canonical lease record는 최소 아래 필드를 포함한다.
+
+```json
+{
+  "doc_id": "00000000-0000-0000-0000-000000000000",
+  "node_id": "node-a",
+  "base_url": "https://collab-a.internal",
+  "lease_id": "2b0fd35e-7f83-4558-a271-695bcdb22fd4",
+  "epoch": 17,
+  "acquired_at": "2026-04-20T09:00:00Z",
+  "renewed_at": "2026-04-20T09:00:10Z",
+  "expires_at": "2026-04-20T09:00:30Z"
+}
+```
+
+- `lease_id`는 compare-and-swap 키다. `renew`/`release`는 현재 holder의 `lease_id`와 `node_id`가 일치할 때만 성공해야 한다.
+- `epoch`는 fencing token이다. snapshot write나 future redirect metadata가 늦게 도착하더라도, 더 작은 `epoch`를 가진 stale owner의 side effect는 거절해야 한다.
+- `expires_at`은 stale 판단의 유일한 authoritative 기준이다. file mtime, process uptime, local heuristic만으로 ownership을 조기 회수하지 않는다.
+- `base_url`은 optional이며, 노출하는 경우 현재 HTTP `409 conflict` 응답의 `owner.base_url` 계약과 같은 canonical origin 규칙을 따라야 한다.
+
+## Lease Lifecycle Policy
+
+- acquire: 첫 세션 진입 직전 현재 lease가 없거나 `expires_at <= now`일 때만 새 lease를 쓴다.
+- activate: acquire 성공 뒤에만 local room activation을 진행한다.
+- renew: room이 active인 동안 background heartbeat loop가 `renewed_at`과 `expires_at`을 갱신한다.
+- release: 마지막 세션 종료 후 snapshot persist 성공 뒤에만 compare-and-delete로 lease를 지운다.
+- handoff: 이전 owner의 `expires_at`이 지난 뒤 새 owner가 acquire하고 snapshot restore를 수행한 다음 WebSocket 세션을 받는다.
+- failure handling: snapshot persist 실패 시 즉시 release하지 않는다. TTL이 남아 있는 동안 기존 owner를 유지해 split-brain과 stale restore를 피한다.
+
+## Recommended Timing Defaults
+
+- `heartbeat_interval`: 10초
+- `lease_ttl`: 30초
+- `max_missed_heartbeats_before_stale`: 2
+- renew scheduling은 TTL의 절반보다 짧아야 한다.
+- takeover는 마지막 `expires_at` 경과 뒤에만 허용한다.
+
+## Current Repository Boundary
+
+- 현재 코드베이스의 `FileRoomCoordinator`/`FileRoomLocator`는 위 계약을 구현하지 않는다.
+- 현 구현은 `node_id`와 activation timestamps만 남기는 best-effort state라 crash 뒤 stale owner file이 남을 수 있다.
+- 따라서 이 저장소에서 실제 handoff를 켜는 작업은 여전히 blocked다. authoritative coordination backend와 shared snapshot store가 둘 다 준비된 뒤에만 런타임 활성화가 가능하다.

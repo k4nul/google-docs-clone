@@ -46,6 +46,8 @@
 - 다중 프로세스 확장 전까지는 "문서당 단일 owner 프로세스" 가정을 깨는 우회 구현을 넣지 않는다.
 - `StaticRoomLocator`의 owner hints는 운영 힌트일 뿐이며, lease/heartbeat 기반 coordination store를 대체하는 것으로 간주하지 않는다.
 - lease/heartbeat 같은 owner coordination side effect는 `RoomCoordinator` 경계 뒤에만 붙이고, snapshot 저장 전 handoff를 허용하지 않는다.
+- future authoritative coordination backend는 `lease_id` compare-and-swap과 `epoch` fencing token을 함께 유지해야 한다.
+- stale owner 판단은 `expires_at` 기준으로만 하고, file mtime 같은 로컬 heuristic로 조기 회수를 시도하지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules

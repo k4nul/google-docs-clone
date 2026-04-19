@@ -135,7 +135,7 @@ cargo run
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
-- file-backed ownership resolver 대신 lease/heartbeat 갱신이 있는 authoritative coordination store를 연결해 stale owner state를 줄이기
+- 아래 `Lease / Heartbeat Coordination Contract`에 맞는 authoritative coordination adapter 구현
 - shared filesystem state 대신 외부 coordination 저장소와 shared snapshot store를 연결해 실제 owner handoff 활성화
 
 ## Snapshot Restore / Eviction Policy
@@ -158,6 +158,21 @@ cargo run
 - `ROOM_LOCATOR=file`과 `ROOM_COORDINATOR=file`은 같은 `ROOM_COORDINATOR_STATE_DIR`를 공유해야 하며, 멀티 노드에서 쓰려면 각 노드가 같은 디렉터리를 읽고 쓸 수 있어야 한다.
 - WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 `RoomCoordinator` hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
 - 현재 file-backed owner state에는 heartbeat가 없어 crash 뒤 stale `.json` state가 남을 수 있다. future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
+
+## Lease / Heartbeat Coordination Contract
+
+- authoritative coordination store는 최소 `get`, `acquire`, `renew`, `release` 네 동작을 제공해야 한다.
+- owner record는 최소 `doc_id`, `node_id`, optional `base_url`, `lease_id`, `acquired_at`, `renewed_at`, `expires_at`, `epoch`를 저장해야 한다.
+- `owner.base_url`을 노출하는 경우 현재 `StaticRoomLocator`와 같은 규칙을 따라 path/query 없는 origin-only absolute `http://` 또는 `https://` URL만 허용하고, 응답에는 canonical origin (`scheme://authority`)으로 실어야 한다.
+- `lease_id`는 compare-and-swap 기준값이다. `renew`와 `release`는 현재 holder의 `lease_id`와 `node_id`가 모두 일치할 때만 성공해야 한다.
+- `epoch`는 lease 재획득마다 증가하는 fencing token이다. snapshot write, redirect metadata, future async side effect는 이 값을 함께 기록해 stale owner가 늦게 도착한 작업을 덮어쓰지 못하게 해야 한다.
+- `acquire`는 active lease가 없거나 `expires_at <= now`인 경우에만 새 owner를 기록해야 한다.
+- `renew`는 첫 WebSocket 세션 시작 직후 background heartbeat loop에서 주기적으로 실행해야 하며, room이 active인 동안 `expires_at`을 앞으로 민다.
+- `release`는 마지막 세션 종료 후 snapshot 저장이 성공한 뒤에만 호출해야 한다. snapshot 저장 실패 시 lease를 즉시 반환하지 말고 TTL 만료까지 기존 owner를 유지해야 한다.
+- locator는 `expires_at`이 지나기 전까지는 non-local owner를 authoritative하게 취급하고, 만료 뒤에만 stale owner로 간주해야 한다. 단순 파일 mtime이나 로컬 clock drift만으로 조기 handoff를 결정하지 않는다.
+- 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `stale_after_missed_heartbeats=2`다. 즉, owner는 TTL의 절반보다 짧은 간격으로 renew를 시도하고, 다른 노드는 마지막 `expires_at`이 지난 뒤에만 ownership takeover를 시도한다.
+- crash 복구 경로는 `owner crash -> renew 중단 -> expires_at 경과 -> 새 owner acquire -> snapshot restore -> room activate` 순서를 따른다. awareness는 재게시 허용 범위로 두고 내구성 복구 대상에는 포함하지 않는다.
+- 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약을 구현하지 않는다. 이들은 external backend 도입 전까지 운영 리허설과 conflict surface 검증용 best-effort mode로만 유지한다.
 
 ## Static Room Owner Hints
 

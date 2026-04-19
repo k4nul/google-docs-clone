@@ -72,6 +72,17 @@ cargo run
 - 현재 state 포맷에는 `base_url`이 없어서 non-local owner `409` 응답에는 `owner.node_id`만 들어간다.
 - 현재 file-backed owner state에는 heartbeat가 없어 프로세스 crash 뒤 stale state가 남을 수 있다. authoritative handoff가 필요하면 lease/heartbeat를 포함한 외부 coordination 저장소가 추가로 필요하다.
 
+## Future Coordination Store Rollout Contract
+
+- 실제 멀티 노드 handoff를 켜려면 `ROOM_LOCATOR=file` / `ROOM_COORDINATOR=file` 대신 외부 coordination backend가 필요하다.
+- 그 backend는 최소 `get`, `acquire`, `renew`, `release` 네 API를 제공해야 한다.
+- lease record는 `doc_id`, `node_id`, optional `base_url`, `lease_id`, `epoch`, `acquired_at`, `renewed_at`, `expires_at`를 저장해야 한다.
+- `owner.base_url`을 응답에 노출하려면 현재 static hints와 같은 canonical origin 규칙을 따라야 한다.
+- `renew`는 active room 동안 heartbeat loop로 반복되어야 하고, `release`는 마지막 세션 종료 뒤 snapshot 저장이 성공했을 때만 허용된다.
+- stale owner 판단은 반드시 `expires_at` 기준으로만 해야 한다. 로컬 파일 timestamp나 프로세스 uptime만으로 handoff를 결정하지 않는다.
+- 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `max_missed_heartbeats_before_stale=2`다.
+- 현재 저장소에는 이 external backend용 환경변수가 아직 없다. backend 선택과 shared snapshot store 결정이 끝난 뒤에만 config surface를 추가한다.
+
 ## Local Development Procedure
 
 1. `.env.example`을 기준으로 로컬 환경값을 준비한다.
