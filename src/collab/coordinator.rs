@@ -1788,6 +1788,7 @@ mod tests {
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
+            snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
             snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
             snapshot_s3_endpoint: None,
