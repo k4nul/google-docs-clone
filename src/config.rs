@@ -12,6 +12,7 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
+pub const DEFAULT_SNAPSHOT_HEED_PATH: &str = "./data/snapshots.heed";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
@@ -40,6 +41,7 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_sqlite_path: String,
+    pub snapshot_heed_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_fjall_path: String,
     pub snapshot_redb_path: String,
@@ -83,6 +85,7 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
+        let snapshot_heed_path = env_string("SNAPSHOT_HEED_PATH", DEFAULT_SNAPSHOT_HEED_PATH)?;
         let snapshot_jammdb_path =
             env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_fjall_path = env_string("SNAPSHOT_FJALL_PATH", DEFAULT_SNAPSHOT_FJALL_PATH)?;
@@ -144,6 +147,7 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_sqlite_path,
+            snapshot_heed_path,
             snapshot_jammdb_path,
             snapshot_fjall_path,
             snapshot_redb_path,

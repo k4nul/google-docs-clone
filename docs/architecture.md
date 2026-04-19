@@ -11,7 +11,7 @@
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 memory/file/sqlite/jammdb/fjall/redb/sled/s3/managed adapter
+- `src/storage`: snapshot store trait과 memory/file/sqlite/heed/jammdb/fjall/redb/sled/s3/managed adapter
 
 ## Request Flow
 
@@ -71,10 +71,11 @@
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되며, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 제거해 temp artifact가 누적되지 않게 한다.
 - `SqliteSnapshotStore`는 `SNAPSHOT_SQLITE_PATH` DB 파일의 `snapshots` 테이블에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 DB catalog를 그대로 사용한다.
+- `HeedSnapshotStore`는 `SNAPSHOT_HEED_PATH` DB 디렉터리의 `snapshots` LMDB database에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 LMDB catalog를 그대로 사용한다.
 - `FjallSnapshotStore`는 `SNAPSHOT_FJALL_PATH` DB 디렉터리의 `snapshots` keyspace에 문서 metadata와 Yrs full-state update를 함께 저장하고, save/delete 뒤 `PersistMode::SyncAll`로 journal을 동기화하며 startup hydrate/list 경로는 keyspace catalog를 그대로 사용한다.
 - `S3SnapshotStore`는 `SNAPSHOT_S3_ENDPOINT` / `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 조합 아래의 S3-compatible object storage에 `<prefix><doc_id>.json` object를 저장하고, startup hydrate/list 경로는 bucket listing 뒤 matching object를 다시 load해 catalog를 구성한다.
 - `ManagedSnapshotStore`는 `SNAPSHOT_MANAGED_BASE_URL` 아래의 external durability service `GET /v1/snapshots`, `GET|PUT|DELETE /v1/snapshots/:doc_id`에 document metadata와 Yrs full-state update를 JSON으로 위임하고, startup hydrate/list 경로는 same service catalog를 사용한다.
-- `Config.snapshot_store`가 `memory`/`file`/`sqlite`/`jammdb`/`fjall`/`redb`/`sled`/`s3`/`managed` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이, `sqlite` 모드에서는 `SNAPSHOT_SQLITE_PATH` DB row가, `jammdb` 모드에서는 `SNAPSHOT_JAMMDB_PATH` bucket key가, `fjall` 모드에서는 `SNAPSHOT_FJALL_PATH` keyspace key가, `redb` 모드에서는 `SNAPSHOT_REDB_PATH` DB key가, `sled` 모드에서는 `SNAPSHOT_SLED_PATH` DB key가, `s3` 모드에서는 `SNAPSHOT_S3_PREFIX<doc_id>.json` object key가, `managed` 모드에서는 `SNAPSHOT_MANAGED_BASE_URL/v1/snapshots/:doc_id` resource가 snapshot storage 단위가 된다.
+- `Config.snapshot_store`가 `memory`/`file`/`sqlite`/`heed`/`jammdb`/`fjall`/`redb`/`sled`/`s3`/`managed` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이, `sqlite` 모드에서는 `SNAPSHOT_SQLITE_PATH` DB row가, `heed` 모드에서는 `SNAPSHOT_HEED_PATH` LMDB key가, `jammdb` 모드에서는 `SNAPSHOT_JAMMDB_PATH` bucket key가, `fjall` 모드에서는 `SNAPSHOT_FJALL_PATH` keyspace key가, `redb` 모드에서는 `SNAPSHOT_REDB_PATH` DB key가, `sled` 모드에서는 `SNAPSHOT_SLED_PATH` DB key가, `s3` 모드에서는 `SNAPSHOT_S3_PREFIX<doc_id>.json` object key가, `managed` 모드에서는 `SNAPSHOT_MANAGED_BASE_URL/v1/snapshots/:doc_id` resource가 snapshot storage 단위가 된다.
 
 ## Multi-Process Distribution Strategy
 
@@ -94,7 +95,7 @@
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - `SqliteRoomLocator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease row에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - `ManagedRoomLocator`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id` 응답을 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
-- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, vendor-specific embedded DB 기반 `JammdbSnapshotStore`/`FjallSnapshotStore`/`RedbSnapshotStore`/`SledSnapshotStore`, S3-compatible `S3SnapshotStore`, external `ManagedSnapshotStore`, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로 ownership coordination plane과 snapshot durability plane을 모두 shared SQLite DB 밖으로 분리할 수 있다. `ManagedRoomCoordinator`/`ManagedRoomLocator`를 `SqliteSnapshotStore`와 결합한 multi-host handoff rehearsal, `ManagedSnapshotStore` 자체의 저장/복구 경계, `S3SnapshotStore` startup/config 복구 경계, 그리고 managed coordination과 managed snapshot durability를 함께 묶은 handoff rehearsal까지 모두 회귀 테스트로 검증됐다.
+- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, vendor-specific embedded DB 기반 `HeedSnapshotStore`/`JammdbSnapshotStore`/`FjallSnapshotStore`/`RedbSnapshotStore`/`SledSnapshotStore`, S3-compatible `S3SnapshotStore`, external `ManagedSnapshotStore`, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로 ownership coordination plane과 snapshot durability plane을 모두 shared SQLite DB 밖으로 분리할 수 있다. `ManagedRoomCoordinator`/`ManagedRoomLocator`를 `SqliteSnapshotStore`와 결합한 multi-host handoff rehearsal, `ManagedSnapshotStore` 자체의 저장/복구 경계, `S3SnapshotStore` startup/config 복구 경계, 그리고 managed coordination과 managed snapshot durability를 함께 묶은 handoff rehearsal까지 모두 회귀 테스트로 검증됐다.
 
 ## Authoritative Coordination Store Contract
 
@@ -141,4 +142,4 @@
 - 현재 코드베이스의 `FileRoomCoordinator`/`FileRoomLocator`는 위 계약의 filesystem rehearsal 구현을 제공한다.
 - 현 file 구현은 `lease_id`, `epoch`, optional `base_url`, `renewed_at`, `expires_at`를 기록하고 background heartbeat로 lease를 연장하지만, CAS 보장 범위가 shared filesystem과 단일 파일 교체에 한정된다.
 - 현재 코드베이스의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑해 transactional CAS를 제공한다.
-- 따라서 이 저장소에서 실제 handoff를 켜는 기본 경로는 검증이 끝난 shared snapshot durability `SNAPSHOT_STORE=sqlite`와, ownership plane 용도로 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 조합하는 형태다. `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=s3`, `SNAPSHOT_STORE=managed`도 같은 `SnapshotStore` 경계에 연결됐고, managed coordination과 함께 묶은 실제 handoff rehearsal까지 회귀 테스트로 검증됐다.
+- 따라서 이 저장소에서 실제 handoff를 켜는 기본 경로는 검증이 끝난 shared snapshot durability `SNAPSHOT_STORE=sqlite`와, ownership plane 용도로 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 조합하는 형태다. `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=s3`, `SNAPSHOT_STORE=managed`도 같은 `SnapshotStore` 경계에 연결됐고, managed coordination과 함께 묶은 실제 handoff rehearsal까지 회귀 테스트로 검증됐다.
