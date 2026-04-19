@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use axum::http::Uri;
+
 use crate::{
     collab::coordinator::{RoomCoordinator, noop_room_coordinator, room_coordinator_from_config},
     collab::locator::{ResolvedRoom, RoomLocator, local_room_locator, room_locator_from_config},
@@ -118,6 +120,15 @@ impl AppState {
         Arc::clone(&self.room_coordinator)
     }
 
+    pub fn ensure_local_room_owner_for_request(
+        &self,
+        doc_id: &uuid::Uuid,
+        request_uri: &Uri,
+    ) -> AppResult<()> {
+        self.ensure_local_room_owner(doc_id)
+            .map_err(|error| error.with_redirect_from_request(request_uri))
+    }
+
     pub fn ensure_local_room_owner(&self, doc_id: &uuid::Uuid) -> AppResult<()> {
         match self.room_locator.resolve(doc_id) {
             Ok(ResolvedRoom::Local) => Ok(()),
@@ -132,6 +143,7 @@ impl AppState {
                     message: format!("document `{doc_id}` is owned by another collaboration node"),
                     owner_node_id: owner.node_id,
                     owner_base_url: owner.base_url,
+                    redirect_url: None,
                 })
             }
             Err(error) => {

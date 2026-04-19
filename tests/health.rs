@@ -466,6 +466,19 @@ async fn document_detail_endpoint_rejects_non_local_room_owner() {
         .await;
 
     response.assert_status(StatusCode::CONFLICT);
+    response.assert_header(
+        "x-collab-owner-node-id",
+        format!("node-for-{}", document.id),
+    );
+    response.assert_header("x-collab-owner-base-url", "http://node-b.internal:4000");
+    response.assert_header(
+        "x-collab-redirect-location",
+        format!("http://node-b.internal:4000/api/documents/{}", document.id),
+    );
+    response.assert_header(
+        "location",
+        format!("http://node-b.internal:4000/api/documents/{}", document.id),
+    );
 
     let payload = response.json::<Value>();
     assert_eq!(payload["error"], "conflict");
@@ -731,6 +744,16 @@ async fn document_detail_endpoint_includes_base_url_for_non_local_sqlite_room_ow
         .await;
 
     response.assert_status(StatusCode::CONFLICT);
+    response.assert_header("x-collab-owner-node-id", "node-b");
+    response.assert_header("x-collab-owner-base-url", "http://node-b.internal:5100");
+    response.assert_header(
+        "x-collab-redirect-location",
+        format!("http://node-b.internal:5100/api/documents/{}", document.id),
+    );
+    response.assert_header(
+        "location",
+        format!("http://node-b.internal:5100/api/documents/{}", document.id),
+    );
 
     let payload = response.json::<Value>();
     assert_eq!(payload["error"], "conflict");
@@ -1064,6 +1087,63 @@ async fn websocket_endpoint_rejects_missing_document_with_json_error() {
         payload["message"],
         format!("document `{doc_id}` was not found")
     );
+}
+
+#[tokio::test]
+async fn websocket_endpoint_rejects_non_local_owner_with_redirect_headers() {
+    let config = test_config();
+    let state = AppState::with_snapshot_store_and_locator(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        Arc::new(InMemorySnapshotStore::new()),
+        Arc::new(RemoteRoomLocator),
+    )
+    .expect("state should initialize with rejecting locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote websocket owner".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let response = server
+        .get_websocket(&format!("/ws/{}?source=edge", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+    response.assert_header(
+        "x-collab-owner-node-id",
+        format!("node-for-{}", document.id),
+    );
+    response.assert_header("x-collab-owner-base-url", "http://node-b.internal:4000");
+    response.assert_header(
+        "x-collab-redirect-location",
+        format!("http://node-b.internal:4000/ws/{}?source=edge", document.id),
+    );
+    response.assert_header(
+        "location",
+        format!("http://node-b.internal:4000/ws/{}?source=edge", document.id),
+    );
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(
+        payload["message"],
+        format!(
+            "document `{}` is owned by another collaboration node",
+            document.id
+        )
+    );
+    assert_eq!(
+        payload["owner"]["node_id"],
+        format!("node-for-{}", document.id)
+    );
+    assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:4000");
 }
 
 #[tokio::test]

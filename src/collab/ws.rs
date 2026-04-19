@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use axum::{
     extract::{
-        Path, State,
+        OriginalUri, Path, State,
         ws::{WebSocket, WebSocketUpgrade},
     },
-    http::{HeaderMap, header::ORIGIN},
+    http::{HeaderMap, Uri, header::ORIGIN},
     response::IntoResponse,
 };
 use futures_util::StreamExt;
@@ -25,11 +25,12 @@ use crate::{
 
 pub async fn ws_handler(
     Path(raw_doc_id): Path<String>,
+    OriginalUri(original_uri): OriginalUri,
     State(state): State<AppState>,
     headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> AppResult<impl IntoResponse> {
-    let (doc_id, room) = resolve_websocket_room(&state, &headers, &raw_doc_id)?;
+    let (doc_id, room) = resolve_websocket_room(&state, &headers, &original_uri, &raw_doc_id)?;
 
     let registry = state.rooms_registry();
     let coordinator = state.room_coordinator();
@@ -121,12 +122,13 @@ fn parse_uuid_param(parameter: &str, raw_value: &str) -> AppResult<Uuid> {
 fn resolve_websocket_room(
     state: &AppState,
     headers: &HeaderMap,
+    request_uri: &Uri,
     raw_doc_id: &str,
 ) -> AppResult<(Uuid, Arc<Room>)> {
     let doc_id = parse_uuid_param("doc_id", raw_doc_id)?;
     validate_origin(state, headers, doc_id)?;
     let token = require_bearer_token(headers)?;
-    state.ensure_local_room_owner(&doc_id)?;
+    state.ensure_local_room_owner_for_request(&doc_id, request_uri)?;
     let room = state
         .rooms()
         .get_or_restore(&doc_id)
@@ -213,7 +215,15 @@ mod tests {
                 .expect("authorization header should be valid"),
         );
 
-        let error = match resolve_websocket_room(&state, &headers, &document.id.to_string()) {
+        let request_uri: Uri = format!("/ws/{}", document.id)
+            .parse()
+            .expect("websocket request URI should parse");
+        let error = match resolve_websocket_room(
+            &state,
+            &headers,
+            &request_uri,
+            &document.id.to_string(),
+        ) {
             Ok(_) => panic!("non-local owner should reject websocket room resolution"),
             Err(error) => error,
         };
@@ -223,6 +233,7 @@ mod tests {
                 message,
                 owner_node_id,
                 owner_base_url,
+                redirect_url,
             } => {
                 assert_eq!(
                     message,
@@ -235,6 +246,10 @@ mod tests {
                 assert_eq!(
                     owner_base_url,
                     Some("http://node-b.internal:4000".to_owned())
+                );
+                assert_eq!(
+                    redirect_url,
+                    Some(format!("http://node-b.internal:4000/ws/{}", document.id))
                 );
             }
             other => panic!("expected conflict, received {other:?}"),
