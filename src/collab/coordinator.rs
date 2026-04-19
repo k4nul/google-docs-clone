@@ -1,11 +1,17 @@
 use std::{
+    collections::HashMap,
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread::{self, JoinHandle},
+    time::Duration,
 };
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{info, warn};
@@ -98,30 +104,68 @@ impl RoomCoordinator for LoggingRoomCoordinator {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct FileRoomCoordinator {
     node_id: Arc<str>,
     root: PathBuf,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
+    heartbeats: Mutex<HashMap<Uuid, FileRoomLeaseHeartbeat>>,
+}
+
+struct FileRoomLeaseHeartbeat {
+    lease_id: Uuid,
+    epoch: u64,
+    stop: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct PersistedRoomCoordinatorState {
     pub(crate) doc_id: Uuid,
     pub(crate) node_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) base_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) lease_id: Option<Uuid>,
+    #[serde(default)]
+    pub(crate) epoch: u64,
     pub(crate) activated_at: DateTime<Utc>,
-    pub(crate) updated_at: DateTime<Utc>,
+    #[serde(default, alias = "updated_at", skip_serializing_if = "Option::is_none")]
+    pub(crate) renewed_at: Option<DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) expires_at: Option<DateTime<Utc>>,
 }
 
 impl FileRoomCoordinator {
     pub fn new(
         node_id: impl Into<String>,
         root: impl Into<PathBuf>,
+        heartbeat_interval: Duration,
+        lease_ttl: Duration,
     ) -> Result<Self, RoomCoordinatorError> {
         let node_id = node_id.into();
         let node_id = node_id.trim();
         if node_id.is_empty() {
             return Err(RoomCoordinatorError::Operation(
                 "NODE_ID cannot be empty when ROOM_COORDINATOR=file".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be greater than zero when ROOM_COORDINATOR=file".to_owned(),
+            ));
+        }
+
+        if lease_ttl.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_LEASE_TTL_SECS must be greater than zero when ROOM_COORDINATOR=file".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval >= lease_ttl {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=file".to_owned(),
             ));
         }
 
@@ -136,6 +180,9 @@ impl FileRoomCoordinator {
         let coordinator = Self {
             node_id: Arc::<str>::from(node_id.to_owned()),
             root,
+            heartbeat_interval,
+            lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
         };
 
         let cleaned_temp_files = coordinator.cleanup_stale_temp_files()?;
@@ -154,6 +201,14 @@ impl FileRoomCoordinator {
 
     pub fn node_id(&self) -> &str {
         &self.node_id
+    }
+
+    pub fn heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    pub fn lease_ttl(&self) -> Duration {
+        self.lease_ttl
     }
 
     fn state_path(&self, doc_id: &Uuid) -> PathBuf {
@@ -274,6 +329,210 @@ impl FileRoomCoordinator {
 
         Ok(())
     }
+
+    fn lease_ttl_delta(&self) -> Result<TimeDelta, RoomCoordinatorError> {
+        TimeDelta::from_std(self.lease_ttl).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to convert lease TTL to chrono duration: {error}"
+            ))
+        })
+    }
+
+    fn read_state(
+        &self,
+        doc_id: &Uuid,
+    ) -> Result<Option<PersistedRoomCoordinatorState>, RoomCoordinatorError> {
+        let path = self.state_path(doc_id);
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
+            Err(error) => {
+                return Err(RoomCoordinatorError::Operation(format!(
+                    "failed to read room coordinator state `{}`: {error}",
+                    path.display()
+                )));
+            }
+        };
+
+        let state = serde_json::from_slice(&bytes).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to deserialize room coordinator state `{}`: {error}",
+                path.display()
+            ))
+        })?;
+
+        Ok(Some(state))
+    }
+
+    fn write_state(
+        &self,
+        doc_id: &Uuid,
+        state: &PersistedRoomCoordinatorState,
+    ) -> Result<(), RoomCoordinatorError> {
+        let path = self.state_path(doc_id);
+        let bytes = serde_json::to_vec(state).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to serialize room coordinator state `{}`: {error}",
+                path.display()
+            ))
+        })?;
+
+        self.write_state_atomically(doc_id, &path, &bytes)
+    }
+
+    fn acquire_lease(
+        &self,
+        doc_id: &Uuid,
+    ) -> Result<PersistedRoomCoordinatorState, RoomCoordinatorError> {
+        let now = Utc::now();
+        let existing = self.read_state(doc_id)?;
+
+        if let Some(existing_state) = existing.as_ref() {
+            if existing_state.doc_id != *doc_id {
+                return Err(RoomCoordinatorError::Operation(format!(
+                    "persisted coordinator state doc_id `{}` did not match requested doc_id `{doc_id}`",
+                    existing_state.doc_id
+                )));
+            }
+
+            let owner_node_id = existing_state.node_id.trim();
+            if owner_node_id.is_empty() {
+                return Err(RoomCoordinatorError::Operation(format!(
+                    "persisted coordinator state `{}` has an empty node_id",
+                    self.state_path(doc_id).display()
+                )));
+            }
+
+            if owner_node_id != self.node_id() {
+                let is_active = existing_state
+                    .expires_at
+                    .map(|expires_at| expires_at > now)
+                    .unwrap_or(true);
+                if is_active {
+                    return Err(RoomCoordinatorError::Operation(format!(
+                        "document `{doc_id}` is already leased by node `{owner_node_id}`"
+                    )));
+                }
+            }
+        }
+
+        let lease_id = Uuid::new_v4();
+        let epoch = existing
+            .as_ref()
+            .map(|state| state.epoch.saturating_add(1))
+            .unwrap_or(1);
+        let expires_at = now + self.lease_ttl_delta()?;
+        let state = PersistedRoomCoordinatorState {
+            doc_id: *doc_id,
+            node_id: self.node_id().to_owned(),
+            base_url: None,
+            lease_id: Some(lease_id),
+            epoch,
+            activated_at: now,
+            renewed_at: Some(now),
+            expires_at: Some(expires_at),
+        };
+
+        self.write_state(doc_id, &state)?;
+        Ok(state)
+    }
+
+    fn renew_lease(
+        &self,
+        doc_id: &Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<bool, RoomCoordinatorError> {
+        let Some(mut state) = self.read_state(doc_id)? else {
+            return Ok(false);
+        };
+
+        if state.doc_id != *doc_id {
+            return Err(RoomCoordinatorError::Operation(format!(
+                "persisted coordinator state doc_id `{}` did not match requested doc_id `{doc_id}`",
+                state.doc_id
+            )));
+        }
+
+        if state.node_id.trim() != self.node_id() {
+            return Ok(false);
+        }
+
+        if state.lease_id != Some(lease_id) || state.epoch != epoch {
+            return Ok(false);
+        }
+
+        let now = Utc::now();
+        state.renewed_at = Some(now);
+        state.expires_at = Some(now + self.lease_ttl_delta()?);
+        self.write_state(doc_id, &state)?;
+        Ok(true)
+    }
+
+    fn spawn_heartbeat(
+        &self,
+        doc_id: Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<FileRoomLeaseHeartbeat, RoomCoordinatorError> {
+        let coordinator = Self {
+            node_id: Arc::clone(&self.node_id),
+            root: self.root.clone(),
+            heartbeat_interval: self.heartbeat_interval,
+            lease_ttl: self.lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
+        };
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_signal = Arc::clone(&stop);
+
+        let thread = thread::Builder::new()
+            .name(format!("room-lease-heartbeat-{doc_id}"))
+            .spawn(move || {
+                while !stop_signal.load(Ordering::Relaxed) {
+                    thread::sleep(coordinator.heartbeat_interval);
+
+                    if stop_signal.load(Ordering::Relaxed) {
+                        break;
+                    }
+
+                    match coordinator.renew_lease(&doc_id, lease_id, epoch) {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            warn!(
+                                coordinator_mode = coordinator.mode(),
+                                node_id = coordinator.node_id(),
+                                %doc_id,
+                                lease_id = %lease_id,
+                                epoch,
+                                "stopped room lease heartbeat because the active lease changed"
+                            );
+                            break;
+                        }
+                        Err(error) => warn!(
+                            coordinator_mode = coordinator.mode(),
+                            node_id = coordinator.node_id(),
+                            %doc_id,
+                            lease_id = %lease_id,
+                            epoch,
+                            %error,
+                            "failed to renew file-backed room lease heartbeat"
+                        ),
+                    }
+                }
+            })
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to spawn room lease heartbeat thread for `{doc_id}`: {error}"
+                ))
+            })?;
+
+        Ok(FileRoomLeaseHeartbeat {
+            lease_id,
+            epoch,
+            stop,
+            thread: Some(thread),
+        })
+    }
 }
 
 impl RoomCoordinator for FileRoomCoordinator {
@@ -282,35 +541,75 @@ impl RoomCoordinator for FileRoomCoordinator {
     }
 
     fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
-        let timestamp = Utc::now();
-        let state = PersistedRoomCoordinatorState {
-            doc_id: *doc_id,
-            node_id: self.node_id().to_owned(),
-            activated_at: timestamp,
-            updated_at: timestamp,
-        };
-        let path = self.state_path(doc_id);
-        let bytes = serde_json::to_vec(&state).map_err(|error| {
-            RoomCoordinatorError::Operation(format!(
-                "failed to serialize room coordinator state `{}`: {error}",
-                path.display()
-            ))
-        })?;
+        let state = self.acquire_lease(doc_id)?;
+        let lease_id = state
+            .lease_id
+            .expect("newly acquired lease should always have an id");
+        let heartbeat = self.spawn_heartbeat(*doc_id, lease_id, state.epoch)?;
 
-        self.write_state_atomically(doc_id, &path, &bytes)?;
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("file room coordinator heartbeat registry should not be poisoned");
+        if heartbeats.contains_key(doc_id) {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread {
+                let _ = thread.join();
+            }
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` already has an active lease heartbeat on this node"
+            )));
+        }
+        heartbeats.insert(*doc_id, heartbeat);
+
+        let path = self.state_path(doc_id);
         info!(
             coordinator_mode = self.mode(),
             node_id = self.node_id(),
             %doc_id,
+            lease_id = %lease_id,
+            epoch = state.epoch,
+            expires_at = %state
+                .expires_at
+                .expect("newly acquired lease should always have an expiry"),
             path = %path.display(),
-            "persisted file-backed room coordinator state"
+            "persisted file-backed room lease state"
         );
         Ok(())
     }
 
     fn room_deactivated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        let heartbeat = self
+            .heartbeats
+            .lock()
+            .expect("file room coordinator heartbeat registry should not be poisoned")
+            .remove(doc_id);
+
+        let Some(mut heartbeat) = heartbeat else {
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` does not have an active lease heartbeat on this node"
+            )));
+        };
+
+        heartbeat.stop.store(true, Ordering::Relaxed);
+        if let Some(thread) = heartbeat.thread.take() {
+            let _ = thread.join();
+        }
+
         let path = self.state_path(doc_id);
-        self.remove_file_if_exists(&path)?;
+        let state = self.read_state(doc_id)?;
+        let should_release = state
+            .as_ref()
+            .map(|state| {
+                state.node_id.trim() == self.node_id()
+                    && state.lease_id == Some(heartbeat.lease_id)
+                    && state.epoch == heartbeat.epoch
+            })
+            .unwrap_or(false);
+
+        if should_release {
+            self.remove_file_if_exists(&path)?;
+        }
 
         for temp_path in self.matching_temp_paths(doc_id)? {
             self.remove_file_if_exists(&temp_path)?;
@@ -320,10 +619,29 @@ impl RoomCoordinator for FileRoomCoordinator {
             coordinator_mode = self.mode(),
             node_id = self.node_id(),
             %doc_id,
+            lease_id = %heartbeat.lease_id,
+            epoch = heartbeat.epoch,
+            released = should_release,
             path = %path.display(),
-            "removed file-backed room coordinator state"
+            "released file-backed room lease state"
         );
         Ok(())
+    }
+}
+
+impl Drop for FileRoomCoordinator {
+    fn drop(&mut self) {
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("file room coordinator heartbeat registry should not be poisoned");
+
+        for (_doc_id, heartbeat) in heartbeats.iter_mut() {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread.take() {
+                let _ = thread.join();
+            }
+        }
     }
 }
 
@@ -338,8 +656,15 @@ pub fn logging_room_coordinator(node_id: impl Into<String>) -> Arc<dyn RoomCoord
 pub fn file_room_coordinator(
     node_id: impl Into<String>,
     root: impl Into<PathBuf>,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
 ) -> Result<Arc<dyn RoomCoordinator>, RoomCoordinatorError> {
-    Ok(Arc::new(FileRoomCoordinator::new(node_id, root)?))
+    Ok(Arc::new(FileRoomCoordinator::new(
+        node_id,
+        root,
+        heartbeat_interval,
+        lease_ttl,
+    )?))
 }
 
 pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCoordinator>> {
@@ -349,6 +674,8 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
         "file" => file_room_coordinator(
             config.node_id.clone(),
             config.room_coordinator_state_dir.clone(),
+            Duration::from_secs(config.room_coordinator_heartbeat_interval_secs),
+            Duration::from_secs(config.room_coordinator_lease_ttl_secs),
         )
         .map_err(|error| {
             AppError::Config(format!(
@@ -364,7 +691,7 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, path::PathBuf};
+    use std::{fs, path::PathBuf, thread, time::Duration};
 
     fn temp_state_dir(test_name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -385,6 +712,8 @@ mod tests {
             room_locator: "local".to_owned(),
             room_coordinator: room_coordinator.to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 1,
+            room_coordinator_lease_ttl_secs: 5,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: None,
         }
@@ -415,8 +744,13 @@ mod tests {
     #[test]
     fn file_room_coordinator_persists_and_clears_active_room_state() {
         let root = temp_state_dir("persist-state");
-        let coordinator = FileRoomCoordinator::new("node-a", &root)
-            .expect("file room coordinator should initialize");
+        let coordinator = FileRoomCoordinator::new(
+            "node-a",
+            &root,
+            Duration::from_millis(25),
+            Duration::from_millis(80),
+        )
+        .expect("file room coordinator should initialize");
         let doc_id = Uuid::new_v4();
         let state_path = root.join(format!("{doc_id}.json"));
 
@@ -430,7 +764,12 @@ mod tests {
             serde_json::from_str(&state).expect("room state json should deserialize");
         assert_eq!(state.doc_id, doc_id);
         assert_eq!(state.node_id, "node-a");
-        assert!(state.updated_at >= state.activated_at);
+        assert!(state.lease_id.is_some());
+        assert_eq!(state.epoch, 1);
+        assert_eq!(state.base_url, None);
+        let renewed_at = state.renewed_at.expect("lease should include renewed_at");
+        assert!(renewed_at >= state.activated_at);
+        assert!(state.expires_at.expect("lease should include expiry") > renewed_at);
 
         coordinator
             .room_deactivated(&doc_id)
@@ -452,6 +791,123 @@ mod tests {
         assert_eq!(coordinator.mode(), "file");
 
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn file_room_coordinator_heartbeat_renews_lease_expiry() {
+        let root = temp_state_dir("heartbeat-renew");
+        let coordinator = FileRoomCoordinator::new(
+            "node-a",
+            &root,
+            Duration::from_millis(20),
+            Duration::from_millis(90),
+        )
+        .expect("file room coordinator should initialize");
+        let doc_id = Uuid::new_v4();
+        let state_path = root.join(format!("{doc_id}.json"));
+
+        coordinator
+            .room_activated(&doc_id)
+            .expect("file coordinator should acquire room lease");
+
+        let initial_state: PersistedRoomCoordinatorState =
+            serde_json::from_slice(&fs::read(&state_path).expect("state file should exist"))
+                .expect("state file should deserialize");
+        let initial_renewed_at = initial_state
+            .renewed_at
+            .expect("initial state should include renewed_at");
+        let initial_expires_at = initial_state
+            .expires_at
+            .expect("state file should include lease expiry");
+
+        thread::sleep(Duration::from_millis(60));
+
+        let renewed_state: PersistedRoomCoordinatorState =
+            serde_json::from_slice(&fs::read(&state_path).expect("state file should exist"))
+                .expect("state file should deserialize");
+        assert_eq!(renewed_state.lease_id, initial_state.lease_id);
+        assert_eq!(renewed_state.epoch, initial_state.epoch);
+        assert!(
+            renewed_state
+                .renewed_at
+                .expect("renewed state should include renewed_at")
+                > initial_renewed_at
+        );
+        assert!(
+            renewed_state
+                .expires_at
+                .expect("renewed state should include lease expiry")
+                > initial_expires_at
+        );
+
+        coordinator
+            .room_deactivated(&doc_id)
+            .expect("file coordinator should release room lease");
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn file_room_coordinator_rejects_active_lease_from_other_node() {
+        let root = temp_state_dir("reject-other-node");
+        let coordinator = FileRoomCoordinator::new(
+            "node-a",
+            &root,
+            Duration::from_secs(1),
+            Duration::from_secs(5),
+        )
+        .expect("file room coordinator should initialize");
+        let doc_id = Uuid::new_v4();
+        let state_path = root.join(format!("{doc_id}.json"));
+        let now = Utc::now();
+
+        fs::write(
+            &state_path,
+            serde_json::to_vec(&PersistedRoomCoordinatorState {
+                doc_id,
+                node_id: "node-b".to_owned(),
+                base_url: None,
+                lease_id: Some(Uuid::new_v4()),
+                epoch: 7,
+                activated_at: now,
+                renewed_at: Some(now),
+                expires_at: Some(now + TimeDelta::seconds(30)),
+            })
+            .expect("state should serialize"),
+        )
+        .expect("state should be written");
+
+        let error = coordinator
+            .room_activated(&doc_id)
+            .expect_err("active lease from another node should reject acquisition");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "room coordination failed: document `{doc_id}` is already leased by node `node-b`"
+            )
+        );
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn room_coordinator_from_config_rejects_invalid_file_timing() {
+        let mut config = test_config("file");
+        config.room_coordinator_heartbeat_interval_secs = 30;
+        config.room_coordinator_lease_ttl_secs = 30;
+
+        let error = match room_coordinator_from_config(&config) {
+            Ok(_) => panic!("invalid file lease timing should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "failed to initialize file room coordinator: room coordination failed: ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=file"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
     }
 
     #[test]

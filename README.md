@@ -102,6 +102,8 @@ cargo run
 - `ROOM_LOCATOR`: `local`, `static`, 또는 `file`
 - `ROOM_COORDINATOR`: `noop`, `logging`, 또는 `file`
 - `ROOM_COORDINATOR_STATE_DIR`: `ROOM_COORDINATOR=file`일 때 active room state JSON 파일을 저장하는 디렉터리이며, `ROOM_LOCATOR=file`은 같은 디렉터리를 읽는다
+- `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS`: `ROOM_COORDINATOR=file`일 때 lease heartbeat 갱신 간격(초)
+- `ROOM_COORDINATOR_LEASE_TTL_SECS`: `ROOM_COORDINATOR=file`일 때 lease 만료 TTL(초)
 - `NODE_ID`: 현재 collaboration node 식별자
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 문서별 owner 힌트 JSON 파일 경로
 
@@ -128,7 +130,7 @@ cargo run
 
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url`로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
-`ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active room state를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `FileRoomCoordinator`가 같은 디렉터리에 남긴 state를 소비하는 best-effort resolver이며, 현재 포맷에는 `base_url`이 없으므로 conflict 응답에는 `owner.node_id`만 포함된다.
+`ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active room lease state를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `FileRoomCoordinator`가 같은 디렉터리에 남긴 state를 소비하는 best-effort resolver이며, 현재 포맷에는 `base_url`이 없으므로 conflict 응답에는 `owner.node_id`만 포함된다. stale owner 판단은 file mtime이 아니라 persisted `expires_at`만 기준으로 한다.
 
 ## 향후 확장 방향
 
@@ -152,12 +154,12 @@ cargo run
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
-- `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`을 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으면 `409 conflict`와 `owner.node_id`를 반환한다.
+- `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`을 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으며 `expires_at`이 아직 지나지 않았으면 `409 conflict`와 `owner.node_id`를 반환한다.
 - `ROOM_COORDINATOR=noop`은 아무 side effect 없이 통과하고, `ROOM_COORDINATOR=logging`은 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남긴다.
-- `ROOM_COORDINATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 현재 active room owner 상태를 atomic write로 남기고, 마지막 세션 종료 뒤에는 해당 상태 파일을 제거한다.
+- `ROOM_COORDINATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 canonical lease state (`doc_id`, `node_id`, optional `base_url`, `lease_id`, `epoch`, `acquired_at`, `renewed_at`, `expires_at`)를 atomic write로 남기고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 시 compare-and-release 방식으로 정리한다.
 - `ROOM_LOCATOR=file`과 `ROOM_COORDINATOR=file`은 같은 `ROOM_COORDINATOR_STATE_DIR`를 공유해야 하며, 멀티 노드에서 쓰려면 각 노드가 같은 디렉터리를 읽고 쓸 수 있어야 한다.
 - WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 `RoomCoordinator` hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
-- 현재 file-backed owner state에는 heartbeat가 없어 crash 뒤 stale `.json` state가 남을 수 있다. future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
+- 현재 file-backed lease state는 shared filesystem 위에서만 동작하는 best-effort 구현이다. crash 뒤에는 `expires_at` 경과 후에만 stale로 간주되며, 실제 authoritative handoff는 여전히 외부 coordination backend와 shared snapshot store가 준비된 뒤에만 활성화해야 한다.
 
 ## Lease / Heartbeat Coordination Contract
 
@@ -172,7 +174,7 @@ cargo run
 - locator는 `expires_at`이 지나기 전까지는 non-local owner를 authoritative하게 취급하고, 만료 뒤에만 stale owner로 간주해야 한다. 단순 파일 mtime이나 로컬 clock drift만으로 조기 handoff를 결정하지 않는다.
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `stale_after_missed_heartbeats=2`다. 즉, owner는 TTL의 절반보다 짧은 간격으로 renew를 시도하고, 다른 노드는 마지막 `expires_at`이 지난 뒤에만 ownership takeover를 시도한다.
 - crash 복구 경로는 `owner crash -> renew 중단 -> expires_at 경과 -> 새 owner acquire -> snapshot restore -> room activate` 순서를 따른다. awareness는 재게시 허용 범위로 두고 내구성 복구 대상에는 포함하지 않는다.
-- 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약을 구현하지 않는다. 이들은 external backend 도입 전까지 운영 리허설과 conflict surface 검증용 best-effort mode로만 유지한다.
+- 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약의 file-backed 준비 구현을 제공한다. canonical lease record, compare-and-release, background heartbeat renew, `expires_at` 기반 stale 판정은 로컬/shared filesystem 경계에서 검증할 수 있지만, external backend의 authoritative CAS 보장과 shared snapshot store가 없으므로 여전히 best-effort rehearsal mode로만 사용해야 한다.
 
 ## Static Room Owner Hints
 

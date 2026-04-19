@@ -14,6 +14,8 @@ pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
 pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
+pub const DEFAULT_ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS: u64 = 10;
+pub const DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS: u64 = 30;
 pub const DEFAULT_NODE_ID: &str = "local-node";
 
 #[derive(Debug, Clone)]
@@ -28,6 +30,8 @@ pub struct Config {
     pub room_locator: String,
     pub room_coordinator: String,
     pub room_coordinator_state_dir: String,
+    pub room_coordinator_heartbeat_interval_secs: u64,
+    pub room_coordinator_lease_ttl_secs: u64,
     pub node_id: String,
     pub room_owner_hints_path: Option<String>,
 }
@@ -49,6 +53,14 @@ impl Config {
             "ROOM_COORDINATOR_STATE_DIR",
             DEFAULT_ROOM_COORDINATOR_STATE_DIR,
         )?;
+        let room_coordinator_heartbeat_interval_secs = env_u64(
+            "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS",
+            DEFAULT_ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS,
+        )?;
+        let room_coordinator_lease_ttl_secs = env_u64(
+            "ROOM_COORDINATOR_LEASE_TTL_SECS",
+            DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS,
+        )?;
         let node_id = env_string("NODE_ID", DEFAULT_NODE_ID)?;
         let room_owner_hints_path = env_optional_string("ROOM_OWNER_HINTS_PATH")?;
 
@@ -63,6 +75,8 @@ impl Config {
             room_locator,
             room_coordinator,
             room_coordinator_state_dir,
+            room_coordinator_heartbeat_interval_secs,
+            room_coordinator_lease_ttl_secs,
             node_id,
             room_owner_hints_path,
         })
@@ -110,6 +124,27 @@ fn env_u16(key: &str, default: u16) -> AppResult<u16> {
             trimmed.parse::<u16>().map_err(|_| {
                 AppError::Config(format!(
                     "{key} must be an unsigned 16-bit integer, received `{trimmed}`"
+                ))
+            })
+        }
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(env::VarError::NotUnicode(_)) => {
+            Err(AppError::Config(format!("{key} must be valid unicode")))
+        }
+    }
+}
+
+fn env_u64(key: &str, default: u64) -> AppResult<u64> {
+    match env::var(key) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err(AppError::Config(format!("{key} cannot be empty")));
+            }
+
+            trimmed.parse::<u64>().map_err(|_| {
+                AppError::Config(format!(
+                    "{key} must be an unsigned 64-bit integer, received `{trimmed}`"
                 ))
             })
         }

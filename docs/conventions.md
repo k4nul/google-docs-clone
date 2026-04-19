@@ -48,6 +48,7 @@
 - lease/heartbeat 같은 owner coordination side effect는 `RoomCoordinator` 경계 뒤에만 붙이고, snapshot 저장 전 handoff를 허용하지 않는다.
 - future authoritative coordination backend는 `lease_id` compare-and-swap과 `epoch` fencing token을 함께 유지해야 한다.
 - stale owner 판단은 `expires_at` 기준으로만 하고, file mtime 같은 로컬 heuristic로 조기 회수를 시도하지 않는다.
+- filesystem 기반 `FileRoomCoordinator`/`FileRoomLocator`는 rehearsal 경계일 뿐이며, 외부 coordination backend와 shared snapshot store를 대체하는 production authority로 간주하지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules

@@ -7,6 +7,7 @@ use std::{
 };
 
 use axum::http::Uri;
+use chrono::Utc;
 use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
@@ -243,12 +244,27 @@ impl RoomLocator for FileRoomLocator {
             )));
         }
 
+        if state
+            .expires_at
+            .map(|expires_at| expires_at <= Utc::now())
+            .unwrap_or(false)
+        {
+            return Ok(ResolvedRoom::Local);
+        }
+
+        let base_url = match state.base_url.as_deref() {
+            Some(base_url) => Some(normalize_owner_base_url(base_url).map_err(|error| {
+                RoomLocatorError::LookupFailed(format!("{}: {error}", path.display()))
+            })?),
+            None => None,
+        };
+
         if owner_node_id == self.current_node_id {
             Ok(ResolvedRoom::Local)
         } else {
             Ok(ResolvedRoom::Remote(RoomOwnerHint {
                 node_id: owner_node_id.to_owned(),
-                base_url: None,
+                base_url,
             }))
         }
     }
@@ -433,8 +449,12 @@ mod tests {
             serde_json::to_vec(&PersistedRoomCoordinatorState {
                 doc_id,
                 node_id: " node-b ".to_owned(),
+                base_url: None,
+                lease_id: Some(Uuid::new_v4()),
+                epoch: 1,
                 activated_at: now,
-                updated_at: now,
+                renewed_at: Some(now),
+                expires_at: Some(now + chrono::TimeDelta::seconds(30)),
             })
             .expect("persisted state should serialize"),
         )
@@ -467,8 +487,12 @@ mod tests {
             serde_json::to_vec(&PersistedRoomCoordinatorState {
                 doc_id,
                 node_id: " node-a ".to_owned(),
+                base_url: None,
+                lease_id: Some(Uuid::new_v4()),
+                epoch: 2,
                 activated_at: now,
-                updated_at: now,
+                renewed_at: Some(now),
+                expires_at: Some(now + chrono::TimeDelta::seconds(30)),
             })
             .expect("persisted state should serialize"),
         )
@@ -478,6 +502,41 @@ mod tests {
             locator
                 .resolve(&doc_id)
                 .expect("local coordinator state should resolve"),
+            ResolvedRoom::Local
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn file_room_locator_treats_expired_remote_lease_as_local() {
+        let doc_id = Uuid::new_v4();
+        let root = temp_state_dir("file-expired-remote");
+        let locator =
+            FileRoomLocator::new("node-a", &root).expect("file locator should initialize");
+        let state_path = root.join(format!("{doc_id}.json"));
+        let now = Utc::now();
+
+        fs::write(
+            &state_path,
+            serde_json::to_vec(&PersistedRoomCoordinatorState {
+                doc_id,
+                node_id: "node-b".to_owned(),
+                base_url: None,
+                lease_id: Some(Uuid::new_v4()),
+                epoch: 4,
+                activated_at: now,
+                renewed_at: Some(now),
+                expires_at: Some(now - chrono::TimeDelta::seconds(1)),
+            })
+            .expect("persisted state should serialize"),
+        )
+        .expect("persisted coordinator state should be written");
+
+        assert_eq!(
+            locator
+                .resolve(&doc_id)
+                .expect("expired remote coordinator state should resolve locally"),
             ResolvedRoom::Local
         );
 
@@ -495,8 +554,12 @@ mod tests {
             serde_json::to_vec(&PersistedRoomCoordinatorState {
                 doc_id,
                 node_id: "node-b".to_owned(),
+                base_url: None,
+                lease_id: Some(Uuid::new_v4()),
+                epoch: 3,
                 activated_at: now,
-                updated_at: now,
+                renewed_at: Some(now),
+                expires_at: Some(now + chrono::TimeDelta::seconds(30)),
             })
             .expect("persisted state should serialize"),
         )
@@ -513,6 +576,8 @@ mod tests {
             room_locator: "file".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: root.display().to_string(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: None,
         };
@@ -562,6 +627,8 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -594,6 +661,8 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: None,
         };
@@ -642,6 +711,8 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -692,6 +763,8 @@ mod tests {
             room_locator: "static".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: "node-a".to_owned(),
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
         };
@@ -725,6 +798,8 @@ mod tests {
             room_locator: "unsupported".to_owned(),
             room_coordinator: "noop".to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
             node_id: DEFAULT_NODE_ID.to_owned(),
             room_owner_hints_path: None,
         };

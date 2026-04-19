@@ -11,6 +11,7 @@ use backend::{
     state::AppState,
     storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
 };
+use chrono::{Duration as ChronoDuration, Utc};
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -37,6 +38,8 @@ fn test_config() -> Config {
         room_locator: "local".to_owned(),
         room_coordinator: "noop".to_owned(),
         room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+        room_coordinator_heartbeat_interval_secs: 10,
+        room_coordinator_lease_ttl_secs: 30,
         node_id: "test-node".to_owned(),
         room_owner_hints_path: None,
     }
@@ -524,6 +527,54 @@ async fn document_detail_endpoint_rejects_non_local_file_room_owner() {
     );
     assert_eq!(payload["owner"]["node_id"], "node-b");
     assert!(payload["owner"]["base_url"].is_null());
+
+    fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_allows_expired_file_room_owner_state() {
+    let mut config = test_config();
+    let coordinator_dir = temp_snapshot_dir("file-room-locator-expired");
+    config.room_locator = "file".to_owned();
+    config.room_coordinator_state_dir = coordinator_dir.display().to_string();
+    config.node_id = "node-a".to_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with file locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Expired remote file owner".to_owned()))
+        .expect("document should be created");
+
+    fs::write(
+        coordinator_dir.join(format!("{}.json", document.id)),
+        serde_json::to_vec(&serde_json::json!({
+            "doc_id": document.id,
+            "node_id": "node-b",
+            "lease_id": Uuid::new_v4(),
+            "epoch": 2,
+            "activated_at": (Utc::now() - ChronoDuration::seconds(5)).to_rfc3339(),
+            "renewed_at": (Utc::now() - ChronoDuration::seconds(4)).to_rfc3339(),
+            "expires_at": (Utc::now() - ChronoDuration::seconds(1)).to_rfc3339()
+        }))
+        .expect("file room state should serialize"),
+    )
+    .expect("file room state should be written");
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status_ok();
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["document"]["id"], document.id.to_string());
 
     fs::remove_dir_all(coordinator_dir).expect("test state directory should be cleaned up");
 }

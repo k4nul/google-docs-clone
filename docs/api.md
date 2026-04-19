@@ -105,8 +105,9 @@ Response: `201 Created`
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
-- `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner state를 읽는다. 현재 state 포맷에는 `base_url`이 없으므로 이 경로의 conflict 응답은 보통 `owner.node_id`만 포함한다.
-- future authoritative coordination resolver는 stale 판단을 `expires_at` 기반 lease 만료로 수행해야 하며, 그 결과도 동일한 `409` owner metadata shape로 노출해야 한다.
+- `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 현재 state 포맷에는 `base_url`이 없으므로 이 경로의 conflict 응답은 보통 `owner.node_id`만 포함한다.
+- `ROOM_LOCATOR=file`은 persisted `expires_at`이 지나기 전까지 다른 node lease를 authoritative하게 취급하고, 만료 뒤에만 stale owner로 간주한다.
+- future authoritative coordination resolver도 stale 판단을 `expires_at` 기반 lease 만료로 수행해야 하며, 그 결과를 동일한 `409` owner metadata shape로 노출해야 한다.
 - UUID 형식이 아니면 `400`과 JSON 에러 응답을 반환한다.
 
 Response:
@@ -153,8 +154,9 @@ Response: `204 No Content`
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 업그레이드 전에 `409` JSON 에러 응답을 반환한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
-- `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner state를 읽는다. 현재 state 포맷에는 `base_url`이 없으므로 이 경로의 conflict 응답은 보통 `owner.node_id`만 포함한다.
-- future authoritative coordination resolver는 lease 만료 전까지 기존 owner를 authoritative하게 취급하고, `expires_at` 경과 뒤에만 ownership handoff를 허용해야 한다.
+- `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 현재 state 포맷에는 `base_url`이 없으므로 이 경로의 conflict 응답은 보통 `owner.node_id`만 포함한다.
+- `ROOM_COORDINATOR=file`은 첫 active session에서 file-backed lease를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 compare-and-release로 lease를 정리한다.
+- future authoritative coordination resolver도 lease 만료 전까지 기존 owner를 authoritative하게 취급하고, `expires_at` 경과 뒤에만 ownership handoff를 허용해야 한다.
 
 ## Frontend Contract Notes
 
