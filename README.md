@@ -161,6 +161,24 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 
 현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 vendor-specific embedded database durability backend인 heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb, S3-compatible object storage durability backend, shared SQLite를 넘어서는 external durability backend 자체, managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
 
+## Embedded Snapshot Store Selection Guide
+
+다음 기준은 `SNAPSHOT_STORE=heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|rustbreak|yedb|btree_store|siamesedb` 중 어떤 embedded durability backend를 운영 기본값으로 둘지 고를 때 사용한다.
+
+| 운영 목표 | 우선 후보 | 이유 |
+| --- | --- | --- |
+| 실제 multi-node owner handoff까지 같은 저장소에서 끝내기 | `sqlite` 또는 `managed` | embedded backend는 snapshot durability만 제공한다. authoritative lease CAS까지 묶으려면 `ROOM_LOCATOR`/`ROOM_COORDINATOR`와 같은 coordination plane을 함께 제공하는 `sqlite` 또는 `managed`가 필요하다. |
+| 단일 노드 재시작 복구를 가장 단순하게 운영하기 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rustbreak`, `btree_store` | 모두 단일 path 기준 백업/복사 절차를 잡기 쉽다. 운영자가 파일 단위 스냅샷, 교체, 롤백을 직접 다루기 편하다. |
+| 디렉터리 단위 엔진과 내부 keyspace/map 구조를 유지하기 | `heed`, `fjall`, `parity_db`, `sled`, `yedb`, `siamesedb` | 엔진이 디렉터리 아래 여러 파일과 내부 카탈로그를 관리한다. 파일 하나만 교체하는 운영보다 디렉터리 전체 백업/restore 절차가 자연스럽다. |
+| 사람이 직접 payload를 확인하거나 임시 복구하기 쉽게 유지하기 | `file`, `pickledb`, `microkv` | 구현이 JSON 또는 단순 key-value 파일 경계에 가깝다. 반면 엔진 주도 포맷보다 대용량 catalog scan과 payload 손상 대응은 더 보수적으로 봐야 한다. |
+| catalog 한 파일 손상이 전체 startup 복구 실패로 바로 번지는 경로를 피하기 | `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb` | 현재 구현 기준으로 corrupt entry는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛴다. `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으니 운영 기본값으로 둘 때 별도 주의가 필요하다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 그대로 유지하기 | `btree_store`, `siamesedb` | 최근 추가 backend가 이 제약을 실제 landed change로 통과했다. 같은 조건의 추가 후보를 검토할 때도 이 둘을 기준선으로 삼고, native `links` 충돌이나 bindgen 의존성이 생기면 제외한다. |
+
+- `siamesedb`는 directory-backed map 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 최신 기준선이다.
+- `btree_store`는 single-file backup/restore 절차를 원하는 경우의 기준선이다.
+- `file`/`pickledb`/`microkv`는 운영자가 payload를 직접 읽기 쉽지만, authoritative coordination plane을 대체하지는 못한다.
+- embedded backend를 어떤 것으로 고르더라도 `ROOM_LOCATOR=file|static`은 rehearsal/best-effort 경계로만 보고, 실제 handoff가 필요하면 `sqlite` 또는 `managed` coordination을 함께 사용한다.
+
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url` 및 대응 헤더로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
 `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active room lease state를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `FileRoomCoordinator`가 같은 디렉터리에 남긴 state를 소비하는 best-effort resolver이며, `NODE_BASE_URL`이 설정돼 있으면 conflict 응답 body와 redirect/proxy 헤더 모두에 canonical `owner.base_url`을 실어 upstream 라우팅 결정을 도울 수 있다. stale owner 판단은 file mtime이 아니라 persisted `expires_at`만 기준으로 한다.

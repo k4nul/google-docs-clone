@@ -82,6 +82,24 @@ cargo run
 - non-local owner `409 conflict`가 발생하면 ingress/proxy가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 항상 붙고, `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 붙는다.
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 owner hints JSON 파일 경로
 
+## Snapshot Store Selection Guide
+
+운영 기본값을 고를 때는 "restart durability만 필요한가"와 "owner coordination까지 같은 plane에서 authoritative하게 해결해야 하는가"를 먼저 나눈다.
+
+| 질문 | 선택 기준 |
+| --- | --- |
+| 실제 multi-node owner handoff가 필요한가 | `SNAPSHOT_STORE=sqlite`를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`와 함께 쓰거나, `SNAPSHOT_STORE=managed`를 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 함께 쓴다. embedded backend는 snapshot durability만 제공한다. |
+| 단일 노드 재시작 복구만 필요하고 파일 단위 백업/교체가 중요하나 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rustbreak`, `btree_store` 중 단일 path 기반 store를 우선 검토한다. |
+| 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `heed`, `fjall`, `parity_db`, `sled`, `yedb`, `siamesedb`처럼 디렉터리 기반 store를 쓴다. |
+| 운영자가 payload를 직접 열어보며 수동 복구해야 하나 | `file`, `pickledb`, `microkv`가 가장 단순하다. 대신 binary engine보다 payload 크기와 catalog scan 비용을 더 보수적으로 본다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `btree_store`와 `siamesedb`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
+
+- `btree_store`는 single-file embedded durability 기준선이다.
+- `siamesedb`는 directory-backed embedded durability 기준선이다.
+- `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으므로 운영 기본값으로 둘 때 별도 백업/검증 절차가 필요하다.
+- corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb` 쪽이 기본값 후보로 더 안전하다.
+- embedded backend를 고르더라도 실제 ownership authority는 `ROOM_COORDINATOR=file|static`에 두지 않는다. handoff가 필요하면 `sqlite` 또는 `managed` coordination과 조합한다.
+
 ## Static Room Locator File
 
 ```json
