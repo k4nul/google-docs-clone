@@ -19,6 +19,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::{
+    collab::managed::{ManagedCoordinationClient, ManagedCoordinationClientError},
     config::{Config, normalize_origin_url},
     errors::{AppError, AppResult},
 };
@@ -113,10 +114,10 @@ pub struct FileRoomCoordinator {
     root: PathBuf,
     heartbeat_interval: Duration,
     lease_ttl: Duration,
-    heartbeats: Mutex<HashMap<Uuid, FileRoomLeaseHeartbeat>>,
+    heartbeats: Mutex<HashMap<Uuid, RoomLeaseHeartbeat>>,
 }
 
-struct FileRoomLeaseHeartbeat {
+struct RoomLeaseHeartbeat {
     lease_id: Uuid,
     epoch: u64,
     stop: Arc<AtomicBool>,
@@ -129,7 +130,16 @@ pub struct SqliteRoomCoordinator {
     path: PathBuf,
     heartbeat_interval: Duration,
     lease_ttl: Duration,
-    heartbeats: Mutex<HashMap<Uuid, FileRoomLeaseHeartbeat>>,
+    heartbeats: Mutex<HashMap<Uuid, RoomLeaseHeartbeat>>,
+}
+
+pub struct ManagedRoomCoordinator {
+    node_id: Arc<str>,
+    base_url: Option<String>,
+    client: ManagedCoordinationClient,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
+    heartbeats: Mutex<HashMap<Uuid, RoomLeaseHeartbeat>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -555,7 +565,7 @@ impl FileRoomCoordinator {
         doc_id: Uuid,
         lease_id: Uuid,
         epoch: u64,
-    ) -> Result<FileRoomLeaseHeartbeat, RoomCoordinatorError> {
+    ) -> Result<RoomLeaseHeartbeat, RoomCoordinatorError> {
         let coordinator = Self {
             node_id: Arc::clone(&self.node_id),
             base_url: self.base_url.clone(),
@@ -608,7 +618,7 @@ impl FileRoomCoordinator {
                 ))
             })?;
 
-        Ok(FileRoomLeaseHeartbeat {
+        Ok(RoomLeaseHeartbeat {
             lease_id,
             epoch,
             stop,
@@ -1052,7 +1062,7 @@ impl SqliteRoomCoordinator {
         doc_id: Uuid,
         lease_id: Uuid,
         epoch: u64,
-    ) -> Result<FileRoomLeaseHeartbeat, RoomCoordinatorError> {
+    ) -> Result<RoomLeaseHeartbeat, RoomCoordinatorError> {
         let coordinator = Self {
             node_id: Arc::clone(&self.node_id),
             base_url: self.base_url.clone(),
@@ -1105,7 +1115,229 @@ impl SqliteRoomCoordinator {
                 ))
             })?;
 
-        Ok(FileRoomLeaseHeartbeat {
+        Ok(RoomLeaseHeartbeat {
+            lease_id,
+            epoch,
+            stop,
+            thread: Some(thread),
+        })
+    }
+}
+
+impl ManagedRoomCoordinator {
+    pub fn new(
+        node_id: impl Into<String>,
+        base_url: Option<String>,
+        managed_base_url: impl Into<String>,
+        managed_auth_token: Option<String>,
+        managed_timeout: Duration,
+        heartbeat_interval: Duration,
+        lease_ttl: Duration,
+    ) -> Result<Self, RoomCoordinatorError> {
+        let node_id = node_id.into();
+        let node_id = node_id.trim();
+        if node_id.is_empty() {
+            return Err(RoomCoordinatorError::Operation(
+                "NODE_ID cannot be empty when ROOM_COORDINATOR=managed".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be greater than zero when ROOM_COORDINATOR=managed".to_owned(),
+            ));
+        }
+
+        if lease_ttl.is_zero() {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_LEASE_TTL_SECS must be greater than zero when ROOM_COORDINATOR=managed".to_owned(),
+            ));
+        }
+
+        if heartbeat_interval >= lease_ttl {
+            return Err(RoomCoordinatorError::Operation(
+                "ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS must be smaller than ROOM_COORDINATOR_LEASE_TTL_SECS when ROOM_COORDINATOR=managed".to_owned(),
+            ));
+        }
+
+        let base_url = base_url
+            .as_deref()
+            .map(|value| normalize_origin_url(value, "NODE_BASE_URL"))
+            .transpose()
+            .map_err(RoomCoordinatorError::Operation)?;
+
+        let client =
+            ManagedCoordinationClient::new(managed_base_url, managed_auth_token, managed_timeout)
+                .map_err(|error| {
+                match error {
+            ManagedCoordinationClientError::Config(message)
+            | ManagedCoordinationClientError::Request(message) => {
+                RoomCoordinatorError::Operation(message)
+            }
+            ManagedCoordinationClientError::Conflict(_) => RoomCoordinatorError::Operation(
+                "managed coordination client returned an unexpected conflict during initialization"
+                    .to_owned(),
+            ),
+        }
+            })?;
+
+        Ok(Self {
+            node_id: Arc::<str>::from(node_id.to_owned()),
+            base_url,
+            client,
+            heartbeat_interval,
+            lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
+        })
+    }
+
+    pub fn node_id(&self) -> &str {
+        &self.node_id
+    }
+
+    pub fn heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    pub fn lease_ttl(&self) -> Duration {
+        self.lease_ttl
+    }
+
+    fn acquire_lease(
+        &self,
+        doc_id: &Uuid,
+    ) -> Result<PersistedRoomCoordinatorState, RoomCoordinatorError> {
+        self.client
+            .acquire_lease(
+                doc_id,
+                self.node_id(),
+                self.base_url.as_deref(),
+                self.lease_ttl,
+            )
+            .map_err(|error| match error {
+                ManagedCoordinationClientError::Conflict(Some(state)) => {
+                    let owner_node_id = state.node_id.trim();
+                    let owner_node_id = if owner_node_id.is_empty() {
+                        "<unknown-node>"
+                    } else {
+                        owner_node_id
+                    };
+                    RoomCoordinatorError::Operation(format!(
+                        "document `{doc_id}` is already leased by node `{owner_node_id}`"
+                    ))
+                }
+                ManagedCoordinationClientError::Conflict(None) => RoomCoordinatorError::Operation(
+                    format!("document `{doc_id}` is already leased by another collaboration node"),
+                ),
+                ManagedCoordinationClientError::Config(message)
+                | ManagedCoordinationClientError::Request(message) => {
+                    RoomCoordinatorError::Operation(message)
+                }
+            })
+    }
+
+    fn renew_lease(
+        &self,
+        doc_id: &Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<bool, RoomCoordinatorError> {
+        self.client
+            .renew_lease(doc_id, self.node_id(), lease_id, epoch, self.lease_ttl)
+            .map(|state| state.is_some())
+            .map_err(|error| match error {
+                ManagedCoordinationClientError::Config(message)
+                | ManagedCoordinationClientError::Request(message) => {
+                    RoomCoordinatorError::Operation(message)
+                }
+                ManagedCoordinationClientError::Conflict(_) => RoomCoordinatorError::Operation(
+                    format!(
+                        "managed coordination renew unexpectedly returned a conflict for document `{doc_id}`"
+                    ),
+                ),
+            })
+    }
+
+    fn release_lease(
+        &self,
+        doc_id: &Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<bool, RoomCoordinatorError> {
+        self.client
+            .release_lease(doc_id, self.node_id(), lease_id, epoch)
+            .map_err(|error| match error {
+                ManagedCoordinationClientError::Config(message)
+                | ManagedCoordinationClientError::Request(message) => {
+                    RoomCoordinatorError::Operation(message)
+                }
+                ManagedCoordinationClientError::Conflict(_) => RoomCoordinatorError::Operation(
+                    format!(
+                        "managed coordination release unexpectedly returned a conflict for document `{doc_id}`"
+                    ),
+                ),
+            })
+    }
+
+    fn spawn_heartbeat(
+        &self,
+        doc_id: Uuid,
+        lease_id: Uuid,
+        epoch: u64,
+    ) -> Result<RoomLeaseHeartbeat, RoomCoordinatorError> {
+        let coordinator = Self {
+            node_id: Arc::clone(&self.node_id),
+            base_url: self.base_url.clone(),
+            client: self.client.clone(),
+            heartbeat_interval: self.heartbeat_interval,
+            lease_ttl: self.lease_ttl,
+            heartbeats: Mutex::new(HashMap::new()),
+        };
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_signal = Arc::clone(&stop);
+
+        let thread = thread::Builder::new()
+            .name(format!("managed-room-lease-heartbeat-{doc_id}"))
+            .spawn(move || {
+                while !stop_signal.load(Ordering::Relaxed) {
+                    thread::sleep(coordinator.heartbeat_interval);
+
+                    if stop_signal.load(Ordering::Relaxed) {
+                        break;
+                    }
+
+                    match coordinator.renew_lease(&doc_id, lease_id, epoch) {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            warn!(
+                                coordinator_mode = coordinator.mode(),
+                                node_id = coordinator.node_id(),
+                                %doc_id,
+                                lease_id = %lease_id,
+                                epoch,
+                                "stopped managed room lease heartbeat because the active lease changed"
+                            );
+                            break;
+                        }
+                        Err(error) => warn!(
+                            coordinator_mode = coordinator.mode(),
+                            node_id = coordinator.node_id(),
+                            %doc_id,
+                            lease_id = %lease_id,
+                            epoch,
+                            %error,
+                            "failed to renew managed room lease heartbeat"
+                        ),
+                    }
+                }
+            })
+            .map_err(|error| {
+                RoomCoordinatorError::Operation(format!(
+                    "failed to spawn managed room lease heartbeat thread for `{doc_id}`: {error}"
+                ))
+            })?;
+
+        Ok(RoomLeaseHeartbeat {
             lease_id,
             epoch,
             stop,
@@ -1315,6 +1547,95 @@ impl Drop for SqliteRoomCoordinator {
     }
 }
 
+impl RoomCoordinator for ManagedRoomCoordinator {
+    fn mode(&self) -> &'static str {
+        "managed"
+    }
+
+    fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        let state = self.acquire_lease(doc_id)?;
+        let lease_id = state
+            .lease_id
+            .expect("newly acquired managed lease should always have an id");
+        let heartbeat = self.spawn_heartbeat(*doc_id, lease_id, state.epoch)?;
+
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("managed room coordinator heartbeat registry should not be poisoned");
+        if heartbeats.contains_key(doc_id) {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread {
+                let _ = thread.join();
+            }
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` already has an active lease heartbeat on this node"
+            )));
+        }
+        heartbeats.insert(*doc_id, heartbeat);
+
+        info!(
+            coordinator_mode = self.mode(),
+            node_id = self.node_id(),
+            %doc_id,
+            lease_id = %lease_id,
+            epoch = state.epoch,
+            expires_at = %state
+                .expires_at
+                .expect("newly acquired managed lease should always have an expiry"),
+            "persisted managed room lease state"
+        );
+        Ok(())
+    }
+
+    fn room_deactivated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        let heartbeat = self
+            .heartbeats
+            .lock()
+            .expect("managed room coordinator heartbeat registry should not be poisoned")
+            .remove(doc_id);
+
+        let Some(mut heartbeat) = heartbeat else {
+            return Err(RoomCoordinatorError::Operation(format!(
+                "document `{doc_id}` does not have an active lease heartbeat on this node"
+            )));
+        };
+
+        heartbeat.stop.store(true, Ordering::Relaxed);
+        if let Some(thread) = heartbeat.thread.take() {
+            let _ = thread.join();
+        }
+
+        let released = self.release_lease(doc_id, heartbeat.lease_id, heartbeat.epoch)?;
+        info!(
+            coordinator_mode = self.mode(),
+            node_id = self.node_id(),
+            %doc_id,
+            lease_id = %heartbeat.lease_id,
+            epoch = heartbeat.epoch,
+            released,
+            "released managed room lease state"
+        );
+        Ok(())
+    }
+}
+
+impl Drop for ManagedRoomCoordinator {
+    fn drop(&mut self) {
+        let mut heartbeats = self
+            .heartbeats
+            .lock()
+            .expect("managed room coordinator heartbeat registry should not be poisoned");
+
+        for (_doc_id, heartbeat) in heartbeats.iter_mut() {
+            heartbeat.stop.store(true, Ordering::Relaxed);
+            if let Some(thread) = heartbeat.thread.take() {
+                let _ = thread.join();
+            }
+        }
+    }
+}
+
 pub fn noop_room_coordinator() -> Arc<dyn RoomCoordinator> {
     Arc::new(NoopRoomCoordinator)
 }
@@ -1355,6 +1676,26 @@ pub fn sqlite_room_coordinator(
     )?))
 }
 
+pub fn managed_room_coordinator(
+    node_id: impl Into<String>,
+    base_url: Option<String>,
+    managed_base_url: impl Into<String>,
+    managed_auth_token: Option<String>,
+    managed_timeout: Duration,
+    heartbeat_interval: Duration,
+    lease_ttl: Duration,
+) -> Result<Arc<dyn RoomCoordinator>, RoomCoordinatorError> {
+    Ok(Arc::new(ManagedRoomCoordinator::new(
+        node_id,
+        base_url,
+        managed_base_url,
+        managed_auth_token,
+        managed_timeout,
+        heartbeat_interval,
+        lease_ttl,
+    )?))
+}
+
 pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCoordinator>> {
     match config.room_coordinator.trim().to_ascii_lowercase().as_str() {
         "noop" => Ok(noop_room_coordinator()),
@@ -1383,8 +1724,33 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
                 "failed to initialize sqlite room coordinator: {error}"
             ))
         }),
+        "managed" => {
+            let managed_base_url = config
+                .room_coordination_managed_base_url
+                .clone()
+                .ok_or_else(|| {
+                    AppError::Config(
+                        "ROOM_COORDINATION_MANAGED_BASE_URL is required when ROOM_COORDINATOR=managed"
+                            .to_owned(),
+                    )
+                })?;
+            managed_room_coordinator(
+                config.node_id.clone(),
+                config.node_base_url.clone(),
+                managed_base_url,
+                config.room_coordination_managed_auth_token.clone(),
+                Duration::from_secs(config.room_coordination_managed_timeout_secs),
+                Duration::from_secs(config.room_coordinator_heartbeat_interval_secs),
+                Duration::from_secs(config.room_coordinator_lease_ttl_secs),
+            )
+            .map_err(|error| {
+                AppError::Config(format!(
+                    "failed to initialize managed room coordinator: {error}"
+                ))
+            })
+        }
         other => Err(AppError::Config(format!(
-            "ROOM_COORDINATOR must be `noop`, `logging`, `file`, or `sqlite`, received `{other}`"
+            "ROOM_COORDINATOR must be `noop`, `logging`, `file`, `sqlite`, or `managed`, received `{other}`"
         ))),
     }
 }
@@ -1424,6 +1790,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 1,
             room_coordinator_lease_ttl_secs: 5,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: None,
@@ -1837,6 +2206,22 @@ mod tests {
     }
 
     #[test]
+    fn room_coordinator_from_config_rejects_managed_mode_without_base_url() {
+        let error = match room_coordinator_from_config(&test_config("managed")) {
+            Ok(_) => panic!("managed mode without base url should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "ROOM_COORDINATION_MANAGED_BASE_URL is required when ROOM_COORDINATOR=managed"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
+    }
+
+    #[test]
     fn room_coordinator_from_config_rejects_unknown_mode() {
         let error = match room_coordinator_from_config(&test_config("unsupported")) {
             Ok(_) => panic!("unknown room coordinator mode should fail"),
@@ -1846,7 +2231,7 @@ mod tests {
         match error {
             AppError::Config(message) => assert_eq!(
                 message,
-                "ROOM_COORDINATOR must be `noop`, `logging`, `file`, or `sqlite`, received `unsupported`"
+                "ROOM_COORDINATOR must be `noop`, `logging`, `file`, `sqlite`, or `managed`, received `unsupported`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }

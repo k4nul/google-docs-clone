@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     collab::coordinator::PersistedRoomCoordinatorState,
+    collab::managed::{ManagedCoordinationClient, ManagedCoordinationClientError},
     config::{Config, normalize_origin_url},
     errors::{AppError, AppResult},
 };
@@ -142,6 +143,12 @@ pub struct FileRoomLocator {
 pub struct SqliteRoomLocator {
     current_node_id: String,
     path: PathBuf,
+}
+
+#[derive(Debug)]
+pub struct ManagedRoomLocator {
+    current_node_id: String,
+    client: ManagedCoordinationClient,
 }
 
 #[derive(Debug, Deserialize)]
@@ -316,6 +323,41 @@ impl SqliteRoomLocator {
     }
 }
 
+impl ManagedRoomLocator {
+    pub fn new(
+        current_node_id: impl Into<String>,
+        managed_base_url: impl Into<String>,
+        managed_auth_token: Option<String>,
+        managed_timeout: std::time::Duration,
+    ) -> Result<Self, RoomLocatorError> {
+        let current_node_id = current_node_id.into();
+        let current_node_id = current_node_id.trim();
+        if current_node_id.is_empty() {
+            return Err(RoomLocatorError::Config(
+                "NODE_ID cannot be empty when ROOM_LOCATOR=managed".to_owned(),
+            ));
+        }
+
+        let client =
+            ManagedCoordinationClient::new(managed_base_url, managed_auth_token, managed_timeout)
+                .map_err(|error| {
+                match error {
+            ManagedCoordinationClientError::Config(message)
+            | ManagedCoordinationClientError::Request(message) => RoomLocatorError::Config(message),
+            ManagedCoordinationClientError::Conflict(_) => RoomLocatorError::Config(
+                "managed coordination client returned an unexpected conflict during initialization"
+                    .to_owned(),
+            ),
+        }
+            })?;
+
+        Ok(Self {
+            current_node_id: current_node_id.to_owned(),
+            client,
+        })
+    }
+}
+
 impl RoomLocator for StaticRoomLocator {
     fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
         match self.document_owners.get(doc_id) {
@@ -461,6 +503,57 @@ impl RoomLocator for SqliteRoomLocator {
     }
 }
 
+impl RoomLocator for ManagedRoomLocator {
+    fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+        let Some(state) = self.client.lookup_lease(doc_id).map_err(|error| match error {
+            ManagedCoordinationClientError::Config(message)
+            | ManagedCoordinationClientError::Request(message) => {
+                RoomLocatorError::LookupFailed(message)
+            }
+            ManagedCoordinationClientError::Conflict(_) => RoomLocatorError::LookupFailed(
+                format!(
+                    "managed coordination lookup unexpectedly returned a conflict for document `{doc_id}`"
+                ),
+            ),
+        })? else {
+            return Ok(ResolvedRoom::Local);
+        };
+
+        let owner_node_id = state.node_id.trim();
+        if owner_node_id.is_empty() {
+            return Err(RoomLocatorError::LookupFailed(format!(
+                "managed coordination lease for document `{doc_id}` has an empty node_id"
+            )));
+        }
+
+        if state
+            .expires_at
+            .map(|expires_at| expires_at <= Utc::now())
+            .unwrap_or(false)
+        {
+            return Ok(ResolvedRoom::Local);
+        }
+
+        let base_url = match state.base_url.as_deref() {
+            Some(base_url) => Some(normalize_owner_base_url(base_url).map_err(|error| {
+                RoomLocatorError::LookupFailed(format!(
+                    "failed to normalize managed lease owner base_url for document `{doc_id}`: {error}"
+                ))
+            })?),
+            None => None,
+        };
+
+        if owner_node_id == self.current_node_id {
+            Ok(ResolvedRoom::Local)
+        } else {
+            Ok(ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: owner_node_id.to_owned(),
+                base_url,
+            }))
+        }
+    }
+}
+
 pub fn local_room_locator() -> Arc<dyn RoomLocator> {
     Arc::new(LocalRoomLocator)
 }
@@ -504,8 +597,30 @@ pub fn room_locator_from_config(config: &Config) -> AppResult<Arc<dyn RoomLocato
             })?;
             Ok(Arc::new(locator))
         }
+        "managed" => {
+            let managed_base_url = config
+                .room_coordination_managed_base_url
+                .clone()
+                .ok_or_else(|| {
+                    AppError::Config(
+                        "ROOM_COORDINATION_MANAGED_BASE_URL is required when ROOM_LOCATOR=managed"
+                            .to_owned(),
+                    )
+                })?;
+            let locator = ManagedRoomLocator::new(
+                config.node_id.clone(),
+                managed_base_url,
+                config.room_coordination_managed_auth_token.clone(),
+                std::time::Duration::from_secs(config.room_coordination_managed_timeout_secs),
+            )
+            .map_err(|error| match error {
+                RoomLocatorError::Config(message) => AppError::Config(message),
+                other => AppError::from(anyhow::Error::from(other)),
+            })?;
+            Ok(Arc::new(locator))
+        }
         other => Err(AppError::Config(format!(
-            "ROOM_LOCATOR must be `local`, `static`, `file`, or `sqlite`, received `{other}`"
+            "ROOM_LOCATOR must be `local`, `static`, `file`, `sqlite`, or `managed`, received `{other}`"
         ))),
     }
 }
@@ -906,6 +1021,9 @@ mod tests {
             room_coordinator_sqlite_path: path.display().to_string(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: None,
@@ -963,6 +1081,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: None,
@@ -1017,6 +1138,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
@@ -1054,6 +1178,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: None,
@@ -1107,6 +1234,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
@@ -1162,6 +1292,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: "node-a".to_owned(),
             node_base_url: None,
             room_owner_hints_path: Some(hints_path.to_string_lossy().into_owned()),
@@ -1184,6 +1317,45 @@ mod tests {
     }
 
     #[test]
+    fn room_locator_from_config_rejects_managed_mode_without_base_url() {
+        let config = Config {
+            host: "127.0.0.1".to_owned(),
+            port: 4000,
+            frontend_origin: "http://localhost:3000".to_owned(),
+            rust_log: "backend=debug".to_owned(),
+            api_token: "test-admin-token".to_owned(),
+            snapshot_store: "memory".to_owned(),
+            snapshot_dir: "./data/test-snapshots".to_owned(),
+            snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
+            room_locator: "managed".to_owned(),
+            room_coordinator: "noop".to_owned(),
+            room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
+            room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
+            room_coordinator_heartbeat_interval_secs: 10,
+            room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
+            node_id: DEFAULT_NODE_ID.to_owned(),
+            node_base_url: None,
+            room_owner_hints_path: None,
+        };
+
+        let error = match room_locator_from_config(&config) {
+            Ok(_) => panic!("managed locator without base url should fail"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::Config(message) => assert_eq!(
+                message,
+                "ROOM_COORDINATION_MANAGED_BASE_URL is required when ROOM_LOCATOR=managed"
+            ),
+            other => panic!("expected config error, received {other:?}"),
+        }
+    }
+
+    #[test]
     fn room_locator_from_config_rejects_unknown_locator_mode() {
         let config = Config {
             host: "127.0.0.1".to_owned(),
@@ -1200,6 +1372,9 @@ mod tests {
             room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
             room_coordinator_heartbeat_interval_secs: 10,
             room_coordinator_lease_ttl_secs: 30,
+            room_coordination_managed_base_url: None,
+            room_coordination_managed_auth_token: None,
+            room_coordination_managed_timeout_secs: 5,
             node_id: DEFAULT_NODE_ID.to_owned(),
             node_base_url: None,
             room_owner_hints_path: None,
@@ -1213,7 +1388,7 @@ mod tests {
         match error {
             AppError::Config(message) => assert_eq!(
                 message,
-                "ROOM_LOCATOR must be `local`, `static`, `file`, or `sqlite`, received `unsupported`"
+                "ROOM_LOCATOR must be `local`, `static`, `file`, `sqlite`, or `managed`, received `unsupported`"
             ),
             other => panic!("expected config error, received {other:?}"),
         }

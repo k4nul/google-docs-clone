@@ -1,4 +1,10 @@
-use axum::http::StatusCode;
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+};
 use axum_test::{TestServer, WsMessage};
 use backend::{
     app::build_app,
@@ -8,6 +14,7 @@ use backend::{
         rooms::RoomRegistry,
     },
     config::Config,
+    errors::AppError,
     state::AppState,
     storage::{
         DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore,
@@ -15,6 +22,7 @@ use backend::{
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::HashMap,
@@ -22,6 +30,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use tokio::{net::TcpListener, task::JoinHandle};
 use uuid::Uuid;
 use yrs::{
     Doc, GetString, ReadTxn, StateVector, Text, Transact, Update,
@@ -45,6 +54,9 @@ fn test_config() -> Config {
         room_coordinator_sqlite_path: "./data/test-room-coordinator.sqlite3".to_owned(),
         room_coordinator_heartbeat_interval_secs: 10,
         room_coordinator_lease_ttl_secs: 30,
+        room_coordination_managed_base_url: None,
+        room_coordination_managed_auth_token: None,
+        room_coordination_managed_timeout_secs: 5,
         node_id: "test-node".to_owned(),
         node_base_url: None,
         room_owner_hints_path: None,
@@ -99,6 +111,258 @@ impl RoomLocator for RemoteRoomLocator {
 #[derive(Debug, Default)]
 struct RecordingRoomCoordinator {
     events: Mutex<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MockManagedLeaseRecord {
+    doc_id: Uuid,
+    node_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    base_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lease_id: Option<Uuid>,
+    #[serde(default)]
+    epoch: u64,
+    activated_at: chrono::DateTime<Utc>,
+    #[serde(default, alias = "updated_at", skip_serializing_if = "Option::is_none")]
+    renewed_at: Option<chrono::DateTime<Utc>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    expires_at: Option<chrono::DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MockManagedAcquireRequest {
+    node_id: String,
+    base_url: Option<String>,
+    lease_ttl_secs: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct MockManagedRenewRequest {
+    node_id: String,
+    lease_id: Uuid,
+    epoch: u64,
+    lease_ttl_secs: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct MockManagedReleaseRequest {
+    node_id: String,
+    lease_id: Uuid,
+    epoch: u64,
+}
+
+#[derive(Debug, Clone)]
+struct MockManagedCoordinationServiceState {
+    leases: Arc<Mutex<HashMap<Uuid, MockManagedLeaseRecord>>>,
+    auth_token: Option<String>,
+}
+
+impl MockManagedCoordinationServiceState {
+    fn lease(&self, doc_id: &Uuid) -> Option<MockManagedLeaseRecord> {
+        self.leases
+            .lock()
+            .expect("managed coordination lease store should not be poisoned")
+            .get(doc_id)
+            .cloned()
+    }
+}
+
+struct MockManagedCoordinationHarness {
+    state: MockManagedCoordinationServiceState,
+    base_url: String,
+    task: JoinHandle<()>,
+}
+
+impl Drop for MockManagedCoordinationHarness {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+
+async fn spawn_mock_managed_coordination_service(
+    auth_token: Option<&str>,
+) -> MockManagedCoordinationHarness {
+    let state = MockManagedCoordinationServiceState {
+        leases: Arc::new(Mutex::new(HashMap::new())),
+        auth_token: auth_token.map(str::to_owned),
+    };
+    let app = Router::new()
+        .route("/coord/v1/leases/{doc_id}", get(mock_managed_lookup_lease))
+        .route(
+            "/coord/v1/leases/{doc_id}/acquire",
+            post(mock_managed_acquire_lease),
+        )
+        .route(
+            "/coord/v1/leases/{doc_id}/renew",
+            post(mock_managed_renew_lease),
+        )
+        .route(
+            "/coord/v1/leases/{doc_id}/release",
+            post(mock_managed_release_lease),
+        )
+        .with_state(state.clone());
+
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("managed coordination listener should bind");
+    let addr = listener
+        .local_addr()
+        .expect("managed coordination listener should expose local addr");
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("managed coordination service should serve");
+    });
+
+    MockManagedCoordinationHarness {
+        state,
+        base_url: format!("http://{addr}/coord"),
+        task,
+    }
+}
+
+fn mock_managed_authorize(
+    headers: &HeaderMap,
+    state: &MockManagedCoordinationServiceState,
+) -> Result<(), StatusCode> {
+    let Some(expected_auth_token) = state.auth_token.as_deref() else {
+        return Ok(());
+    };
+    let Some(header_value) = headers.get(axum::http::header::AUTHORIZATION) else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    let Ok(header_value) = header_value.to_str() else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if header_value == format!("Bearer {expected_auth_token}") {
+        Ok(())
+    } else {
+        Err(StatusCode::FORBIDDEN)
+    }
+}
+
+async fn mock_managed_lookup_lease(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    match state.lease(&doc_id) {
+        Some(lease) => (StatusCode::OK, Json(lease)).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn mock_managed_acquire_lease(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<MockManagedAcquireRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    let now = Utc::now();
+    let ttl = ChronoDuration::seconds(payload.lease_ttl_secs as i64);
+    let mut leases = state
+        .leases
+        .lock()
+        .expect("managed coordination lease store should not be poisoned");
+
+    if let Some(existing) = leases.get(&doc_id) {
+        let active_remote_owner = existing.node_id.trim() != payload.node_id.trim()
+            && existing
+                .expires_at
+                .map(|expires_at| expires_at > now)
+                .unwrap_or(true);
+        if active_remote_owner {
+            return (StatusCode::CONFLICT, Json(existing.clone())).into_response();
+        }
+    }
+
+    let epoch = leases
+        .get(&doc_id)
+        .map(|lease| lease.epoch.saturating_add(1))
+        .unwrap_or(1);
+    let lease = MockManagedLeaseRecord {
+        doc_id,
+        node_id: payload.node_id.trim().to_owned(),
+        base_url: payload.base_url,
+        lease_id: Some(Uuid::new_v4()),
+        epoch,
+        activated_at: now,
+        renewed_at: Some(now),
+        expires_at: Some(now + ttl),
+    };
+    leases.insert(doc_id, lease.clone());
+
+    (StatusCode::OK, Json(lease)).into_response()
+}
+
+async fn mock_managed_renew_lease(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<MockManagedRenewRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    let now = Utc::now();
+    let ttl = ChronoDuration::seconds(payload.lease_ttl_secs as i64);
+    let mut leases = state
+        .leases
+        .lock()
+        .expect("managed coordination lease store should not be poisoned");
+    let Some(existing) = leases.get_mut(&doc_id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    if existing.node_id.trim() != payload.node_id.trim()
+        || existing.lease_id != Some(payload.lease_id)
+        || existing.epoch != payload.epoch
+    {
+        return (StatusCode::CONFLICT, Json(existing.clone())).into_response();
+    }
+
+    existing.renewed_at = Some(now);
+    existing.expires_at = Some(now + ttl);
+    (StatusCode::OK, Json(existing.clone())).into_response()
+}
+
+async fn mock_managed_release_lease(
+    State(state): State<MockManagedCoordinationServiceState>,
+    Path(doc_id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(payload): Json<MockManagedReleaseRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = mock_managed_authorize(&headers, &state) {
+        return status.into_response();
+    }
+
+    let mut leases = state
+        .leases
+        .lock()
+        .expect("managed coordination lease store should not be poisoned");
+    let Some(existing) = leases.get(&doc_id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    if existing.node_id.trim() != payload.node_id.trim()
+        || existing.lease_id != Some(payload.lease_id)
+        || existing.epoch != payload.epoch
+    {
+        return (StatusCode::CONFLICT, Json(existing.clone())).into_response();
+    }
+
+    leases.remove(&doc_id);
+    StatusCode::NO_CONTENT.into_response()
 }
 
 impl RecordingRoomCoordinator {
@@ -1937,6 +2201,97 @@ async fn app_state_uses_sqlite_room_coordinator_from_config() {
     assert_eq!(remaining, 0);
 
     fs::remove_dir_all(coordinator_dir).expect("test coordinator directory should be cleaned up");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn app_state_uses_managed_room_coordination_from_config() {
+    let harness = spawn_mock_managed_coordination_service(Some("managed-secret")).await;
+
+    let mut writer_config = test_config();
+    writer_config.room_locator = "managed".to_owned();
+    writer_config.room_coordinator = "managed".to_owned();
+    writer_config.room_coordination_managed_base_url = Some(harness.base_url.clone());
+    writer_config.room_coordination_managed_auth_token = Some("managed-secret".to_owned());
+    writer_config.room_coordinator_heartbeat_interval_secs = 1;
+    writer_config.room_coordinator_lease_ttl_secs = 3;
+    writer_config.node_id = "node-a".to_owned();
+    writer_config.node_base_url = Some("http://node-a.internal:4300/".to_owned());
+
+    let writer_state =
+        AppState::from_config(&writer_config).expect("state should initialize with managed mode");
+    assert_eq!(writer_state.room_coordinator().mode(), "managed");
+
+    let document = writer_state
+        .rooms()
+        .create_document(Some("Managed coordinated room".to_owned()))
+        .expect("document should be created");
+
+    writer_state
+        .room_coordinator()
+        .room_activated(&document.id)
+        .expect("managed coordinator should persist active room state");
+
+    let initial_lease = harness
+        .state
+        .lease(&document.id)
+        .expect("managed coordination service should store the acquired lease");
+    assert_eq!(initial_lease.node_id, "node-a");
+    assert_eq!(
+        initial_lease.base_url,
+        Some("http://node-a.internal:4300".to_owned())
+    );
+
+    tokio::time::sleep(Duration::from_millis(1_100)).await;
+
+    let renewed_lease = harness
+        .state
+        .lease(&document.id)
+        .expect("managed coordination service should keep the renewed lease");
+    assert_eq!(renewed_lease.lease_id, initial_lease.lease_id);
+    assert_eq!(renewed_lease.epoch, initial_lease.epoch);
+    assert!(
+        renewed_lease.renewed_at > initial_lease.renewed_at,
+        "managed coordinator heartbeat should advance renewed_at"
+    );
+
+    let mut reader_config = test_config();
+    reader_config.room_locator = "managed".to_owned();
+    reader_config.room_coordination_managed_base_url = Some(harness.base_url.clone());
+    reader_config.room_coordination_managed_auth_token = Some("managed-secret".to_owned());
+    reader_config.node_id = "node-b".to_owned();
+
+    let reader_state =
+        AppState::from_config(&reader_config).expect("reader state should initialize");
+    let error = reader_state
+        .ensure_local_room_owner(&document.id)
+        .expect_err("managed locator should report the remote owner while the lease is active");
+
+    match error {
+        AppError::RemoteOwner {
+            owner_node_id,
+            owner_base_url,
+            ..
+        } => {
+            assert_eq!(owner_node_id, "node-a");
+            assert_eq!(
+                owner_base_url.as_deref(),
+                Some("http://node-a.internal:4300")
+            );
+        }
+        other => panic!("expected remote owner error, received {other:?}"),
+    }
+
+    writer_state
+        .room_coordinator()
+        .room_deactivated(&document.id)
+        .expect("managed coordinator should release active room state");
+    assert!(
+        harness.state.lease(&document.id).is_none(),
+        "managed coordination service should remove the lease after release"
+    );
+    reader_state
+        .ensure_local_room_owner(&document.id)
+        .expect("managed locator should resolve locally after lease release");
 }
 
 #[tokio::test]

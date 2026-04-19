@@ -51,11 +51,12 @@
 - `SnapshotStore` trait이 `load/save/delete` 경계를 정의하고, `RoomRegistry`가 이 trait에만 의존한다.
 - `RoomLocator` trait이 "현재 프로세스가 이 문서의 authoritative owner인가"라는 진입 경계를 정의하고, `AppState`가 route/WS 진입 전에 이 trait만 호출한다.
 - `RoomCoordinator` trait이 "이 문서 room이 현재 노드에서 active 상태로 전이/종료되는 시점"을 정의하고, WebSocket 첫 세션 시작 및 마지막 세션 종료 뒤에만 hook이 호출된다.
-- `room_locator_from_config`는 현재 `LocalRoomLocator`, `StaticRoomLocator`, `FileRoomLocator`, 또는 `SqliteRoomLocator`를 런타임에 선택한다.
-- `room_coordinator_from_config`는 현재 `NoopRoomCoordinator`, `LoggingRoomCoordinator`, `FileRoomCoordinator`, 또는 `SqliteRoomCoordinator`를 런타임에 선택한다.
+- `room_locator_from_config`는 현재 `LocalRoomLocator`, `StaticRoomLocator`, `FileRoomLocator`, `SqliteRoomLocator`, 또는 `ManagedRoomLocator`를 런타임에 선택한다.
+- `room_coordinator_from_config`는 현재 `NoopRoomCoordinator`, `LoggingRoomCoordinator`, `FileRoomCoordinator`, `SqliteRoomCoordinator`, 또는 `ManagedRoomCoordinator`를 런타임에 선택한다.
 - `LoggingRoomCoordinator`는 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남기는 dry-run 구현이며, 외부 lease/heartbeat coordinator가 붙기 전 운영 관측용 경계로 사용한다.
 - `FileRoomCoordinator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 canonical lease state를 atomic write로 남기고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 compare-and-release로 정리하는 file-backed 준비 구현이다. `NODE_BASE_URL`이 있으면 canonical origin 형태의 `base_url`도 lease record에 포함한다.
 - `SqliteRoomCoordinator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블에 canonical lease state를 upsert하고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 `node_id + lease_id + epoch` compare-and-delete로 정리하는 authoritative SQLite 구현이다. `NODE_BASE_URL`이 있으면 canonical origin 형태의 `base_url`도 lease row에 포함한다.
+- `ManagedRoomCoordinator`는 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service에 `POST /v1/leases/:doc_id/acquire|renew|release`를 호출해 같은 canonical lease state를 유지하고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 compare-and-release를 요청하는 managed authority 구현이다. optional `ROOM_COORDINATION_MANAGED_AUTH_TOKEN`이 있으면 모든 요청에 Bearer 토큰을 실어 보낸다.
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
@@ -64,7 +65,7 @@
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 기본 local ownership 모드에서는 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 eager hydrate한다.
-- distributed ownership 모드(`ROOM_LOCATOR != local` 또는 authoritative `ROOM_COORDINATOR=file|sqlite`)에서는 startup hydrate를 생략하고, 문서 catalog만 유지한 채 ownership 확인 뒤 `get_or_restore`에서 room을 on-demand로 복구한다.
+- distributed ownership 모드(`ROOM_LOCATOR != local` 또는 authoritative `ROOM_COORDINATOR=file|sqlite|managed`)에서는 startup hydrate를 생략하고, 문서 catalog만 유지한 채 ownership 확인 뒤 `get_or_restore`에서 room을 on-demand로 복구한다.
 - `FileSnapshotStore`는 catalog/hydrate 경로에서 corrupt snapshot 파일을 warning과 함께 건너뛰어 단일 손상 파일이 전체 startup/listing 실패로 번지지 않게 한다.
 - `FileSnapshotStore`는 같은 디렉터리의 임시 파일에 snapshot을 먼저 쓴 뒤 `rename`으로 교체해 partial write가 마지막 정상 snapshot을 직접 덮어쓰지 않도록 한다.
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되며, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
@@ -84,16 +85,17 @@
 - cross-node fan-out이 필요해지는 시점 전까지는 한 room의 WebSocket 세션을 모두 owner node에 붙이는 방식이 가장 단순하다. node 간 pub/sub 복제는 ownership 우회가 아니라 장애 복구 보조 경로로만 고려한다.
 - 구현 확장 포인트는 `RoomRegistry` 앞단에 `RoomLocator` 또는 동등한 ownership resolver를 두고, 현재 `get_or_restore` 호출 전에 authoritative node 결정을 끼워 넣는 형태가 가장 경계에 맞다.
 - lease/heartbeat 기반 coordination store는 별도 `RoomCoordinator` 구현으로 붙여 첫 세션 시작 시 activate, 마지막 세션 종료 후 snapshot persist 성공 시 deactivate를 담당하게 두는 것이 현재 경계에 맞다.
-- 현재 저장소에는 이 경계를 구현한 기본 `LocalRoomLocator`, 문서별 owner hints를 읽는 `StaticRoomLocator`, `FileRoomCoordinator` state를 읽는 `FileRoomLocator`, 그리고 SQLite lease row를 읽는 `SqliteRoomLocator`가 들어가 있다.
-- 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`, dry-run `LoggingRoomCoordinator`, local/shared filesystem에 lease state와 heartbeat를 남기는 `FileRoomCoordinator`, 그리고 shared SQLite DB에 lease state를 남기는 `SqliteRoomCoordinator`가 들어가 있다.
+- 현재 저장소에는 이 경계를 구현한 기본 `LocalRoomLocator`, 문서별 owner hints를 읽는 `StaticRoomLocator`, `FileRoomCoordinator` state를 읽는 `FileRoomLocator`, SQLite lease row를 읽는 `SqliteRoomLocator`, 그리고 external lease service를 읽는 `ManagedRoomLocator`가 들어가 있다.
+- 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`, dry-run `LoggingRoomCoordinator`, local/shared filesystem에 lease state와 heartbeat를 남기는 `FileRoomCoordinator`, shared SQLite DB에 lease state를 남기는 `SqliteRoomCoordinator`, 그리고 external lease service에 같은 lifecycle을 위임하는 `ManagedRoomCoordinator`가 들어가 있다.
 - `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
 - `SqliteRoomLocator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease row에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
-- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, 그리고 SQLite lease 기반 owner coordination이 있으므로 shared SQLite DB를 쓰는 범위에서는 snapshot durability와 authoritative owner CAS를 함께 구성할 수 있다. shared SQLite DB 없이 동작하는 멀티 호스트 배포는 여전히 blocked 상태다.
+- `ManagedRoomLocator`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id` 응답을 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. lease record에 `base_url`이 있으면 conflict 응답에도 함께 전달해 redirect/proxy 결정을 돕는다.
+- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로 ownership coordination plane은 shared SQLite DB 밖으로도 분리할 수 있다. 다만 snapshot durability는 여전히 shared snapshot store가 필요하고, shared SQLite를 넘어서는 multi-host rehearsal은 여전히 blocked 상태다.
 
 ## Authoritative Coordination Store Contract
 
-- future external backend는 `RoomCoordinator`가 쓰는 write path와 `RoomLocator`가 읽는 lookup path를 동일한 lease record로 맞춰야 한다. 현재 SQLite 구현도 같은 contract를 그대로 따른다.
+- authoritative backend는 `RoomCoordinator`가 쓰는 write path와 `RoomLocator`가 읽는 lookup path를 동일한 lease record로 맞춰야 한다. 현재 SQLite 구현과 managed HTTP backend도 같은 contract를 그대로 따른다.
 - canonical lease record는 최소 아래 필드를 포함한다.
 
 ```json

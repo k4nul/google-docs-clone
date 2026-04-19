@@ -18,6 +18,7 @@ pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
 pub const DEFAULT_ROOM_COORDINATOR_SQLITE_PATH: &str = "./data/room-coordinator.sqlite3";
 pub const DEFAULT_ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS: u64 = 10;
 pub const DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS: u64 = 30;
+pub const DEFAULT_ROOM_COORDINATION_MANAGED_TIMEOUT_SECS: u64 = 5;
 pub const DEFAULT_NODE_ID: &str = "local-node";
 
 #[derive(Debug, Clone)]
@@ -36,6 +37,9 @@ pub struct Config {
     pub room_coordinator_sqlite_path: String,
     pub room_coordinator_heartbeat_interval_secs: u64,
     pub room_coordinator_lease_ttl_secs: u64,
+    pub room_coordination_managed_base_url: Option<String>,
+    pub room_coordination_managed_auth_token: Option<String>,
+    pub room_coordination_managed_timeout_secs: u64,
     pub node_id: String,
     pub node_base_url: Option<String>,
     pub room_owner_hints_path: Option<String>,
@@ -72,6 +76,14 @@ impl Config {
             "ROOM_COORDINATOR_LEASE_TTL_SECS",
             DEFAULT_ROOM_COORDINATOR_LEASE_TTL_SECS,
         )?;
+        let room_coordination_managed_base_url =
+            env_optional_http_base_url("ROOM_COORDINATION_MANAGED_BASE_URL")?;
+        let room_coordination_managed_auth_token =
+            env_optional_string("ROOM_COORDINATION_MANAGED_AUTH_TOKEN")?;
+        let room_coordination_managed_timeout_secs = env_u64(
+            "ROOM_COORDINATION_MANAGED_TIMEOUT_SECS",
+            DEFAULT_ROOM_COORDINATION_MANAGED_TIMEOUT_SECS,
+        )?;
         let node_id = env_string("NODE_ID", DEFAULT_NODE_ID)?;
         let node_base_url = env_optional_origin("NODE_BASE_URL")?;
         let room_owner_hints_path = env_optional_string("ROOM_OWNER_HINTS_PATH")?;
@@ -91,6 +103,9 @@ impl Config {
             room_coordinator_sqlite_path,
             room_coordinator_heartbeat_interval_secs,
             room_coordinator_lease_ttl_secs,
+            room_coordination_managed_base_url,
+            room_coordination_managed_auth_token,
+            room_coordination_managed_timeout_secs,
             node_id,
             node_base_url,
             room_owner_hints_path,
@@ -206,6 +221,25 @@ fn env_optional_origin(key: &str) -> AppResult<Option<String>> {
     }
 }
 
+fn env_optional_http_base_url(key: &str) -> AppResult<Option<String>> {
+    match env::var(key) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                Err(AppError::Config(format!("{key} cannot be empty")))
+            } else {
+                normalize_http_base_url(trimmed, key)
+                    .map(Some)
+                    .map_err(AppError::Config)
+            }
+        }
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(env::VarError::NotUnicode(_)) => {
+            Err(AppError::Config(format!("{key} must be valid unicode")))
+        }
+    }
+}
+
 pub fn normalize_origin_url(value: &str, field_name: &str) -> Result<String, String> {
     let invalid_message = || {
         format!(
@@ -230,4 +264,29 @@ pub fn normalize_origin_url(value: &str, field_name: &str) -> Result<String, Str
     }
 
     Ok(format!("{scheme}://{authority}"))
+}
+
+pub fn normalize_http_base_url(value: &str, field_name: &str) -> Result<String, String> {
+    let invalid_message = || {
+        format!("{field_name} must be an absolute http/https URL without query, received `{value}`")
+    };
+
+    let uri: Uri = value.parse().map_err(|_| invalid_message())?;
+    let Some(scheme) = uri.scheme_str() else {
+        return Err(invalid_message());
+    };
+    let Some(authority) = uri.authority() else {
+        return Err(invalid_message());
+    };
+
+    if !matches!(scheme, "http" | "https") || uri.query().is_some() {
+        return Err(invalid_message());
+    }
+
+    let normalized_path = match uri.path() {
+        "" | "/" => String::new(),
+        path => path.trim_end_matches('/').to_owned(),
+    };
+
+    Ok(format!("{scheme}://{authority}{normalized_path}"))
 }

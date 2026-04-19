@@ -24,7 +24,7 @@ room ownership conflict처럼 non-local owner 힌트를 함께 주는 경우에�
 }
 ```
 
-- future external coordination resolver도 같은 `owner.node_id` / optional `owner.base_url` shape를 유지해야 한다. 현재 저장소의 `ROOM_LOCATOR=sqlite`도 이 shape를 그대로 사용한다.
+- authoritative coordination resolver도 같은 `owner.node_id` / optional `owner.base_url` shape를 유지해야 한다. 현재 저장소의 `ROOM_LOCATOR=sqlite|managed`도 이 shape를 그대로 사용한다.
 - `owner.base_url`이 존재하면 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하고, 응답에는 canonical origin (`scheme://authority`)으로 반환한다.
 - 같은 non-local owner conflict 응답은 JSON body 외에도 `x-collab-owner-node-id` 헤더를 포함한다.
 - `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함한다.
@@ -105,15 +105,16 @@ Response: `201 Created`
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
 - 문서가 없으면 `404` JSON 에러를 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
-- `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
+- `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
 - `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 해당 state에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 읽는다. 해당 row에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
+- `ROOM_LOCATOR=managed`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id`를 읽는다. 해당 lease record에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - non-local owner conflict 응답은 `x-collab-owner-node-id` 헤더를 항상 포함한다.
 - `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함하고, redirect URL은 현재 요청의 path/query를 그대로 유지한다.
 - `ROOM_LOCATOR=file`과 `ROOM_LOCATOR=sqlite`는 persisted `expires_at`이 지나기 전까지 다른 node lease를 authoritative하게 취급하고, 만료 뒤에만 stale owner로 간주한다.
-- future authoritative coordination resolver도 stale 판단을 `expires_at` 기반 lease 만료로 수행해야 하며, 그 결과를 동일한 `409` owner metadata shape로 노출해야 한다.
+- `ROOM_LOCATOR=managed`를 포함한 authoritative coordination resolver는 stale 판단을 `expires_at` 기반 lease 만료로 수행해야 하며, 그 결과를 동일한 `409` owner metadata shape로 노출해야 한다.
 - UUID 형식이 아니면 `400`과 JSON 에러 응답을 반환한다.
 
 Response:
@@ -151,22 +152,24 @@ Response: `204 No Content`
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
-- 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, 또는 `file` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
+- 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, `file`, `sqlite`, 또는 `managed` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403` JSON 에러 응답을 반환한다.
 - 문서가 존재하지 않으면 업그레이드 전에 `404` JSON 에러 응답을 반환한다.
 - `Origin` 헤더가 없거나 허용되지 않으면 업그레이드 전에 `403` JSON 에러 응답을 반환한다.
-- `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 업그레이드 전에 `409` JSON 에러 응답을 반환한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
+- `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 업그레이드 전에 `409` JSON 에러 응답을 반환한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
 - `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 해당 state에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽는다. 해당 row에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
+- `ROOM_LOCATOR=managed`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id` 응답을 읽는다. 해당 lease record에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - non-local owner conflict 응답은 `x-collab-owner-node-id` 헤더를 항상 포함한다.
 - `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함하고, redirect URL은 현재 요청의 path/query를 그대로 유지한다.
 - `ROOM_COORDINATOR=file`은 첫 active session에서 file-backed lease를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 compare-and-release로 lease를 정리한다.
 - `ROOM_COORDINATOR=sqlite`는 첫 active session에서 SQLite-backed lease row를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 `node_id + lease_id + epoch` compare-and-delete로 lease를 정리한다.
-- `ROOM_LOCATOR=file|sqlite`와 future authoritative coordination resolver는 모두 lease 만료 전까지 기존 owner를 authoritative하게 취급하고, `expires_at` 경과 뒤에만 ownership handoff를 허용해야 한다.
+- `ROOM_COORDINATOR=managed`는 첫 active session에서 managed lease service `POST /v1/leases/:doc_id/acquire`를 호출하고, background heartbeat로 `POST /v1/leases/:doc_id/renew`를 반복하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 `POST /v1/leases/:doc_id/release`로 compare-and-release를 요청한다.
+- `ROOM_LOCATOR=file|sqlite|managed`와 동등한 authoritative coordination resolver는 모두 lease 만료 전까지 기존 owner를 authoritative하게 취급하고, `expires_at` 경과 뒤에만 ownership handoff를 허용해야 한다.
 
 ## Frontend Contract Notes
 
