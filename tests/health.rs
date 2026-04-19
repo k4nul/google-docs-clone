@@ -1,8 +1,9 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    body::Bytes,
+    extract::{Path, Query, State},
+    http::{HeaderMap, HeaderValue, Method, StatusCode, Uri},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use axum_test::{TestServer, WsMessage};
@@ -18,7 +19,7 @@ use backend::{
     state::AppState,
     storage::{
         DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, ManagedSnapshotStore,
-        SnapshotStore, SqliteSnapshotStore,
+        S3SnapshotStore, SnapshotStore, SqliteSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -48,6 +49,15 @@ fn test_config() -> Config {
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
         snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
+        snapshot_s3_endpoint: None,
+        snapshot_s3_region: "us-east-1".to_owned(),
+        snapshot_s3_bucket: None,
+        snapshot_s3_prefix: "snapshots/".to_owned(),
+        snapshot_s3_access_key_id: None,
+        snapshot_s3_secret_access_key: None,
+        snapshot_s3_session_token: None,
+        snapshot_s3_timeout_secs: 5,
+        snapshot_s3_path_style: true,
         snapshot_managed_base_url: None,
         snapshot_managed_auth_token: None,
         snapshot_managed_timeout_secs: 5,
@@ -102,6 +112,25 @@ fn configure_managed_snapshot_store(
     config.snapshot_managed_timeout_secs = 5;
 }
 
+fn configure_s3_snapshot_store(
+    config: &mut Config,
+    endpoint: &str,
+    bucket: &str,
+    access_key_id: &str,
+    secret_access_key: &str,
+) {
+    config.snapshot_store = "s3".to_owned();
+    config.snapshot_s3_endpoint = Some(endpoint.to_owned());
+    config.snapshot_s3_region = "us-east-1".to_owned();
+    config.snapshot_s3_bucket = Some(bucket.to_owned());
+    config.snapshot_s3_prefix = "snapshots/test-suite/".to_owned();
+    config.snapshot_s3_access_key_id = Some(access_key_id.to_owned());
+    config.snapshot_s3_secret_access_key = Some(secret_access_key.to_owned());
+    config.snapshot_s3_session_token = None;
+    config.snapshot_s3_timeout_secs = 5;
+    config.snapshot_s3_path_style = true;
+}
+
 fn configure_managed_coordination_with_shared_sqlite_snapshots(
     config: &mut Config,
     root: &std::path::Path,
@@ -150,6 +179,181 @@ fn admin_auth_header(config: &Config) -> String {
 
 fn document_auth_header(access_token: &str) -> String {
     format!("Bearer {access_token}")
+}
+
+#[derive(Debug, Clone, Default)]
+struct MockS3ServiceState {
+    objects: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    last_authorization: Arc<Mutex<Option<String>>>,
+}
+
+impl MockS3ServiceState {
+    fn object(&self, key: &str) -> Option<Vec<u8>> {
+        self.objects
+            .lock()
+            .expect("mock s3 object store should not be poisoned")
+            .get(key)
+            .cloned()
+    }
+
+    fn last_authorization(&self) -> Option<String> {
+        self.last_authorization
+            .lock()
+            .expect("mock s3 auth state should not be poisoned")
+            .clone()
+    }
+}
+
+struct MockS3Harness {
+    state: MockS3ServiceState,
+    endpoint: String,
+    bucket: String,
+    access_key_id: String,
+    secret_access_key: String,
+    task: JoinHandle<()>,
+}
+
+impl Drop for MockS3Harness {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+
+async fn spawn_mock_s3_snapshot_service() -> MockS3Harness {
+    let state = MockS3ServiceState::default();
+    let bucket = "backend-test-snapshots".to_owned();
+    let access_key_id = "test-access-key".to_owned();
+    let secret_access_key = "test-secret-key".to_owned();
+    let app = Router::new()
+        .fallback(mock_s3_dispatch)
+        .with_state(state.clone());
+
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("mock s3 listener should bind");
+    let addr = listener
+        .local_addr()
+        .expect("mock s3 listener should expose local addr");
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("mock s3 service should serve");
+    });
+
+    MockS3Harness {
+        state,
+        endpoint: format!("http://{addr}"),
+        bucket,
+        access_key_id,
+        secret_access_key,
+        task,
+    }
+}
+
+async fn mock_s3_dispatch(
+    State(state): State<MockS3ServiceState>,
+    method: Method,
+    uri: Uri,
+    Query(query): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let authorization = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    *state
+        .last_authorization
+        .lock()
+        .expect("mock s3 auth state should not be poisoned") = authorization;
+
+    let path = uri.path().trim_start_matches('/');
+    if path.is_empty() {
+        return mock_s3_xml_error(StatusCode::NOT_FOUND, "NoSuchBucket", "bucket not found");
+    }
+
+    let (bucket, key) = match path.split_once('/') {
+        Some((bucket, "")) => (bucket, None),
+        Some((bucket, key)) => (bucket, Some(key)),
+        None => (path, None),
+    };
+
+    if bucket.trim().is_empty() {
+        return mock_s3_xml_error(StatusCode::NOT_FOUND, "NoSuchBucket", "bucket not found");
+    }
+
+    if key.is_none() && query.get("list-type").map(String::as_str) == Some("2") {
+        let prefix = query.get("prefix").cloned().unwrap_or_default();
+        let mut objects = state
+            .objects
+            .lock()
+            .expect("mock s3 object store should not be poisoned")
+            .iter()
+            .filter(|(key, _)| key.starts_with(&prefix))
+            .map(|(key, bytes)| (key.clone(), bytes.len()))
+            .collect::<Vec<_>>();
+        objects.sort_by(|left, right| left.0.cmp(&right.0));
+
+        let contents = objects
+            .into_iter()
+            .map(|(key, size)| {
+                format!(
+                    "<Contents><Key>{key}</Key><Size>{size}</Size><StorageClass>STANDARD</StorageClass></Contents>"
+                )
+            })
+            .collect::<String>();
+        let xml = format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult><Name>{bucket}</Name><Prefix>{prefix}</Prefix><KeyCount>{key_count}</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated>{contents}</ListBucketResult>",
+            key_count = contents.matches("<Contents>").count(),
+        );
+        return mock_s3_xml_response(StatusCode::OK, xml);
+    }
+
+    let Some(key) = key else {
+        return mock_s3_xml_error(StatusCode::NOT_FOUND, "NoSuchKey", "object not found");
+    };
+
+    match method {
+        Method::GET => match state.object(key) {
+            Some(bytes) => (StatusCode::OK, bytes).into_response(),
+            None => mock_s3_xml_error(StatusCode::NOT_FOUND, "NoSuchKey", "object not found"),
+        },
+        Method::PUT => {
+            state
+                .objects
+                .lock()
+                .expect("mock s3 object store should not be poisoned")
+                .insert(key.to_owned(), body.to_vec());
+            StatusCode::OK.into_response()
+        }
+        Method::DELETE => {
+            state
+                .objects
+                .lock()
+                .expect("mock s3 object store should not be poisoned")
+                .remove(key);
+            StatusCode::NO_CONTENT.into_response()
+        }
+        _ => StatusCode::METHOD_NOT_ALLOWED.into_response(),
+    }
+}
+
+fn mock_s3_xml_response(status: StatusCode, body: String) -> Response {
+    let mut response = (status, body).into_response();
+    response.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        HeaderValue::from_static("application/xml"),
+    );
+    response
+}
+
+fn mock_s3_xml_error(status: StatusCode, code: &str, message: &str) -> Response {
+    mock_s3_xml_response(
+        status,
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>{code}</Code><Message>{message}</Message></Error>"
+        ),
+    )
 }
 
 #[derive(Debug, Default)]
@@ -2569,6 +2773,24 @@ fn app_state_rejects_managed_snapshot_store_without_base_url() {
     );
 }
 
+#[test]
+fn app_state_rejects_s3_snapshot_store_without_endpoint() {
+    let mut config = test_config();
+    config.snapshot_store = "s3".to_owned();
+
+    let error = match AppState::from_config(&config) {
+        Ok(_) => panic!("s3 snapshot store should require endpoint"),
+        Err(error) => error,
+    };
+
+    assert!(
+        error
+            .to_string()
+            .contains("SNAPSHOT_S3_ENDPOINT is required when SNAPSHOT_STORE=s3"),
+        "unexpected error: {error}"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn app_state_uses_managed_snapshot_store_from_config() {
     let harness = spawn_mock_managed_coordination_service(Some("snapshot-secret")).await;
@@ -2613,6 +2835,62 @@ async fn app_state_uses_managed_snapshot_store_from_config() {
         .expect("persisted room should hydrate on startup");
 
     assert_eq!(restored_room.document().id, document.id);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn app_state_uses_s3_snapshot_store_from_config() {
+    let harness = spawn_mock_s3_snapshot_service().await;
+
+    let mut config = test_config();
+    configure_s3_snapshot_store(
+        &mut config,
+        &harness.endpoint,
+        &harness.bucket,
+        &harness.access_key_id,
+        &harness.secret_access_key,
+    );
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with s3 snapshot store");
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to s3".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to s3 on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    let object_key = format!("snapshots/test-suite/{}.json", document.id);
+    let persisted_snapshot = harness
+        .state
+        .object(&object_key)
+        .expect("mock s3 service should store the snapshot object");
+    assert!(!persisted_snapshot.is_empty());
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted s3 snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(
+        harness
+            .state
+            .last_authorization()
+            .is_some_and(|header| header.contains("Credential=test-access-key/")),
+        "s3 requests should be signed with the configured access key"
+    );
 }
 
 #[tokio::test]
@@ -3088,6 +3366,49 @@ fn managed_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+}
+
+#[test]
+fn s3_snapshot_store_round_trips_document_catalog() {
+    let runtime = tokio::runtime::Runtime::new().expect("tokio runtime should initialize");
+    let harness = runtime.block_on(spawn_mock_s3_snapshot_service());
+    let store = S3SnapshotStore::new(
+        &harness.endpoint,
+        "us-east-1",
+        &harness.bucket,
+        "snapshots/unit-tests/",
+        &harness.access_key_id,
+        &harness.secret_access_key,
+        None,
+        Duration::from_secs(5),
+        true,
+    )
+    .expect("s3 snapshot store should initialize");
+    let document = backend::models::document::Document::new(Uuid::new_v4(), Some("S3".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to s3 store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from s3 store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from s3 store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert!(
+        harness
+            .state
+            .last_authorization()
+            .is_some_and(|header| header.contains("Credential=test-access-key/")),
+        "s3 requests should be signed with the configured access key"
+    );
 }
 
 #[test]

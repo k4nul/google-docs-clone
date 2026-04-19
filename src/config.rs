@@ -12,6 +12,10 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
+pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
+pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
+pub const DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS: u64 = 5;
+pub const DEFAULT_SNAPSHOT_S3_PATH_STYLE: bool = true;
 pub const DEFAULT_SNAPSHOT_MANAGED_TIMEOUT_SECS: u64 = 5;
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
@@ -32,6 +36,15 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_sqlite_path: String,
+    pub snapshot_s3_endpoint: Option<String>,
+    pub snapshot_s3_region: String,
+    pub snapshot_s3_bucket: Option<String>,
+    pub snapshot_s3_prefix: String,
+    pub snapshot_s3_access_key_id: Option<String>,
+    pub snapshot_s3_secret_access_key: Option<String>,
+    pub snapshot_s3_session_token: Option<String>,
+    pub snapshot_s3_timeout_secs: u64,
+    pub snapshot_s3_path_style: bool,
     pub snapshot_managed_base_url: Option<String>,
     pub snapshot_managed_auth_token: Option<String>,
     pub snapshot_managed_timeout_secs: u64,
@@ -62,6 +75,17 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
+        let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
+        let snapshot_s3_region = env_string("SNAPSHOT_S3_REGION", DEFAULT_SNAPSHOT_S3_REGION)?;
+        let snapshot_s3_bucket = env_optional_string("SNAPSHOT_S3_BUCKET")?;
+        let snapshot_s3_prefix = env_string("SNAPSHOT_S3_PREFIX", DEFAULT_SNAPSHOT_S3_PREFIX)?;
+        let snapshot_s3_access_key_id = env_optional_string("SNAPSHOT_S3_ACCESS_KEY_ID")?;
+        let snapshot_s3_secret_access_key = env_optional_string("SNAPSHOT_S3_SECRET_ACCESS_KEY")?;
+        let snapshot_s3_session_token = env_optional_string("SNAPSHOT_S3_SESSION_TOKEN")?;
+        let snapshot_s3_timeout_secs =
+            env_u64("SNAPSHOT_S3_TIMEOUT_SECS", DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS)?;
+        let snapshot_s3_path_style =
+            env_bool("SNAPSHOT_S3_PATH_STYLE", DEFAULT_SNAPSHOT_S3_PATH_STYLE)?;
         let snapshot_managed_base_url = env_optional_http_base_url("SNAPSHOT_MANAGED_BASE_URL")?;
         let snapshot_managed_auth_token = env_optional_string("SNAPSHOT_MANAGED_AUTH_TOKEN")?;
         let snapshot_managed_timeout_secs = env_u64(
@@ -107,6 +131,15 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_sqlite_path,
+            snapshot_s3_endpoint,
+            snapshot_s3_region,
+            snapshot_s3_bucket,
+            snapshot_s3_prefix,
+            snapshot_s3_access_key_id,
+            snapshot_s3_secret_access_key,
+            snapshot_s3_session_token,
+            snapshot_s3_timeout_secs,
+            snapshot_s3_path_style,
             snapshot_managed_base_url,
             snapshot_managed_auth_token,
             snapshot_managed_timeout_secs,
@@ -190,6 +223,29 @@ fn env_u64(key: &str, default: u64) -> AppResult<u64> {
                     "{key} must be an unsigned 64-bit integer, received `{trimmed}`"
                 ))
             })
+        }
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(env::VarError::NotUnicode(_)) => {
+            Err(AppError::Config(format!("{key} must be valid unicode")))
+        }
+    }
+}
+
+fn env_bool(key: &str, default: bool) -> AppResult<bool> {
+    match env::var(key) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err(AppError::Config(format!("{key} cannot be empty")));
+            }
+
+            match trimmed.to_ascii_lowercase().as_str() {
+                "true" | "1" | "yes" | "on" => Ok(true),
+                "false" | "0" | "no" | "off" => Ok(false),
+                _ => Err(AppError::Config(format!(
+                    "{key} must be a boolean (`true`/`false`), received `{trimmed}`"
+                ))),
+            }
         }
         Err(env::VarError::NotPresent) => Ok(default),
         Err(env::VarError::NotUnicode(_)) => {

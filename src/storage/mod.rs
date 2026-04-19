@@ -1,5 +1,6 @@
 mod file_snapshot_store;
 mod managed_snapshot_store;
+mod s3_snapshot_store;
 mod sqlite_snapshot_store;
 
 use std::{
@@ -19,6 +20,7 @@ use crate::{config::Config, models::document::Document};
 
 pub use file_snapshot_store::FileSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
+pub use s3_snapshot_store::S3SnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
 
 #[derive(Debug, Clone)]
@@ -157,6 +159,37 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "sqlite" => Ok(Arc::new(SqliteSnapshotStore::new(
             &config.snapshot_sqlite_path,
         )?)),
+        "s3" => Ok(Arc::new(S3SnapshotStore::new(
+            config.snapshot_s3_endpoint.clone().ok_or_else(|| {
+                StorageError::Config(
+                    "SNAPSHOT_S3_ENDPOINT is required when SNAPSHOT_STORE=s3".to_owned(),
+                )
+            })?,
+            config.snapshot_s3_region.clone(),
+            config.snapshot_s3_bucket.clone().ok_or_else(|| {
+                StorageError::Config(
+                    "SNAPSHOT_S3_BUCKET is required when SNAPSHOT_STORE=s3".to_owned(),
+                )
+            })?,
+            config.snapshot_s3_prefix.clone(),
+            config.snapshot_s3_access_key_id.clone().ok_or_else(|| {
+                StorageError::Config(
+                    "SNAPSHOT_S3_ACCESS_KEY_ID is required when SNAPSHOT_STORE=s3".to_owned(),
+                )
+            })?,
+            config
+                .snapshot_s3_secret_access_key
+                .clone()
+                .ok_or_else(|| {
+                    StorageError::Config(
+                        "SNAPSHOT_S3_SECRET_ACCESS_KEY is required when SNAPSHOT_STORE=s3"
+                            .to_owned(),
+                    )
+                })?,
+            config.snapshot_s3_session_token.clone(),
+            Duration::from_secs(config.snapshot_s3_timeout_secs),
+            config.snapshot_s3_path_style,
+        )?)),
         "managed" => Ok(Arc::new(ManagedSnapshotStore::new(
             config.snapshot_managed_base_url.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -167,7 +200,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
