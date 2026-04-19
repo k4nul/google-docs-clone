@@ -12,6 +12,7 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
+pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
 pub const DEFAULT_SNAPSHOT_SLED_PATH: &str = "./data/snapshots.sled";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
@@ -38,6 +39,7 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_sqlite_path: String,
+    pub snapshot_jammdb_path: String,
     pub snapshot_redb_path: String,
     pub snapshot_sled_path: String,
     pub snapshot_s3_endpoint: Option<String>,
@@ -79,6 +81,8 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
+        let snapshot_jammdb_path =
+            env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_redb_path = env_string("SNAPSHOT_REDB_PATH", DEFAULT_SNAPSHOT_REDB_PATH)?;
         let snapshot_sled_path = env_string("SNAPSHOT_SLED_PATH", DEFAULT_SNAPSHOT_SLED_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
@@ -137,6 +141,7 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_sqlite_path,
+            snapshot_jammdb_path,
             snapshot_redb_path,
             snapshot_sled_path,
             snapshot_s3_endpoint,
