@@ -28,22 +28,7 @@ pub async fn ws_handler(
     headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> AppResult<impl IntoResponse> {
-    let doc_id = parse_uuid_param("doc_id", &raw_doc_id)?;
-    validate_origin(&state, &headers, doc_id)?;
-    let token = require_bearer_token(&headers)?;
-    let room = state
-        .rooms()
-        .get_or_restore(&doc_id)
-        .map_err(anyhow::Error::from)
-        .map_err(AppError::from)?
-        .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))?;
-
-    if !room.authorizes(token) {
-        warn!(%doc_id, "rejected websocket connection with invalid document token");
-        return Err(AppError::Forbidden(format!(
-            "provided token does not grant access to document `{doc_id}`"
-        )));
-    }
+    let (doc_id, room) = resolve_websocket_room(&state, &headers, &raw_doc_id)?;
 
     let registry = state.rooms_registry();
     Ok(ws.on_upgrade(move |socket| serve_room_socket(socket, registry, room, doc_id)))
@@ -88,6 +73,32 @@ fn parse_uuid_param(parameter: &str, raw_value: &str) -> AppResult<Uuid> {
     })
 }
 
+fn resolve_websocket_room(
+    state: &AppState,
+    headers: &HeaderMap,
+    raw_doc_id: &str,
+) -> AppResult<(Uuid, Arc<Room>)> {
+    let doc_id = parse_uuid_param("doc_id", raw_doc_id)?;
+    validate_origin(state, headers, doc_id)?;
+    let token = require_bearer_token(headers)?;
+    state.ensure_local_room_owner(&doc_id)?;
+    let room = state
+        .rooms()
+        .get_or_restore(&doc_id)
+        .map_err(anyhow::Error::from)
+        .map_err(AppError::from)?
+        .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))?;
+
+    if !room.authorizes(token) {
+        warn!(%doc_id, "rejected websocket connection with invalid document token");
+        return Err(AppError::Forbidden(format!(
+            "provided token does not grant access to document `{doc_id}`"
+        )));
+    }
+
+    Ok((doc_id, room))
+}
+
 fn validate_origin(state: &AppState, headers: &HeaderMap, doc_id: Uuid) -> AppResult<()> {
     let Some(origin) = headers.get(ORIGIN) else {
         warn!(%doc_id, "rejected websocket connection without origin header");
@@ -110,4 +121,78 @@ fn validate_origin(state: &AppState, headers: &HeaderMap, doc_id: Uuid) -> AppRe
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::{HeaderValue, header::AUTHORIZATION};
+
+    use crate::{
+        collab::locator::{ResolvedRoom, RoomLocator, RoomLocatorError, RoomOwnerHint},
+        config::DEFAULT_FRONTEND_ORIGIN,
+        storage::InMemorySnapshotStore,
+    };
+
+    #[derive(Debug, Default)]
+    struct RemoteRoomLocator;
+
+    impl RoomLocator for RemoteRoomLocator {
+        fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+            Ok(ResolvedRoom::Remote(RoomOwnerHint {
+                node_id: format!("node-for-{doc_id}"),
+                base_url: Some("http://node-b.internal:4000".to_owned()),
+            }))
+        }
+    }
+
+    #[test]
+    fn websocket_room_resolution_rejects_non_local_owner() {
+        let state = AppState::with_snapshot_store_and_locator(
+            DEFAULT_FRONTEND_ORIGIN,
+            crate::config::DEFAULT_API_TOKEN,
+            Arc::new(InMemorySnapshotStore::new()),
+            Arc::new(RemoteRoomLocator),
+        )
+        .expect("state should initialize with rejecting locator");
+        let document = state
+            .rooms()
+            .create_document(Some("Remote websocket owner".to_owned()))
+            .expect("document should be created");
+
+        let mut headers = HeaderMap::new();
+        headers.insert(ORIGIN, HeaderValue::from_static(DEFAULT_FRONTEND_ORIGIN));
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
+                .expect("authorization header should be valid"),
+        );
+
+        let error = match resolve_websocket_room(&state, &headers, &document.id.to_string()) {
+            Ok(_) => panic!("non-local owner should reject websocket room resolution"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::RemoteOwner {
+                message,
+                owner_node_id,
+                owner_base_url,
+            } => {
+                assert_eq!(
+                    message,
+                    format!(
+                        "document `{}` is owned by another collaboration node",
+                        document.id
+                    )
+                );
+                assert_eq!(owner_node_id, format!("node-for-{}", document.id));
+                assert_eq!(
+                    owner_base_url,
+                    Some("http://node-b.internal:4000".to_owned())
+                );
+            }
+            other => panic!("expected conflict, received {other:?}"),
+        }
+    }
 }

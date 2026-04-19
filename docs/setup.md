@@ -17,13 +17,19 @@ cargo run
 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`이므로 로컬 프런트엔드 개발 서버를 별도 포트에서 띄우는 흐름을 바로 재현할 수 있습니다.
 기본 `API_TOKEN`은 `dev-admin-token`이며, 개발 환경에서는 이 토큰으로 문서 생성/목록 API를 호출합니다.
 기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`를 함께 설정합니다.
+기본 `ROOM_LOCATOR`는 `local`이며, `static`으로 바꾸면 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 설정해 문서별 owner 힌트를 읽습니다.
 
 ## Test
 
 ```bash
-cargo fmt --check
-cargo test
+./scripts/verify.sh core
+./scripts/preflight.sh publish
+./scripts/verify.sh websocket
 ```
+
+- `preflight.sh commit`/`publish`는 stage/commit/push 차단을 점검한다.
+- `verify.sh core`는 socket bind나 `.git` 쓰기 가능 여부와 무관한 검증만 실행한다.
+- `verify.sh websocket`는 WebSocket/삭제 통합 테스트처럼 socket bind가 필요한 검증만 실행한다.
 
 ## Environment Variables
 
@@ -34,6 +40,25 @@ cargo test
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
 - `SNAPSHOT_STORE`: `memory` 또는 `file`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
+- `ROOM_LOCATOR`: `local` 또는 `static`
+- `NODE_ID`: 현재 collaboration node 식별자
+- `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 owner hints JSON 파일 경로
+
+## Static Room Locator File
+
+```json
+{
+  "documents": {
+    "00000000-0000-0000-0000-000000000000": {
+      "node_id": "node-b",
+      "base_url": "http://127.0.0.1:5001"
+    }
+  }
+}
+```
+
+- 힌트에 없는 문서는 현재 노드 소유로 간주한다.
+- `base_url`은 선택값이며, non-local owner `409` 응답의 owner metadata로 전달된다.
 
 ## Local Development Procedure
 
@@ -43,5 +68,7 @@ cargo test
 4. `Authorization: Bearer <API_TOKEN>`으로 `POST /api/documents`를 호출해 문서를 만들고 응답의 `access_token`을 확보한다.
 5. 문서 상세 조회, 삭제, WebSocket 연결에는 `Authorization: Bearer <access_token>`을 사용한다.
 6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞춰 `/ws/:doc_id`에 접속한다.
-7. 작업 마무리 전 `cargo fmt --check`와 `cargo test`를 실행한다.
-8. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.
+7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
+8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
+9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`와 `owner` metadata가 반환되는지 확인한다.
+10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다.

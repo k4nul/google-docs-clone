@@ -2,7 +2,10 @@ use axum::http::StatusCode;
 use axum_test::{TestServer, WsMessage};
 use backend::{
     app::build_app,
-    collab::rooms::RoomRegistry,
+    collab::{
+        locator::{ResolvedRoom, RoomLocator, RoomLocatorError, RoomOwnerHint},
+        rooms::RoomRegistry,
+    },
     config::Config,
     state::AppState,
     storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
@@ -25,6 +28,9 @@ fn test_config() -> Config {
         api_token: "test-admin-token".to_owned(),
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
+        room_locator: "local".to_owned(),
+        node_id: "test-node".to_owned(),
+        room_owner_hints_path: None,
     }
 }
 
@@ -38,6 +44,18 @@ fn admin_auth_header(config: &Config) -> String {
 
 fn document_auth_header(access_token: &str) -> String {
     format!("Bearer {access_token}")
+}
+
+#[derive(Debug, Default)]
+struct RemoteRoomLocator;
+
+impl RoomLocator for RemoteRoomLocator {
+    fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+        Ok(ResolvedRoom::Remote(RoomOwnerHint {
+            node_id: format!("node-for-{doc_id}"),
+            base_url: Some("http://node-b.internal:4000".to_owned()),
+        }))
+    }
 }
 
 fn decode_sync_message(payload: impl AsRef<[u8]>) -> SyncMessage {
@@ -346,6 +364,49 @@ async fn document_detail_endpoint_rejects_missing_document_with_json_error() {
         payload["message"],
         format!("document `{doc_id}` was not found")
     );
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_rejects_non_local_room_owner() {
+    let config = test_config();
+    let state = AppState::with_snapshot_store_and_locator(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        Arc::new(InMemorySnapshotStore::new()),
+        Arc::new(RemoteRoomLocator),
+    )
+    .expect("state should initialize with rejecting locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote owner".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(
+        payload["message"],
+        format!(
+            "document `{}` is owned by another collaboration node",
+            document.id
+        )
+    );
+    assert_eq!(
+        payload["owner"]["node_id"],
+        format!("node-for-{}", document.id)
+    );
+    assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:4000");
 }
 
 #[tokio::test]
@@ -899,7 +960,7 @@ async fn app_state_with_file_store_skips_corrupt_snapshots_during_startup() {
 }
 
 #[tokio::test]
-async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_startup() {
+async fn app_state_with_file_store_cleans_matching_stale_temp_snapshots_during_startup() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("file-store-stale-temp-startup");
     config.snapshot_store = "file".to_owned();
@@ -920,8 +981,8 @@ async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_
     fs::write(&stale_temp_path, br#"{"partial":true}"#)
         .expect("stale temp snapshot fixture should be written");
 
-    let state =
-        AppState::from_config(&config).expect("startup hydration should ignore stale temp files");
+    let state = AppState::from_config(&config)
+        .expect("startup hydration should clean stale temp files and restore valid snapshots");
     let hydrated_documents = state
         .rooms()
         .list_documents()
@@ -929,13 +990,13 @@ async fn app_state_with_file_store_ignores_matching_stale_temp_snapshots_during_
 
     assert!(state.rooms().get(&valid_document.id).is_some());
     assert_eq!(hydrated_documents, vec![valid_document]);
-    assert!(stale_temp_path.exists());
+    assert!(!stale_temp_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
 #[tokio::test]
-async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_startup() {
+async fn app_state_with_file_store_cleans_orphan_stale_temp_snapshots_during_startup() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("file-store-orphan-stale-temp-startup");
     config.snapshot_store = "file".to_owned();
@@ -948,7 +1009,7 @@ async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_st
         .expect("stale temp snapshot fixture should be written");
 
     let state =
-        AppState::from_config(&config).expect("startup hydration should ignore orphan temp files");
+        AppState::from_config(&config).expect("startup hydration should clean orphan temp files");
     let hydrated_documents = state
         .rooms()
         .list_documents()
@@ -956,7 +1017,7 @@ async fn app_state_with_file_store_ignores_orphan_stale_temp_snapshots_during_st
 
     assert!(state.rooms().get(&orphan_doc_id).is_none());
     assert!(hydrated_documents.is_empty());
-    assert!(stale_temp_path.exists());
+    assert!(!stale_temp_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

@@ -22,6 +22,12 @@ pub enum AppError {
     Unauthorized(String),
     #[error("resource not found: {0}")]
     NotFound(String),
+    #[error("conflict: {message}")]
+    RemoteOwner {
+        message: String,
+        owner_node_id: String,
+        owner_base_url: Option<String>,
+    },
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
 }
@@ -30,6 +36,15 @@ pub enum AppError {
 struct ErrorBody {
     error: &'static str,
     message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    owner: Option<OwnerBody>,
+}
+
+#[derive(Debug, Serialize)]
+struct OwnerBody {
+    node_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    base_url: Option<String>,
 }
 
 impl IntoResponse for AppError {
@@ -40,6 +55,7 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "bad_request",
                     message,
+                    owner: None,
                 }),
             )
                 .into_response(),
@@ -48,6 +64,7 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "config_error",
                     message,
+                    owner: None,
                 }),
             )
                 .into_response(),
@@ -56,6 +73,7 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "conflict",
                     message,
+                    owner: None,
                 }),
             )
                 .into_response(),
@@ -64,6 +82,7 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "forbidden",
                     message,
+                    owner: None,
                 }),
             )
                 .into_response(),
@@ -72,6 +91,7 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "unauthorized",
                     message,
+                    owner: None,
                 }),
             )
                 .into_response(),
@@ -80,6 +100,23 @@ impl IntoResponse for AppError {
                 Json(ErrorBody {
                     error: "not_found",
                     message,
+                    owner: None,
+                }),
+            )
+                .into_response(),
+            AppError::RemoteOwner {
+                message,
+                owner_node_id,
+                owner_base_url,
+            } => (
+                StatusCode::CONFLICT,
+                Json(ErrorBody {
+                    error: "conflict",
+                    message,
+                    owner: Some(OwnerBody {
+                        node_id: owner_node_id,
+                        base_url: owner_base_url,
+                    }),
                 }),
             )
                 .into_response(),
@@ -90,6 +127,7 @@ impl IntoResponse for AppError {
                     Json(ErrorBody {
                         error: "internal_error",
                         message: "unexpected internal server error".to_owned(),
+                        owner: None,
                     }),
                 )
                     .into_response()

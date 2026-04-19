@@ -11,6 +11,19 @@
 }
 ```
 
+room ownership conflict처럼 non-local owner 힌트를 함께 주는 경우에는 `owner` 객체가 추가될 수 있다.
+
+```json
+{
+  "error": "conflict",
+  "message": "document `00000000-0000-0000-0000-000000000000` is owned by another collaboration node",
+  "owner": {
+    "node_id": "node-b",
+    "base_url": "http://127.0.0.1:5001"
+  }
+}
+```
+
 ## HTTP Endpoints
 
 ### `GET /api/health`
@@ -83,9 +96,10 @@ Response: `201 Created`
 
 - `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
-- active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
+- 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
 - 문서가 없으면 `404` JSON 에러를 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
+- `ROOM_LOCATOR=static` 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - UUID 형식이 아니면 `400`과 JSON 에러 응답을 반환한다.
 
 Response:
@@ -122,12 +136,13 @@ Response: `204 No Content`
 - 문서는 먼저 `POST /api/documents`로 생성되어 있어야 한다.
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
-- active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
+- 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403` JSON 에러 응답을 반환한다.
 - 문서가 존재하지 않으면 업그레이드 전에 `404` JSON 에러 응답을 반환한다.
 - `Origin` 헤더가 없거나 허용되지 않으면 업그레이드 전에 `403` JSON 에러 응답을 반환한다.
+- `ROOM_LOCATOR=static` 또는 future 외부 resolver가 현재 노드 비소유를 보고하면 업그레이드 전에 `409` JSON 에러 응답을 반환한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 
 ## Frontend Contract Notes
 
