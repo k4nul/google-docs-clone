@@ -55,6 +55,9 @@
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 hydrate한다.
 - `FileSnapshotStore`는 catalog/hydrate 경로에서 corrupt snapshot 파일을 warning과 함께 건너뛰어 단일 손상 파일이 전체 startup/listing 실패로 번지지 않게 한다.
+- `FileSnapshotStore`는 같은 디렉터리의 임시 파일에 snapshot을 먼저 쓴 뒤 `rename`으로 교체해 partial write가 마지막 정상 snapshot을 직접 덮어쓰지 않도록 한다.
+- interrupted save가 남긴 `.tmp` 파일은 `.json` snapshot catalog에 포함되지 않으므로 startup hydrate와 문서 목록 생성에서 무시된다.
+- 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 제거해 temp artifact가 누적되지 않게 한다.
 - `Config.snapshot_store`가 `memory`/`file` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이 문서 metadata와 Yrs full-state update를 함께 저장한다.
 
 ## Multi-Process Distribution Strategy
@@ -68,4 +71,4 @@
 - awareness는 durability 대상이 아니므로 owner handoff 시 재게시를 허용하고, 문서 본문 CRDT update와 분리해 취급한다.
 - cross-node fan-out이 필요해지는 시점 전까지는 한 room의 WebSocket 세션을 모두 owner node에 붙이는 방식이 가장 단순하다. node 간 pub/sub 복제는 ownership 우회가 아니라 장애 복구 보조 경로로만 고려한다.
 - 구현 확장 포인트는 `RoomRegistry` 앞단에 `RoomLocator` 또는 동등한 ownership resolver를 두고, 현재 `get_or_restore` 호출 전에 authoritative node 결정을 끼워 넣는 형태가 가장 경계에 맞다.
-- 현재 저장소가 `InMemorySnapshotStore`뿐이므로 실제 멀티 프로세스 활성화는 blocked 상태다. 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
+- 현재는 `InMemorySnapshotStore`와 로컬 `FileSnapshotStore`만 있으므로 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
