@@ -1785,6 +1785,7 @@ mod tests {
             snapshot_dir: "./data/test-snapshots".to_owned(),
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
+            snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

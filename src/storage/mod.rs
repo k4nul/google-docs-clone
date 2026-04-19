@@ -2,6 +2,7 @@ mod file_snapshot_store;
 mod managed_snapshot_store;
 mod redb_snapshot_store;
 mod s3_snapshot_store;
+mod sled_snapshot_store;
 mod sqlite_snapshot_store;
 
 use std::{
@@ -23,6 +24,7 @@ pub use file_snapshot_store::FileSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
+pub use sled_snapshot_store::SledSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
 
 #[derive(Debug, Clone)]
@@ -164,6 +166,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
         )?)),
+        "sled" => Ok(Arc::new(SledSnapshotStore::new(
+            &config.snapshot_sled_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -205,7 +210,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `redb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `redb`, `sled`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
