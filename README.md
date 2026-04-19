@@ -145,7 +145,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
 - SQLite 외의 managed coordination backend 추가
-- gateway redirect/proxy 레이어와 owner handoff end-to-end 검증 고도화
+- shared SQLite를 넘어선 multi-host owner handoff 검증 고도화
 
 ## Snapshot Restore / Eviction Policy
 
@@ -158,8 +158,8 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=file` 저장은 같은 디렉터리의 임시 파일 작성 후 `rename`으로 마무리해, 저장 도중 프로세스가 중단돼도 마지막 정상 snapshot을 바로 덮어쓰지 않도록 한다.
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되고, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 정리한다.
-- `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
-- `SNAPSHOT_STORE=sqlite`이면 snapshot과 문서 토큰이 `SNAPSHOT_SQLITE_PATH` SQLite DB의 `snapshots` 테이블에 저장되고, 앱 시작 시 DB catalog에서 문서를 hydrate한다.
+- `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 해당 디렉터리에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=sqlite`이면 snapshot과 문서 토큰이 `SNAPSHOT_SQLITE_PATH` SQLite DB의 `snapshots` 테이블에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 DB catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SqliteSnapshotStore`는 row-level upsert로 기존 snapshot을 교체하며, 잘못된 timestamp나 손상된 row는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.

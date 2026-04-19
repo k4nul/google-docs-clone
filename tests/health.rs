@@ -55,6 +55,27 @@ fn temp_snapshot_dir(test_name: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("backend-{test_name}-{}", Uuid::new_v4()))
 }
 
+fn configure_shared_sqlite_collaboration(
+    config: &mut Config,
+    root: &std::path::Path,
+    node_id: &str,
+    node_base_url: &str,
+) {
+    config.snapshot_store = "sqlite".to_owned();
+    config.snapshot_sqlite_path = root
+        .join("snapshots.sqlite3")
+        .to_string_lossy()
+        .into_owned();
+    config.room_locator = "sqlite".to_owned();
+    config.room_coordinator = "sqlite".to_owned();
+    config.room_coordinator_sqlite_path = root
+        .join("room-coordinator.sqlite3")
+        .to_string_lossy()
+        .into_owned();
+    config.node_id = node_id.to_owned();
+    config.node_base_url = Some(node_base_url.to_owned());
+}
+
 fn admin_auth_header(config: &Config) -> String {
     format!("Bearer {}", config.api_token)
 }
@@ -136,6 +157,27 @@ fn decode_sync_message(payload: impl AsRef<[u8]>) -> SyncMessage {
         Message::Sync(message) => message,
         other => panic!("expected sync message, received {other:?}"),
     }
+}
+
+async fn wait_for_sqlite_room_lease_release(sqlite_path: &std::path::Path, doc_id: Uuid) {
+    for _ in 0..20 {
+        let connection = rusqlite::Connection::open(sqlite_path)
+            .expect("sqlite coordinator file should open while waiting for release");
+        let remaining: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM room_leases WHERE doc_id = ?1",
+                [doc_id.to_string()],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        if remaining == 0 {
+            return;
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    panic!("sqlite room lease for `{doc_id}` should be released after handoff");
 }
 
 #[tokio::test]
@@ -1357,6 +1399,171 @@ async fn websocket_endpoint_supports_yrs_sync_handshake_and_update_broadcast() {
 }
 
 #[tokio::test]
+async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff() {
+    let shared_root = temp_snapshot_dir("sqlite-owner-handoff");
+
+    let mut node_a_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_a_config,
+        &shared_root,
+        "node-a",
+        "http://node-a.internal:4300/",
+    );
+
+    let mut node_b_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_b_config,
+        &shared_root,
+        "node-b",
+        "http://node-b.internal:4301/",
+    );
+
+    let node_a_state =
+        AppState::from_config(&node_a_config).expect("node-a state should initialize");
+    let node_a_app = build_app(&node_a_config, node_a_state).expect("node-a app should build");
+    let node_a_server = TestServer::builder().http_transport().build(node_a_app);
+
+    let create_response = node_a_server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&node_a_config).as_str())
+        .json(&serde_json::json!({
+            "title": "Handoff document"
+        }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+
+    let payload = create_response.json::<Value>();
+    let doc_id = payload["document"]["id"]
+        .as_str()
+        .expect("created document id should be returned")
+        .to_owned();
+    let doc_uuid = Uuid::parse_str(&doc_id).expect("created document id should be a UUID");
+    let access_token = payload["credentials"]["access_token"]
+        .as_str()
+        .expect("document access token should be returned")
+        .to_owned();
+
+    let mut node_a_client = node_a_server
+        .get_websocket(&format!("/ws/{doc_id}"))
+        .add_header("Origin", node_a_config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    node_a_client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::SyncStep1(StateVector::default()))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+    let initial_sync = decode_sync_message(node_a_client.receive_bytes().await);
+    let SyncMessage::SyncStep2(initial_update) = initial_sync else {
+        panic!("expected SyncStep2 during initial node-a handshake");
+    };
+
+    let node_a_doc = Doc::new();
+    let node_a_text = node_a_doc.get_or_insert_text("content");
+    let mut node_a_txn = node_a_doc.transact_mut();
+    node_a_txn.apply_update(
+        Update::decode_v1(initial_update.as_slice()).expect("initial sync payload should decode"),
+    );
+    node_a_text.insert(&mut node_a_txn, 0, "hello handoff");
+    let client_update = node_a_txn.encode_update_v1();
+    drop(node_a_txn);
+
+    node_a_client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::Update(client_update))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+
+    let node_b_state =
+        AppState::from_config(&node_b_config).expect("node-b state should initialize");
+    assert!(
+        node_b_state.rooms().get(&doc_uuid).is_none(),
+        "distributed sqlite mode should not eagerly hydrate rooms on startup"
+    );
+
+    let node_b_app =
+        build_app(&node_b_config, node_b_state.clone()).expect("node-b app should build");
+    let node_b_server = TestServer::builder().http_transport().build(node_b_app);
+
+    let standby_response = node_b_server
+        .get(&format!("/api/documents/{doc_id}?probe=standby"))
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await;
+    standby_response.assert_status(StatusCode::CONFLICT);
+    standby_response.assert_header("x-collab-owner-node-id", "node-a");
+    standby_response.assert_header("x-collab-owner-base-url", "http://node-a.internal:4300");
+    standby_response.assert_header(
+        "x-collab-redirect-location",
+        format!("http://node-a.internal:4300/api/documents/{doc_id}?probe=standby"),
+    );
+
+    node_a_client.close().await;
+    let lease_path = shared_root.join("room-coordinator.sqlite3");
+    wait_for_sqlite_room_lease_release(&lease_path, doc_uuid).await;
+
+    let detail_response = node_b_server
+        .get(&format!("/api/documents/{doc_id}"))
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await;
+    detail_response.assert_status_ok();
+
+    let mut node_b_client = node_b_server
+        .get_websocket(&format!("/ws/{doc_id}"))
+        .add_header("Origin", node_b_config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    node_b_client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::SyncStep1(StateVector::default()))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+    let handoff_sync = decode_sync_message(node_b_client.receive_bytes().await);
+    let SyncMessage::SyncStep2(handoff_update) = handoff_sync else {
+        panic!("expected SyncStep2 during node-b handoff handshake");
+    };
+
+    let node_b_doc = Doc::new();
+    let node_b_text = node_b_doc.get_or_insert_text("content");
+    let mut node_b_txn = node_b_doc.transact_mut();
+    node_b_txn.apply_update(
+        Update::decode_v1(handoff_update.as_slice()).expect("handoff sync payload should decode"),
+    );
+    drop(node_b_txn);
+
+    assert_eq!(
+        node_b_text.get_string(&node_b_doc.transact()),
+        "hello handoff"
+    );
+
+    node_b_client.close().await;
+    fs::remove_dir_all(shared_root).expect("shared sqlite handoff directory should be cleaned up");
+}
+
+#[tokio::test]
 async fn websocket_endpoint_rejects_invalid_awareness_payload_updates() {
     let config = test_config();
     let state = AppState::from_config(&config).expect("state should initialize");
@@ -1534,6 +1741,49 @@ async fn app_state_uses_sqlite_snapshot_store_from_config() {
     assert!(snapshot_path.exists());
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_skips_startup_room_hydration_in_distributed_sqlite_mode() {
+    let shared_root = temp_snapshot_dir("sqlite-distributed-skip-hydrate");
+
+    let mut writer_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut writer_config,
+        &shared_root,
+        "node-a",
+        "http://node-a.internal:4400/",
+    );
+    let writer_state =
+        AppState::from_config(&writer_config).expect("writer state should initialize");
+    let document = writer_state
+        .rooms()
+        .create_document(Some("Distributed hydrate guard".to_owned()))
+        .expect("document should be created");
+
+    let mut reader_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut reader_config,
+        &shared_root,
+        "node-b",
+        "http://node-b.internal:4401/",
+    );
+    let reader_state =
+        AppState::from_config(&reader_config).expect("reader state should initialize");
+
+    assert!(
+        reader_state.rooms().get(&document.id).is_none(),
+        "distributed sqlite mode should leave rooms cold until ownership is checked"
+    );
+    let listed_documents = reader_state
+        .rooms()
+        .list_documents()
+        .expect("document catalog should still load from shared snapshot store");
+    assert_eq!(listed_documents.len(), 1);
+    assert_eq!(listed_documents[0].id, document.id);
+    assert_eq!(listed_documents[0].title, document.title);
+
+    fs::remove_dir_all(shared_root).expect("shared sqlite test directory should be cleaned up");
 }
 
 #[tokio::test]

@@ -63,7 +63,8 @@
 - 현재는 `InMemorySnapshotStore`, `FileSnapshotStore`, `SqliteSnapshotStore`가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
-- 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 hydrate한다.
+- 기본 local ownership 모드에서는 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 eager hydrate한다.
+- distributed ownership 모드(`ROOM_LOCATOR != local` 또는 authoritative `ROOM_COORDINATOR=file|sqlite`)에서는 startup hydrate를 생략하고, 문서 catalog만 유지한 채 ownership 확인 뒤 `get_or_restore`에서 room을 on-demand로 복구한다.
 - `FileSnapshotStore`는 catalog/hydrate 경로에서 corrupt snapshot 파일을 warning과 함께 건너뛰어 단일 손상 파일이 전체 startup/listing 실패로 번지지 않게 한다.
 - `FileSnapshotStore`는 같은 디렉터리의 임시 파일에 snapshot을 먼저 쓴 뒤 `rename`으로 교체해 partial write가 마지막 정상 snapshot을 직접 덮어쓰지 않도록 한다.
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되며, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.

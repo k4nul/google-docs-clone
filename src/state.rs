@@ -68,16 +68,40 @@ impl AppState {
         room_locator: Arc<dyn RoomLocator>,
         room_coordinator: Arc<dyn RoomCoordinator>,
     ) -> AppResult<Self> {
-        let rooms = Arc::new(RoomRegistry::new(snapshot_store));
-        let hydrated_rooms = rooms
-            .hydrate_from_store()
-            .map_err(anyhow::Error::from)
-            .map_err(AppError::from)?;
+        Self::with_snapshot_store_locator_and_coordinator_and_hydration(
+            frontend_origin,
+            api_token,
+            snapshot_store,
+            room_locator,
+            room_coordinator,
+            true,
+        )
+    }
 
-        tracing::info!(
-            hydrated_rooms,
-            "initialized room registry from snapshot store"
-        );
+    fn with_snapshot_store_locator_and_coordinator_and_hydration(
+        frontend_origin: impl Into<String>,
+        api_token: impl Into<String>,
+        snapshot_store: Arc<dyn SnapshotStore>,
+        room_locator: Arc<dyn RoomLocator>,
+        room_coordinator: Arc<dyn RoomCoordinator>,
+        hydrate_rooms_on_startup: bool,
+    ) -> AppResult<Self> {
+        let rooms = Arc::new(RoomRegistry::new(snapshot_store));
+        if hydrate_rooms_on_startup {
+            let hydrated_rooms = rooms
+                .hydrate_from_store()
+                .map_err(anyhow::Error::from)
+                .map_err(AppError::from)?;
+
+            tracing::info!(
+                hydrated_rooms,
+                "initialized room registry from snapshot store"
+            );
+        } else {
+            tracing::info!(
+                "skipped eager room hydration because distributed room ownership mode is enabled"
+            );
+        }
 
         Ok(Self {
             rooms,
@@ -89,7 +113,8 @@ impl AppState {
     }
 
     pub fn from_config(config: &Config) -> AppResult<Self> {
-        Self::with_snapshot_store_locator_and_coordinator(
+        let hydrate_rooms_on_startup = startup_room_hydration_enabled(config);
+        Self::with_snapshot_store_locator_and_coordinator_and_hydration(
             config.frontend_origin.clone(),
             config.api_token.clone(),
             snapshot_store_from_config(config)
@@ -97,6 +122,7 @@ impl AppState {
                 .map_err(AppError::from)?,
             room_locator_from_config(config)?,
             room_coordinator_from_config(config)?,
+            hydrate_rooms_on_startup,
         )
     }
 
@@ -152,6 +178,11 @@ impl AppState {
             }
         }
     }
+}
+
+fn startup_room_hydration_enabled(config: &Config) -> bool {
+    matches!(config.room_locator.trim(), "local")
+        && matches!(config.room_coordinator.trim(), "noop" | "logging")
 }
 
 impl Default for AppState {
