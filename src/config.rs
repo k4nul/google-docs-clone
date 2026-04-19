@@ -11,6 +11,7 @@ pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
 pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
+pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_ROOM_LOCATOR: &str = "local";
 pub const DEFAULT_ROOM_COORDINATOR: &str = "noop";
 pub const DEFAULT_ROOM_COORDINATOR_STATE_DIR: &str = "./data/room-coordinator";
@@ -27,6 +28,7 @@ pub struct Config {
     pub api_token: String,
     pub snapshot_store: String,
     pub snapshot_dir: String,
+    pub snapshot_sqlite_path: String,
     pub room_locator: String,
     pub room_coordinator: String,
     pub room_coordinator_state_dir: String,
@@ -47,6 +49,8 @@ impl Config {
         let api_token = env_string("API_TOKEN", DEFAULT_API_TOKEN)?;
         let snapshot_store = env_string("SNAPSHOT_STORE", DEFAULT_SNAPSHOT_STORE)?;
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
+        let snapshot_sqlite_path =
+            env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
         let room_locator = env_string("ROOM_LOCATOR", DEFAULT_ROOM_LOCATOR)?;
         let room_coordinator = env_string("ROOM_COORDINATOR", DEFAULT_ROOM_COORDINATOR)?;
         let room_coordinator_state_dir = env_string(
@@ -72,6 +76,7 @@ impl Config {
             api_token,
             snapshot_store,
             snapshot_dir,
+            snapshot_sqlite_path,
             room_locator,
             room_coordinator,
             room_coordinator_state_dir,

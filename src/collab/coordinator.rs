@@ -709,6 +709,7 @@ mod tests {
             api_token: "test-admin-token".to_owned(),
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
+            snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             room_locator: "local".to_owned(),
             room_coordinator: room_coordinator.to_owned(),
             room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),

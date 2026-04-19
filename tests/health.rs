@@ -9,7 +9,10 @@ use backend::{
     },
     config::Config,
     state::AppState,
-    storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
+    storage::{
+        DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore,
+        SqliteSnapshotStore,
+    },
 };
 use chrono::{Duration as ChronoDuration, Utc};
 use serde_json::Value;
@@ -35,6 +38,7 @@ fn test_config() -> Config {
         api_token: "test-admin-token".to_owned(),
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
+        snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
         room_locator: "local".to_owned(),
         room_coordinator: "noop".to_owned(),
         room_coordinator_state_dir: "./data/test-room-coordinator".to_owned(),
@@ -1208,6 +1212,46 @@ async fn app_state_uses_file_snapshot_store_from_config() {
 }
 
 #[tokio::test]
+async fn app_state_uses_sqlite_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("sqlite-store-config");
+    let snapshot_path = snapshot_dir.join("snapshots.sqlite3");
+    config.snapshot_store = "sqlite".to_owned();
+    config.snapshot_sqlite_path = snapshot_path.to_string_lossy().into_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with sqlite store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to sqlite".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to sqlite on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted sqlite snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
 async fn app_state_uses_logging_room_coordinator_from_config() {
     let mut config = test_config();
     config.room_coordinator = "logging".to_owned();
@@ -1410,6 +1454,80 @@ fn file_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn sqlite_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("sqlite-store-unit");
+    let snapshot_path = snapshot_dir.join("snapshots.sqlite3");
+    let store = SqliteSnapshotStore::new(&snapshot_path).expect("sqlite store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Sqlite".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to sqlite store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from sqlite store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from sqlite store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn sqlite_snapshot_store_skips_corrupt_rows_when_listing_documents() {
+    let snapshot_dir = temp_snapshot_dir("sqlite-store-corrupt-catalog");
+    let snapshot_path = snapshot_dir.join("snapshots.sqlite3");
+    let store = SqliteSnapshotStore::new(&snapshot_path).expect("sqlite store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Catalog".to_owned()));
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![7, 8, 9]))
+        .expect("valid snapshot should save");
+
+    let corrupt_doc_id = Uuid::new_v4();
+    let connection =
+        rusqlite::Connection::open(&snapshot_path).expect("sqlite file should be writable");
+    connection
+        .execute(
+            "INSERT INTO snapshots (doc_id, title, created_at, updated_at, access_token, update_bytes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![
+                corrupt_doc_id.to_string(),
+                "Corrupt",
+                "not-a-timestamp",
+                "not-a-timestamp",
+                "token",
+                vec![1_u8, 2, 3]
+            ],
+        )
+        .expect("corrupt sqlite snapshot row should be written");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should skip corrupt sqlite rows");
+    let corrupt_snapshot_error = store
+        .load_snapshot(&corrupt_doc_id)
+        .expect_err("directly loading a corrupt sqlite snapshot should still fail");
+
+    assert_eq!(listed_documents, vec![document]);
+    assert!(matches!(
+        corrupt_snapshot_error,
+        backend::storage::StorageError::CorruptSnapshot(id) if id == corrupt_doc_id
+    ));
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

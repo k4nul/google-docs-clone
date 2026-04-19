@@ -1,4 +1,5 @@
 mod file_snapshot_store;
+mod sqlite_snapshot_store;
 
 use std::{
     fs,
@@ -15,6 +16,7 @@ use uuid::Uuid;
 use crate::{config::Config, models::document::Document};
 
 pub use file_snapshot_store::FileSnapshotStore;
+pub use sqlite_snapshot_store::SqliteSnapshotStore;
 
 #[derive(Debug, Clone)]
 pub struct DocumentSnapshot {
@@ -149,8 +151,11 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
     match config.snapshot_store.trim().to_ascii_lowercase().as_str() {
         "memory" => Ok(in_memory_snapshot_store()),
         "file" => file_snapshot_store(&config.snapshot_dir),
+        "sqlite" => Ok(Arc::new(SqliteSnapshotStore::new(
+            &config.snapshot_sqlite_path,
+        )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory` or `file`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, or `sqlite`, received `{other}`"
         ))),
     }
 }

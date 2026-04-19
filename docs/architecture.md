@@ -11,7 +11,7 @@
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 memory/file adapter
+- `src/storage`: snapshot store trait과 memory/file/sqlite adapter
 
 ## Request Flow
 
@@ -59,7 +59,7 @@
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
 - 문서 삭제는 active WebSocket session 수가 0일 때만 허용하며, 세션이 남아 있으면 `409 conflict`로 거절한다.
-- 현재는 `InMemorySnapshotStore`와 `FileSnapshotStore`가 연결되며, future adapter는 같은 trait으로 db/object storage를 대체할 수 있다.
+- 현재는 `InMemorySnapshotStore`, `FileSnapshotStore`, `SqliteSnapshotStore`가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 hydrate한다.
@@ -67,7 +67,8 @@
 - `FileSnapshotStore`는 같은 디렉터리의 임시 파일에 snapshot을 먼저 쓴 뒤 `rename`으로 교체해 partial write가 마지막 정상 snapshot을 직접 덮어쓰지 않도록 한다.
 - interrupted save가 남긴 `.tmp` 파일은 `FileSnapshotStore` 초기화 시점에 정리되며, catalog/hydrate는 계속 `.json` snapshot만 복구 대상으로 취급한다.
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 제거해 temp artifact가 누적되지 않게 한다.
-- `Config.snapshot_store`가 `memory`/`file` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이 문서 metadata와 Yrs full-state update를 함께 저장한다.
+- `SqliteSnapshotStore`는 `SNAPSHOT_SQLITE_PATH` DB 파일의 `snapshots` 테이블에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 DB catalog를 그대로 사용한다.
+- `Config.snapshot_store`가 `memory`/`file`/`sqlite` 어댑터 선택을 담당하고, `file` 모드에서는 `SNAPSHOT_DIR/<doc_id>.json` 파일이, `sqlite` 모드에서는 `SNAPSHOT_SQLITE_PATH` DB row가 snapshot storage 단위가 된다.
 
 ## Multi-Process Distribution Strategy
 
@@ -85,7 +86,7 @@
 - 현재 저장소에는 side effect 없는 `NoopRoomCoordinator`, dry-run `LoggingRoomCoordinator`, 그리고 local/shared filesystem에 lease state와 heartbeat를 남기는 `FileRoomCoordinator`가 들어가 있다.
 - `StaticRoomLocator`는 문서별 owner 힌트를 읽어 현재 `NODE_ID`와 다른 owner를 가진 room 요청을 조기에 차단하고 optional `base_url` 힌트를 응답에 실어준다.
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽어 현재 `NODE_ID`와 다른 node가 기록돼 있고 `expires_at`이 아직 지나지 않았으면 non-local owner로 간주한다. 현재 state 포맷에는 `base_url`이 없으므로 best-effort owner signal로만 취급한다.
-- 현재는 `InMemorySnapshotStore`와 로컬 `FileSnapshotStore`만 있으므로 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
+- 현재는 `InMemorySnapshotStore`, 로컬 `FileSnapshotStore`, 단일 DB 파일 기반 `SqliteSnapshotStore`가 있으므로 shared snapshot durability 후보는 생겼지만 실제 멀티 프로세스 활성화는 여전히 blocked 상태다. 여러 프로세스가 함께 쓰는 authoritative owner coordination 저장소가 준비되기 전까지는 단일 프로세스 배포를 운영 규칙으로 유지한다.
 
 ## Authoritative Coordination Store Contract
 
