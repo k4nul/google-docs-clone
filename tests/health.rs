@@ -3,6 +3,7 @@ use axum_test::{TestServer, WsMessage};
 use backend::{
     app::build_app,
     collab::{
+        coordinator::{RoomCoordinator, RoomCoordinatorError},
         locator::{ResolvedRoom, RoomLocator, RoomLocatorError, RoomOwnerHint},
         rooms::RoomRegistry,
     },
@@ -11,7 +12,12 @@ use backend::{
     storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
 };
 use serde_json::Value;
-use std::{collections::HashMap, fs, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    fs,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use uuid::Uuid;
 use yrs::{
     Doc, GetString, ReadTxn, StateVector, Text, Transact, Update,
@@ -55,6 +61,53 @@ impl RoomLocator for RemoteRoomLocator {
             node_id: format!("node-for-{doc_id}"),
             base_url: Some("http://node-b.internal:4000".to_owned()),
         }))
+    }
+}
+
+#[derive(Debug, Default)]
+struct RecordingRoomCoordinator {
+    events: Mutex<Vec<String>>,
+}
+
+impl RecordingRoomCoordinator {
+    fn snapshot(&self) -> Vec<String> {
+        self.events
+            .lock()
+            .expect("recording coordinator mutex should not be poisoned")
+            .clone()
+    }
+}
+
+impl RoomCoordinator for RecordingRoomCoordinator {
+    fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        self.events
+            .lock()
+            .expect("recording coordinator mutex should not be poisoned")
+            .push(format!("activate:{doc_id}"));
+        Ok(())
+    }
+
+    fn room_deactivated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        self.events
+            .lock()
+            .expect("recording coordinator mutex should not be poisoned")
+            .push(format!("deactivate:{doc_id}"));
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+struct FailingRoomCoordinator;
+
+impl RoomCoordinator for FailingRoomCoordinator {
+    fn room_activated(&self, doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        Err(RoomCoordinatorError::Operation(format!(
+            "unable to acquire lease for {doc_id}"
+        )))
+    }
+
+    fn room_deactivated(&self, _doc_id: &Uuid) -> Result<(), RoomCoordinatorError> {
+        Ok(())
     }
 }
 
@@ -175,10 +228,12 @@ async fn documents_endpoint_lists_snapshot_backed_documents_after_room_eviction(
         .get(&document.id)
         .expect("created document should have an active room");
     assert_eq!(room.start_session(), 1);
-    state
+    let teardown = state
         .rooms()
         .persist_and_evict_if_idle(&document.id, &room)
         .expect("idle room eviction should succeed");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
     assert!(state.rooms().get(&document.id).is_none());
 
     let app = build_app(&config, state).expect("app should build");
@@ -447,6 +502,119 @@ async fn websocket_endpoint_accepts_document_connections() {
         .await;
 
     websocket.close().await;
+}
+
+#[tokio::test]
+async fn websocket_room_coordinator_tracks_first_and_last_session() {
+    let config = test_config();
+    let coordinator = Arc::new(RecordingRoomCoordinator::default());
+    let state = AppState::with_snapshot_store_locator_and_coordinator(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        Arc::new(InMemorySnapshotStore::new()),
+        Arc::new(backend::collab::locator::LocalRoomLocator),
+        coordinator.clone(),
+    )
+    .expect("state should initialize with recording coordinator");
+    let document = state
+        .rooms()
+        .create_document(Some("Tracked room".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let websocket_a = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    assert_eq!(
+        coordinator.snapshot(),
+        vec![format!("activate:{}", document.id)]
+    );
+
+    let websocket_b = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    assert_eq!(
+        coordinator.snapshot(),
+        vec![format!("activate:{}", document.id)]
+    );
+
+    websocket_a.close().await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    assert_eq!(
+        coordinator.snapshot(),
+        vec![format!("activate:{}", document.id)]
+    );
+
+    websocket_b.close().await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    assert_eq!(
+        coordinator.snapshot(),
+        vec![
+            format!("activate:{}", document.id),
+            format!("deactivate:{}", document.id),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn websocket_room_activation_failure_does_not_leak_active_sessions() {
+    let config = test_config();
+    let state = AppState::with_snapshot_store_locator_and_coordinator(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        Arc::new(InMemorySnapshotStore::new()),
+        Arc::new(backend::collab::locator::LocalRoomLocator),
+        Arc::new(FailingRoomCoordinator),
+    )
+    .expect("state should initialize with failing coordinator");
+    let document = state
+        .rooms()
+        .create_document(Some("Failed coordinator activation".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state.clone()).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let websocket = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    websocket.close().await;
+
+    let room = state
+        .rooms()
+        .get_or_restore(&document.id)
+        .expect("room lookup should succeed")
+        .expect("room should remain recoverable after activation failure");
+    assert_eq!(room.active_sessions(), 0);
 }
 
 #[tokio::test]
@@ -859,10 +1027,11 @@ async fn app_state_hydrates_snapshot_backed_rooms_on_startup() {
     }
 
     assert_eq!(room.start_session(), 1);
-    let evicted = bootstrap_registry
+    let teardown = bootstrap_registry
         .persist_and_evict_if_idle(&document.id, &room)
         .expect("idle room eviction should succeed");
-    assert!(evicted);
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
     assert!(bootstrap_registry.get(&document.id).is_none());
 
     let state = AppState::with_snapshot_store(
@@ -903,11 +1072,12 @@ async fn app_state_uses_file_snapshot_store_from_config() {
         .expect("created document should have a room");
 
     assert_eq!(room.start_session(), 1);
-    let evicted = state
+    let teardown = state
         .rooms()
         .persist_and_evict_if_idle(&document.id, &room)
         .expect("snapshot should persist to disk on eviction");
-    assert!(evicted);
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
 
     let reloaded_state =
         AppState::from_config(&config).expect("state should reload persisted file snapshot");

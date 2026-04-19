@@ -41,9 +41,11 @@
 - 요청 단위 기본 추적은 `TraceLayer`를 사용한다.
 - WebSocket 연결 시작/종료, 실패는 문서 ID와 함께 기록한다.
 - 마지막 WebSocket 세션 종료 후 snapshot 저장과 idle room eviction 결과도 문서 ID와 함께 기록한다.
+- 첫 WebSocket 세션 시작과 마지막 세션 종료에 연결되는 `RoomCoordinator` hook 실패도 문서 ID와 함께 warning으로 기록한다.
 - WebSocket origin 거절도 문서 ID와 함께 기록한다.
 - 다중 프로세스 확장 전까지는 "문서당 단일 owner 프로세스" 가정을 깨는 우회 구현을 넣지 않는다.
 - `StaticRoomLocator`의 owner hints는 운영 힌트일 뿐이며, lease/heartbeat 기반 coordination store를 대체하는 것으로 간주하지 않는다.
+- lease/heartbeat 같은 owner coordination side effect는 `RoomCoordinator` 경계 뒤에만 붙이고, snapshot 저장 전 handoff를 허용하지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules

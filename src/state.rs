@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
+    collab::coordinator::{RoomCoordinator, noop_room_coordinator},
     collab::locator::{ResolvedRoom, RoomLocator, local_room_locator, room_locator_from_config},
     collab::rooms::RoomRegistry,
     config::{Config, DEFAULT_FRONTEND_ORIGIN},
@@ -14,15 +15,17 @@ pub struct AppState {
     frontend_origin: Arc<str>,
     api_token: Arc<str>,
     room_locator: Arc<dyn RoomLocator>,
+    room_coordinator: Arc<dyn RoomCoordinator>,
 }
 
 impl AppState {
     pub fn new(frontend_origin: impl Into<String>, api_token: impl Into<String>) -> Self {
-        Self::with_snapshot_store_and_locator(
+        Self::with_snapshot_store_locator_and_coordinator(
             frontend_origin,
             api_token,
             in_memory_snapshot_store(),
             local_room_locator(),
+            noop_room_coordinator(),
         )
         .expect("default in-memory state should initialize")
     }
@@ -32,11 +35,12 @@ impl AppState {
         api_token: impl Into<String>,
         snapshot_store: Arc<dyn SnapshotStore>,
     ) -> AppResult<Self> {
-        Self::with_snapshot_store_and_locator(
+        Self::with_snapshot_store_locator_and_coordinator(
             frontend_origin,
             api_token,
             snapshot_store,
             local_room_locator(),
+            noop_room_coordinator(),
         )
     }
 
@@ -45,6 +49,22 @@ impl AppState {
         api_token: impl Into<String>,
         snapshot_store: Arc<dyn SnapshotStore>,
         room_locator: Arc<dyn RoomLocator>,
+    ) -> AppResult<Self> {
+        Self::with_snapshot_store_locator_and_coordinator(
+            frontend_origin,
+            api_token,
+            snapshot_store,
+            room_locator,
+            noop_room_coordinator(),
+        )
+    }
+
+    pub fn with_snapshot_store_locator_and_coordinator(
+        frontend_origin: impl Into<String>,
+        api_token: impl Into<String>,
+        snapshot_store: Arc<dyn SnapshotStore>,
+        room_locator: Arc<dyn RoomLocator>,
+        room_coordinator: Arc<dyn RoomCoordinator>,
     ) -> AppResult<Self> {
         let rooms = Arc::new(RoomRegistry::new(snapshot_store));
         let hydrated_rooms = rooms
@@ -62,17 +82,19 @@ impl AppState {
             frontend_origin: Arc::<str>::from(frontend_origin.into()),
             api_token: Arc::<str>::from(api_token.into()),
             room_locator,
+            room_coordinator,
         })
     }
 
     pub fn from_config(config: &Config) -> AppResult<Self> {
-        Self::with_snapshot_store_and_locator(
+        Self::with_snapshot_store_locator_and_coordinator(
             config.frontend_origin.clone(),
             config.api_token.clone(),
             snapshot_store_from_config(config)
                 .map_err(anyhow::Error::from)
                 .map_err(AppError::from)?,
             room_locator_from_config(config)?,
+            noop_room_coordinator(),
         )
     }
 
@@ -90,6 +112,10 @@ impl AppState {
 
     pub fn api_token(&self) -> &str {
         &self.api_token
+    }
+
+    pub fn room_coordinator(&self) -> Arc<dyn RoomCoordinator> {
+        Arc::clone(&self.room_coordinator)
     }
 
     pub fn ensure_local_room_owner(&self, doc_id: &uuid::Uuid) -> AppResult<()> {

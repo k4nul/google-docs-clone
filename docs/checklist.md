@@ -39,9 +39,11 @@
 - [x] `yrs-axum` upstream 변화에 맞춘 provider compatibility 검증 자동화
 - [x] `RoomLocator` ownership resolver 경계를 route/WS restore 전에 도입
 - [x] config-driven `StaticRoomLocator`와 owner hint 응답 계약 추가
+- [x] `RoomCoordinator` session lifecycle hook 경계 추가
 
 ## Execution Log
 
+- 2026-04-20: blocked 상태인 멀티 프로세스 roadmap 준비 작업으로 `RoomCoordinator` lifecycle 경계를 도입했다. `src/collab/coordinator.rs`에 기본 `NoopRoomCoordinator`와 trait을 추가하고 `src/state.rs`, `src/collab/ws.rs`에서 WebSocket 첫 세션 시작 시 activate, 마지막 세션 종료 후 snapshot persist/eviction 처리 뒤 deactivate hook을 타도록 연결했다. `src/collab/rooms.rs`의 session teardown 결과를 구조화해 lease handoff 후보 구현이 idle 여부를 안정적으로 판단할 수 있게 정리했고, `tests/health.rs`에는 first/last session hook 호출과 activation failure rollback 회귀 테스트를 추가했다. 관련 아키텍처/운영 문서도 같은 경계로 맞췄다. 검증은 `cargo fmt --check`, `cargo check`, `cargo test websocket_room_coordinator_tracks_first_and_last_session -- --nocapture`, `cargo test websocket_room_activation_failure_does_not_leak_active_sessions -- --nocapture`, `cargo test`, `./scripts/preflight.sh publish` 순서로 실행했고 모두 통과했다.
 - 2026-04-19: blocked 상태인 멀티 프로세스 roadmap 준비 작업으로 `StaticRoomLocator` owner hints 정규화를 보강했다. `src/collab/locator.rs`에서 hints JSON의 `node_id`/`base_url`을 trim 후 저장하도록 바꿨고, `owner.base_url`은 path/query 없는 origin-only absolute `http://`/`https://` URL만 허용한 뒤 canonical origin (`scheme://authority`)으로 정규화해 응답 metadata에 실리도록 고정했다. 관련 unit test를 추가하고 `README.md`, `docs/setup.md`, `docs/api.md`를 같은 계약으로 맞췄다. 검증은 `cargo test static_room_locator -- --nocapture`, `cargo fmt --check`, `cargo check`, `cargo test`, `./scripts/preflight.sh publish` 순서로 실행했고 모두 통과했다.
 - 2026-04-19: blocked 상태인 멀티 프로세스 roadmap의 준비 작업으로 `StaticRoomLocator` owner hint 검증을 보강했다. `src/collab/locator.rs`에서 `owner.base_url`이 비어 있지 않은 경우 absolute `http://`/`https://` URL인지 fail-fast 검증하도록 바꿨고, 잘못된 hints 파일은 startup 시 `AppError::Config`로 즉시 중단되게 정리했다. 관련 unit test와 `README.md`, `docs/setup.md`, `docs/api.md`도 같은 계약으로 맞췄다.
 - 2026-04-19: Codex 자동화가 예전 작업 slug 기반 브랜치 `storage-temp-handling`을 계속 사용해 역할 이름과 어긋나는 문제를 정리했다. 현재 협업 브랜치 이름을 `backend-realtime-api`로 변경했고, 이후 문서 기준도 역할 중심 브랜치명으로 맞췄다. repo 내부 검색으로는 이 이름을 생성하는 하드코딩 코드는 없었고, 저장소 안에는 checklist 기록만 남아 있었다. 따라서 repo 차원 조치는 현재 브랜치/원격 브랜치 이름 정리와 문서 규칙 추가로 제한했다.

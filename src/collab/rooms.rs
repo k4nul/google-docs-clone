@@ -127,6 +127,12 @@ pub struct RoomRegistry {
     snapshot_store: Arc<dyn SnapshotStore>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionTeardown {
+    pub remaining_sessions: usize,
+    pub evicted: bool,
+}
+
 impl RoomRegistry {
     pub fn new(snapshot_store: Arc<dyn SnapshotStore>) -> Self {
         Self {
@@ -197,10 +203,13 @@ impl RoomRegistry {
         &self,
         doc_id: &Uuid,
         room: &Arc<Room>,
-    ) -> Result<bool, StorageError> {
+    ) -> Result<SessionTeardown, StorageError> {
         let remaining_sessions = room.end_session();
         if remaining_sessions > 0 {
-            return Ok(false);
+            return Ok(SessionTeardown {
+                remaining_sessions,
+                evicted: false,
+            });
         }
 
         match self.rooms.entry(*doc_id) {
@@ -209,12 +218,21 @@ impl RoomRegistry {
 
                 if room.active_sessions() == 0 {
                     entry.remove();
-                    Ok(true)
+                    Ok(SessionTeardown {
+                        remaining_sessions: 0,
+                        evicted: true,
+                    })
                 } else {
-                    Ok(false)
+                    Ok(SessionTeardown {
+                        remaining_sessions: room.active_sessions(),
+                        evicted: false,
+                    })
                 }
             }
-            _ => Ok(false),
+            _ => Ok(SessionTeardown {
+                remaining_sessions: room.active_sessions(),
+                evicted: false,
+            }),
         }
     }
 
@@ -325,11 +343,12 @@ mod tests {
 
         assert_eq!(room.start_session(), 1);
 
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
 
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
         assert!(registry.get(&document.id).is_none());
 
         let restored_room = registry
@@ -357,11 +376,12 @@ mod tests {
         assert_eq!(room.start_session(), 1);
         assert_eq!(room.start_session(), 2);
 
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("room release should succeed");
 
-        assert!(!evicted);
+        assert!(!teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 1);
         assert!(registry.get(&document.id).is_some());
         assert_eq!(room.active_sessions(), 1);
     }
@@ -378,11 +398,12 @@ mod tests {
             .expect("created document should have an active room");
 
         assert_eq!(room.start_session(), 1);
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
 
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
         assert!(registry.get(&document.id).is_none());
 
         let documents = registry
@@ -432,10 +453,11 @@ mod tests {
             .expect("created document should have an active room");
 
         assert_eq!(room.start_session(), 1);
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
 
         let restored_registry = RoomRegistry::new(snapshot_store);
         let hydrated = restored_registry

@@ -23,6 +23,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - `yrs-axum` 기반 broadcast group 연결
 - `SnapshotStore` trait 및 memory/file adapter
 - `RoomLocator` 경계와 기본 local/static ownership resolver
+- `RoomCoordinator` 경계와 기본 no-op session lifecycle hook
 
 ## 기술 스택
 
@@ -146,6 +147,8 @@ cargo run
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장되고, 앱 시작 시 해당 디렉터리에서 문서를 hydrate한다.
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
+- 기본 `NoopRoomCoordinator`는 아무 side effect 없이 통과하지만, WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
+- future lease/heartbeat coordinator는 이 hook에 붙되, 마지막 세션 종료 시 snapshot 저장이 성공한 뒤에만 deactivation 쪽 handoff를 진행해야 한다.
 
 ## Static Room Owner Hints
 
