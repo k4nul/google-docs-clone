@@ -115,7 +115,7 @@ cargo run
 - `GET /v1/snapshots/:doc_id` 응답은 `{"document": {...}, "update": [...]}` shape로 full-state snapshot을 반환해야 한다. `document`에는 internal restore에 필요한 `id`, `title`, `created_at`, `updated_at`, `access_token`이 모두 포함돼야 한다.
 - `PUT /v1/snapshots/:doc_id`는 같은 JSON payload를 받아 해당 문서 snapshot을 upsert해야 한다.
 - `DELETE /v1/snapshots/:doc_id`는 문서 snapshot이 없어도 idempotent하게 성공해도 된다.
-- 이 구현은 shared SQLite를 넘어서는 durability surface를 제공하지만, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 결합한 실제 owner handoff rehearsal은 아직 다음 단계다.
+- 이 구현은 shared SQLite를 넘어서는 durability surface를 제공하며, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 결합한 실제 owner handoff rehearsal도 회귀 테스트로 검증됐다.
 
 ## Future Coordination Store Rollout Contract
 
@@ -126,7 +126,7 @@ cargo run
 - `renew`는 active room 동안 heartbeat loop로 반복되어야 하고, `release`는 마지막 세션 종료 뒤 snapshot 저장이 성공했을 때만 허용된다.
 - stale owner 판단은 반드시 `expires_at` 기준으로만 해야 한다. 로컬 파일 timestamp나 프로세스 uptime만으로 handoff를 결정하지 않는다.
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `max_missed_heartbeats_before_stale=2`다.
-- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, 외부 durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있다. 다만 managed coordination과 managed durability를 묶은 actual handoff rehearsal은 아직 future work다.
+- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, 외부 durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있고, managed-managed actual handoff rehearsal까지 회귀 테스트로 검증됐다.
 
 ## Local Development Procedure
 

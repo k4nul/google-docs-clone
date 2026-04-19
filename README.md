@@ -131,13 +131,12 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 ## 비범위
 
 - 데이터베이스 연동
-- managed snapshot service와 coordination service를 함께 묶은 owner handoff rehearsal
 - 문서 수정용 REST API
 - vendor-specific object storage / database durability backend
 
-현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. 이제 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고, `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 각각 shared SQLite 밖으로 분리할 수 있다. 현재 저장소는 이 두 경계를 각각 설정/복구 테스트 수준까지 지원하며, 둘을 묶은 실제 multi-host handoff rehearsal은 다음 단계다.
+현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. 또한 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고, `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
 
-현재 `blocked` 상태는 둘로 나눠 관리한다. 첫째, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=managed`와 묶은 multi-host owner handoff rehearsal은 아직 회귀 테스트로 검증되지 않았다. 둘째, 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다. 반면 shared SQLite를 넘어서는 snapshot durability backend 자체는 이제 `SNAPSHOT_STORE=managed`로 설정 가능하다.
+현재 `blocked` 상태는 둘로 나눠 관리한다. 첫째, vendor-specific object storage / database durability backend는 아직 없다. 둘째, 로컬 commit/push/test 실패는 실행 환경 차원의 blocked 항목으로 별도 취급한다. 반면 shared SQLite를 넘어서는 external durability backend 자체와 managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
 
 `ROOM_LOCATOR=static`은 외부 coordinator를 대체하지 않는다. 대신 운영자가 문서별 owner 힌트를 선언해 현재 노드 비소유 문서를 조기에 거절하고, 응답 JSON의 `owner.node_id` / optional `owner.base_url` 및 대응 헤더로 upstream 라우팅 결정을 돕는 용도다. 힌트에 없는 문서는 현재 노드 소유로 간주한다.
 
@@ -152,7 +151,6 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
 - provider / frontend editor 연동 계약 고도화
-- managed snapshot durability와 managed coordination을 묶은 owner handoff rehearsal 추가
 - shared snapshot store를 확장할 vendor-specific durability backend 추가
 
 ## Snapshot Restore / Eviction Policy
@@ -202,7 +200,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - crash 복구 경로는 `owner crash -> renew 중단 -> expires_at 경과 -> 새 owner acquire -> snapshot restore -> room activate` 순서를 따른다. awareness는 재게시 허용 범위로 두고 내구성 복구 대상에는 포함하지 않는다.
 - 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약의 file-backed 준비 구현을 제공한다. canonical lease record, compare-and-release, background heartbeat renew, `expires_at` 기반 stale 판정은 로컬/shared filesystem 경계에서 검증할 수 있지만 여전히 best-effort rehearsal mode로만 사용해야 한다.
 - 현재 저장소의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑한 authoritative CAS 구현을 제공한다.
-- 현재 저장소의 `ManagedRoomCoordinator`/`ManagedRoomLocator`는 external lease service를 쓰는 multi-host coordination backend를 제공하고, `ManagedSnapshotStore`는 같은 방식의 external durability backend를 제공한다. `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=sqlite`와 결합한 owner handoff rehearsal은 회귀 테스트로 검증됐고, `SNAPSHOT_STORE=managed` 자체의 저장/복구 경계도 회귀 테스트로 검증됐다. 다만 managed coordination과 managed durability를 함께 묶은 handoff rehearsal은 아직 future work다.
+- 현재 저장소의 `ManagedRoomCoordinator`/`ManagedRoomLocator`는 external lease service를 쓰는 multi-host coordination backend를 제공하고, `ManagedSnapshotStore`는 같은 방식의 external durability backend를 제공한다. `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=sqlite`와 결합한 owner handoff rehearsal, `SNAPSHOT_STORE=managed` 자체의 저장/복구 경계, 그리고 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=managed`와 결합한 actual handoff rehearsal까지 모두 회귀 테스트로 검증됐다.
 
 ## Static Room Owner Hints
 

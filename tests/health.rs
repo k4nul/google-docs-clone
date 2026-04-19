@@ -125,6 +125,25 @@ fn configure_managed_coordination_with_shared_sqlite_snapshots(
     config.node_base_url = Some(node_base_url.to_owned());
 }
 
+fn configure_managed_coordination_with_managed_snapshots(
+    config: &mut Config,
+    node_id: &str,
+    node_base_url: &str,
+    coordination_base_url: &str,
+    snapshot_base_url: &str,
+    managed_auth_token: Option<&str>,
+) {
+    configure_managed_snapshot_store(config, snapshot_base_url, managed_auth_token);
+    config.room_locator = "managed".to_owned();
+    config.room_coordinator = "managed".to_owned();
+    config.room_coordination_managed_base_url = Some(coordination_base_url.to_owned());
+    config.room_coordination_managed_auth_token = managed_auth_token.map(str::to_owned);
+    config.room_coordinator_heartbeat_interval_secs = 1;
+    config.room_coordinator_lease_ttl_secs = 3;
+    config.node_id = node_id.to_owned();
+    config.node_base_url = Some(node_base_url.to_owned());
+}
+
 fn admin_auth_header(config: &Config) -> String {
     format!("Bearer {}", config.api_token)
 }
@@ -2230,6 +2249,126 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
     );
 
     fs::remove_dir_all(shared_root).expect("managed handoff directory should be cleaned up");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn app_state_restores_latest_managed_snapshot_after_managed_owner_handoff() {
+    let harness = spawn_mock_managed_coordination_service(Some("managed-secret")).await;
+
+    let mut node_a_config = test_config();
+    configure_managed_coordination_with_managed_snapshots(
+        &mut node_a_config,
+        "node-a",
+        "http://node-a.internal:4300/",
+        harness.base_url.as_str(),
+        harness.snapshot_base_url.as_str(),
+        Some("managed-secret"),
+    );
+
+    let mut node_b_config = test_config();
+    configure_managed_coordination_with_managed_snapshots(
+        &mut node_b_config,
+        "node-b",
+        "http://node-b.internal:4301/",
+        harness.base_url.as_str(),
+        harness.snapshot_base_url.as_str(),
+        Some("managed-secret"),
+    );
+
+    let node_a_state =
+        AppState::from_config(&node_a_config).expect("node-a state should initialize");
+    let document = node_a_state
+        .rooms()
+        .create_document(Some("Managed durability handoff document".to_owned()))
+        .expect("document should be created");
+    let doc_uuid = document.id;
+    let node_a_room = node_a_state
+        .rooms()
+        .get(&doc_uuid)
+        .expect("created document should have an active room");
+    {
+        let node_a_doc = node_a_room.awareness().write().await.doc().clone();
+        let node_a_text = node_a_doc.get_or_insert_text("content");
+        let mut node_a_txn = node_a_doc.transact_mut();
+        node_a_text.insert(&mut node_a_txn, 0, "hello managed durability handoff");
+    }
+
+    assert_eq!(node_a_room.start_session(), 1);
+    node_a_state
+        .room_coordinator()
+        .room_activated(&doc_uuid)
+        .expect("node-a should acquire the managed lease");
+
+    wait_for_managed_room_lease_owner(&harness.state, doc_uuid, "node-a").await;
+
+    let node_b_state =
+        AppState::from_config(&node_b_config).expect("node-b state should initialize");
+    assert!(
+        node_b_state.rooms().get(&doc_uuid).is_none(),
+        "distributed managed mode should not eagerly hydrate rooms on startup"
+    );
+    let listed_documents = node_b_state
+        .rooms()
+        .list_documents()
+        .expect("managed snapshot catalog should load while the room stays cold");
+    assert_eq!(listed_documents.len(), 1);
+    assert_eq!(listed_documents[0].id, doc_uuid);
+
+    let error = node_b_state
+        .ensure_local_room_owner(&doc_uuid)
+        .expect_err("node-b should observe node-a as the active managed owner");
+    match error {
+        AppError::RemoteOwner {
+            owner_node_id,
+            owner_base_url,
+            ..
+        } => {
+            assert_eq!(owner_node_id, "node-a");
+            assert_eq!(
+                owner_base_url.as_deref(),
+                Some("http://node-a.internal:4300")
+            );
+        }
+        other => panic!("expected remote owner error, received {other:?}"),
+    }
+
+    let teardown = node_a_state
+        .rooms()
+        .persist_and_evict_if_idle(&doc_uuid, &node_a_room)
+        .expect("node-a should persist the managed snapshot before handoff");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+    node_a_state
+        .room_coordinator()
+        .room_deactivated(&doc_uuid)
+        .expect("node-a should release the managed lease after persisting");
+    wait_for_managed_room_lease_release(&harness.state, doc_uuid).await;
+
+    node_b_state
+        .ensure_local_room_owner(&doc_uuid)
+        .expect("node-b should resolve locally after the managed lease is released");
+
+    let restored_room = node_b_state
+        .rooms()
+        .get_or_restore(&doc_uuid)
+        .expect("node-b restore should query the managed snapshot store")
+        .expect("managed snapshot should restore after owner handoff");
+    let node_b_doc = Doc::new();
+    let node_b_text = node_b_doc.get_or_insert_text("content");
+    let restored_snapshot = restored_room
+        .snapshot()
+        .expect("restored room should snapshot after managed-managed handoff");
+    let mut node_b_txn = node_b_doc.transact_mut();
+    node_b_txn.apply_update(
+        Update::decode_v1(restored_snapshot.update.as_slice())
+            .expect("managed-managed handoff snapshot should decode"),
+    );
+    drop(node_b_txn);
+
+    assert_eq!(
+        node_b_text.get_string(&node_b_doc.transact()),
+        "hello managed durability handoff"
+    );
 }
 
 #[tokio::test]
