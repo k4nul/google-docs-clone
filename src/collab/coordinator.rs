@@ -1804,6 +1804,7 @@ mod tests {
             snapshot_readb_path: "./data/test-snapshots.readb".to_owned(),
             snapshot_rustlite_path: "./data/test-snapshots.rustlite".to_owned(),
             snapshot_canopydb_path: "./data/test-snapshots.canopydb".to_owned(),
+            snapshot_caves_path: "./data/test-snapshots.caves".to_owned(),
             snapshot_ckydb_path: "./data/test-snapshots.ckydb".to_owned(),
             snapshot_scdb_path: "./data/test-snapshots.scdb".to_owned(),
             snapshot_surrealkv_path: "./data/test-snapshots.surrealkv".to_owned(),

@@ -245,6 +245,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21e4227379beff4205943696e6c3e0cd809bacdf3f0edd6e3dd153e2269571a4"
 
 [[package]]
+name = "atomicwrites"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb8f2cd6962fa53c0e2a9d3f97eaa7dbd1e3cbbeeb4745403515b42ae07b3ff6"
+dependencies = [
+ "tempfile",
+ "winapi",
+]
+
+[[package]]
 name = "autocfg"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -393,6 +403,7 @@ dependencies = [
  "base64 0.22.1",
  "btree-store",
  "canopydb",
+ "caves",
  "chrono",
  "ckydb",
  "dashmap 6.1.0",
@@ -775,6 +786,17 @@ dependencies = [
  "semver 1.0.28",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "caves"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c67f3d63e49effe9b0f3c0a3a0f7f1df4b0515e12add1f290da6987bdc8b1c18"
+dependencies = [
+ "anyhow",
+ "atomicwrites",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

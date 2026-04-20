@@ -2,6 +2,7 @@ mod abyssiniandb_snapshot_store;
 mod aeternusdb_snapshot_store;
 mod btree_store_snapshot_store;
 mod canopydb_snapshot_store;
+mod caves_snapshot_store;
 mod ckydb_snapshot_store;
 mod dbless_snapshot_store;
 mod dblite_snapshot_store;
@@ -62,6 +63,7 @@ pub use abyssiniandb_snapshot_store::AbyssiniandbSnapshotStore;
 pub use aeternusdb_snapshot_store::AeternusdbSnapshotStore;
 pub use btree_store_snapshot_store::BtreeStoreSnapshotStore;
 pub use canopydb_snapshot_store::CanopydbSnapshotStore;
+pub use caves_snapshot_store::CavesSnapshotStore;
 pub use ckydb_snapshot_store::CkydbSnapshotStore;
 pub use dbless_snapshot_store::DblessSnapshotStore;
 pub use dblite_snapshot_store::DbliteSnapshotStore;
@@ -305,6 +307,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "canopydb" => Ok(Arc::new(CanopydbSnapshotStore::new(
             &config.snapshot_canopydb_path,
         )?)),
+        "caves" => Ok(Arc::new(CavesSnapshotStore::new(
+            &config.snapshot_caves_path,
+        )?)),
         "ckydb" => Ok(Arc::new(CkydbSnapshotStore::new(
             &config.snapshot_ckydb_path,
         )?)),
@@ -400,7 +405,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `jsondb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `jsondb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
