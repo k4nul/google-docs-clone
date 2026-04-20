@@ -416,6 +416,7 @@ dependencies = [
  "futures-util",
  "heed",
  "hightower-kv",
+ "hmdb",
  "jammdb",
  "jsondb",
  "microkv",
@@ -1996,6 +1997,17 @@ dependencies = [
  "serde",
  "serde_cbor",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "hmdb"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3516f40904df7f69914e8ceae7020ac08f9c2c07f3804af68908eadaf3255b4"
+dependencies = [
+ "bincode",
+ "serde",
+ "tracing",
 ]
 
 [[package]]

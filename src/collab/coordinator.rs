@@ -1790,6 +1790,7 @@ mod tests {
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
             snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
+            snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),

@@ -39,7 +39,7 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `jsondb`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `jsondb`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_FLASH_KV_PATH`: flash-kv snapshot store 디렉터리 경로
 - `SNAPSHOT_SIMPLE_DB_PATH`: simple_db snapshot store 단일 파일 경로
@@ -47,6 +47,7 @@ cargo run
 - `SNAPSHOT_SQLITE_PATH`: sqlite snapshot store DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: heed snapshot store DB 디렉터리 경로
 - `SNAPSHOT_HIGHTOWER_KV_PATH`: hightower-kv snapshot store 데이터 디렉터리 경로
+- `SNAPSHOT_HMDB_PATH`: hmdb snapshot store append-only 로그 디렉터리 경로
 - `SNAPSHOT_JAMMDB_PATH`: jammdb snapshot store DB 파일 경로
 - `SNAPSHOT_FJALL_PATH`: fjall snapshot store DB 디렉터리 경로
 - `SNAPSHOT_PERSY_PATH`: persy snapshot store DB 파일 경로
@@ -116,9 +117,9 @@ cargo run
 | --- | --- |
 | 실제 multi-node owner handoff가 필요한가 | `SNAPSHOT_STORE=sqlite`를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`와 함께 쓰거나, `SNAPSHOT_STORE=managed`를 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 함께 쓴다. embedded backend는 snapshot durability만 제공한다. |
 | 단일 노드 재시작 복구만 필요하고 파일 단위 백업/교체가 중요하나 | `file`, `jammdb`, `persy`, `native_db`, `nikidb`, `nodb`, `redb`, `rskey`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `surrealkv`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `tinykv`, `saberdb`, `jsondb`, `simple_db`, `docdb` 중 단일 path 기반 store를 우선 검토한다. |
-| 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `flash_kv`, `heed`, `hightower_kv`, `fjall`, `parity_db`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`처럼 디렉터리 기반 store를 쓴다. |
+| 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `flash_kv`, `heed`, `hightower_kv`, `hmdb`, `fjall`, `parity_db`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`처럼 디렉터리 기반 store를 쓴다. |
 | 운영자가 payload를 직접 열어보며 수동 복구해야 하나 | `file`, `pickledb`, `microkv`, `docdb`가 가장 단순하다. 대신 binary engine보다 payload 크기와 catalog scan 비용을 더 보수적으로 본다. |
-| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `flash_kv`, `simple_db`, `docdb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `jsondb`, `persistent_kv`, `nikidb`, `nodb`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `rskey`, `hightower_kv`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `flash_kv`, `simple_db`, `docdb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `saberdb`, `jsondb`, `persistent_kv`, `nikidb`, `nodb`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `rskey`, `hightower_kv`, `hmdb`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
 
 backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기준으로 본다.
 
@@ -127,6 +128,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `file` | 문서별 JSON 파일 | 가장 높음 | 파일 하나 손상 시 해당 문서만 직접 격리 가능 | baseline filesystem store |
 | `heed` | 디렉터리 + LMDB data file | 낮음 | 엔진 파일 단위 백업이 필요하고 수동 entry 복구는 어렵다 | mmap 기반, pure-Rust baseline에는 포함하지 않음 |
 | `hightower_kv` | 디렉터리 + log-structured segments/snapshots | 낮음 | `snapshot:<doc_id>` prefix scan을 쓰므로 엔진 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `hmdb` | 디렉터리 + append-only bincode log | 낮음 | schema 로그 replay로 catalog를 복구한다. tail truncation은 incomplete write로 흡수할 수 있지만, 중간 구간 손상이나 스키마 불일치는 startup 전체 복구 실패로 이어질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `jammdb` | 단일 파일 | 낮음 | bucket 내부 key는 분리되지만 payload는 binary라 수동 복구가 어렵다 | single-file backup에 유리 |
 | `fjall` | 디렉터리 keyspace | 낮음 | LSM directory 전체를 함께 백업해야 한다 | directory-backed engine |
 | `persy` | 단일 파일 + index | 낮음 | entry 단위 skip은 가능하지만 index 일관성 검증이 필요하다 | single-file engine |
@@ -172,6 +174,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `abyssiniandb`는 single-file embedded durability 기준선이다.
 - `aeternusdb`는 directory-backed LSM embedded durability 기준선이다.
 - `hightower_kv`는 prefix-indexed directory-backed embedded durability 기준선이다.
+- `hmdb`는 append-only bincode log directory-backed embedded durability 기준선이다.
 - `surrealkv`는 single-file embedded durability 기준선이다.
 - `thunderdb`는 single-file embedded durability 기준선이다.
 - `dbless`는 redb-backed single-file typed table embedded durability 기준선이다.
@@ -194,7 +197,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `ckydb`는 directory-backed embedded durability 기준선이다.
 - `scdb`는 directory-backed embedded durability 기준선이다.
 - `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으므로 운영 기본값으로 둘 때 별도 백업/검증 절차가 필요하다.
-- corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `flash_kv`, `hightower_kv`, `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `surrealkv`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `simple_db` 쪽이 기본값 후보로 더 안전하다. `nikidb`는 single-file bucket store라 backup 절차는 단순하지만 binary B+tree file 전체 무결성에 더 의존한다.
+- corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `flash_kv`, `hightower_kv`, `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `surrealkv`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `simple_db` 쪽이 기본값 후보로 더 안전하다. `hmdb`는 tail truncation은 흡수할 수 있지만 로그 중간 손상 시 startup 전체 복구 실패로 이어질 수 있고, `nikidb`는 single-file bucket store라 backup 절차는 단순하지만 binary B+tree file 전체 무결성에 더 의존한다.
 - `rskey`는 JSON hashmap 전체를 다시 쓰는 구조라 payload 가시성은 높지만 store 파일 하나 손상이 startup 전체 복구 실패로 이어질 수 있다.
 - embedded backend를 고르더라도 실제 ownership authority는 `ROOM_COORDINATOR=file|static`에 두지 않는다. handoff가 필요하면 `sqlite` 또는 `managed` coordination과 조합한다.
 
@@ -338,6 +341,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 saberdb catalog에 `doc_id -> persisted snapshot JSON string` key-value로 저장되고, document catalog는 whole-file map load로 복구된다.
 - `SNAPSHOT_STORE=jsondb`는 `SNAPSHOT_JSONDB_PATH` 단일 jsondb versioned pretty JSON 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 jsondb catalog의 `snapshots.<doc_id>` key-value로 저장되고, document catalog는 whole-file map load로 복구된다.
+- `SNAPSHOT_STORE=hmdb`는 `SNAPSHOT_HMDB_PATH` 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 hmdb schema 로그의 `doc_id -> persisted snapshot` key-value로 저장되고, document catalog는 append-only 로그 replay로 복구된다.
 - `SNAPSHOT_STORE=caves`는 `SNAPSHOT_CAVES_PATH` 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 caves key-per-file catalog의 `<doc_id>` 파일에 JSON bytes로 저장되고, document catalog는 directory scan으로 복구된다.
 - `SNAPSHOT_STORE=persistent_kv`는 `SNAPSHOT_PERSISTENT_KV_PATH` 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
@@ -383,7 +388,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `renew`는 active room 동안 heartbeat loop로 반복되어야 하고, `release`는 마지막 세션 종료 뒤 snapshot 저장이 성공했을 때만 허용된다.
 - stale owner 판단은 반드시 `expires_at` 기준으로만 해야 한다. 로컬 파일 timestamp나 프로세스 uptime만으로 handoff를 결정하지 않는다.
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `max_missed_heartbeats_before_stale=2`다.
-- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, vendor-specific embedded DB durability surface(`SNAPSHOT_STORE=heed|hightower_kv|jammdb|fjall|persy|persistent_kv|native_db|nikidb|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|caves|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|saberdb|jsondb|simple_db|docdb|shorterdb`), S3-compatible object storage durability surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, object storage durability 후보로 `SNAPSHOT_STORE=s3`를 쓸 수 있으며, 외부 service durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있고, managed-managed actual handoff rehearsal까지 회귀 테스트로 검증됐다.
+- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, vendor-specific embedded DB durability surface(`SNAPSHOT_STORE=heed|hightower_kv|hmdb|jammdb|fjall|persy|persistent_kv|native_db|nikidb|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|caves|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|saberdb|jsondb|simple_db|docdb|shorterdb`), S3-compatible object storage durability surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, object storage durability 후보로 `SNAPSHOT_STORE=s3`를 쓸 수 있으며, 외부 service durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있고, managed-managed actual handoff rehearsal까지 회귀 테스트로 검증됐다.
 
 ## Local Development Procedure
 
@@ -396,4 +401,4 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
 8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
 9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`, `owner` metadata, `x-collab-owner-node-id` 헤더가 반환되는지 확인한다. `ROOM_LOCATOR=file`을 쓰는 경우에는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json` state를 준비하고, `ROOM_LOCATOR=sqlite`를 쓰는 경우에는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 준비한다. `ROOM_LOCATOR=managed`를 쓰는 경우에는 managed lease service `GET /v1/leases/:doc_id`가 current lease record를 반환하도록 준비한 뒤 같은 응답이 `owner.node_id`, optional `owner.base_url`, optional `x-collab-redirect-location`/`Location` 기준으로 반환되는지 확인한다.
-10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`, `SNAPSHOT_STORE=sqlite`, `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=hightower_kv`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=persistent_kv`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=nikidb`, `SNAPSHOT_STORE=nodb`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=rskey`, `SNAPSHOT_STORE=readb`, `SNAPSHOT_STORE=rustlite`, `SNAPSHOT_STORE=canopydb`, `SNAPSHOT_STORE=caves`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=scdb`, `SNAPSHOT_STORE=surrealkv`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=aeternusdb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=dblite`, `SNAPSHOT_STORE=dbless`, `SNAPSHOT_STORE=sanakirja`, `SNAPSHOT_STORE=snaildb`, `SNAPSHOT_STORE=tinykv`, `SNAPSHOT_STORE=saberdb`, `SNAPSHOT_STORE=jsondb`, `SNAPSHOT_STORE=simple_db`, `SNAPSHOT_STORE=docdb`, `SNAPSHOT_STORE=shorterdb`, `SNAPSHOT_STORE=s3`, 또는 `SNAPSHOT_STORE=managed`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다. 단, `ROOM_LOCATOR != local` 또는 `ROOM_COORDINATOR=file|sqlite|managed` 같은 distributed ownership 모드에서는 startup eager hydrate 대신 ownership 확인 뒤 on-demand restore가 일어나므로, 실제 owner handoff 검증은 snapshot store와 authoritative coordination backend를 함께 맞춘 뒤 이전 owner 종료 후 새 owner의 detail/WS 진입이 최신 snapshot을 복구하는지 확인해야 한다.
+10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`, `SNAPSHOT_STORE=sqlite`, `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=hightower_kv`, `SNAPSHOT_STORE=hmdb`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=persistent_kv`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=nikidb`, `SNAPSHOT_STORE=nodb`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=rskey`, `SNAPSHOT_STORE=readb`, `SNAPSHOT_STORE=rustlite`, `SNAPSHOT_STORE=canopydb`, `SNAPSHOT_STORE=caves`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=scdb`, `SNAPSHOT_STORE=surrealkv`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=aeternusdb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=dblite`, `SNAPSHOT_STORE=dbless`, `SNAPSHOT_STORE=sanakirja`, `SNAPSHOT_STORE=snaildb`, `SNAPSHOT_STORE=tinykv`, `SNAPSHOT_STORE=saberdb`, `SNAPSHOT_STORE=jsondb`, `SNAPSHOT_STORE=simple_db`, `SNAPSHOT_STORE=docdb`, `SNAPSHOT_STORE=shorterdb`, `SNAPSHOT_STORE=s3`, 또는 `SNAPSHOT_STORE=managed`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다. 단, `ROOM_LOCATOR != local` 또는 `ROOM_COORDINATOR=file|sqlite|managed` 같은 distributed ownership 모드에서는 startup eager hydrate 대신 ownership 확인 뒤 on-demand restore가 일어나므로, 실제 owner handoff 검증은 snapshot store와 authoritative coordination backend를 함께 맞춘 뒤 이전 owner 종료 후 새 owner의 detail/WS 진입이 최신 snapshot을 복구하는지 확인해야 한다.
