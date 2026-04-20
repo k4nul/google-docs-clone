@@ -51,6 +51,7 @@ rskey = "0.4.0"
 rustlite = "0.8.0"
 rusqlite = { version = "0.37", features = ["bundled"] }
 rustbreak = { version = "2", features = ["bin_enc"] }
+rusty-leveldb = "4.0.1"
 snaildb = "0.2.2"
 saberdb = "1.1.0"
 scdb = "0.2.1"
