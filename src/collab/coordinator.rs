@@ -1792,6 +1792,7 @@ mod tests {
             snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
             snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
             snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
+            snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
