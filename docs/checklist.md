@@ -61,10 +61,13 @@
 - 방금 screening한 후보 중 `mhdb`는 docs 기준으로 key-value pair 크기가 506B를 넘을 수 없어 `PersistedSnapshot` + Yrs full-state payload를 담는 현재 snapshot 경계에는 맞지 않아 제외했다.
 - `rapiddb`는 `cargo info` 기준 라이선스가 AGPL-3.0이라 현재 저장소 dependency/license surface에 바로 섞지 않는 쪽으로 정리했다.
 - `buffdb`는 default feature가 `vendored-sqlite`이고 저장 엔진도 SQLite에 기대므로, 이번 backlog가 유지하는 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 보고 제외했다.
+- `struct_db`는 upstream README와 `cargo info --verbose` 기준으로 이미 `native_db`로 rename된 redb wrapper라, 현재 저장소가 이미 지원하는 `native_db`/`redb` 축과 storage surface가 중복돼 신규 backend 후보에서 제외했다.
+- `aurora-db`는 upstream `Cargo.toml.orig` 기준 `sled`와 `zstd`를 기본 dependency로 끌어와 기존 `sled` durability 경계와 중복될 뿐 아니라 `zstd-safe`/`zstd-sys` native compression surface를 추가하므로 이번 backlog의 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 봤다.
+- `edma`는 `cargo info --verbose` 기준 TUI/management utility crate이고 실제 durability engine은 별도 `edma_storage`에 위임돼 있어, 현재 `SnapshotStore`가 요구하는 direct embedded store adapter 후보로는 맞지 않아 제외했다.
 - 방금 시도한 후보 중 `grebedb`는 기존 `s3` 경로가 끌어오는 `zstd-sys`와 links conflict로 차단됐고, `unqlite`는 local toolchain에 `libclang`이 없어 build script bindgen 단계에서 차단됐다.
 - `bitcasky`는 upstream `Bitcasky::open()` 초기화 경로가 directory lock 파일을 열 때 read/write/append 플래그 없이 `open()`을 호출해 `must specify at least one of read, write, or append access`로 실패하므로 이번 후보에서는 제외했다.
 - `sqjson`는 fixed page size가 4096 byte라 Yrs full-state payload를 page당 저장하는 현재 후보 조건에서는 4KB payload 한계가 너무 낮아 이번 후보에서는 제외했다.
-- 이번 `rumdb` landed 작업 자체의 잔여 차단은 없고, 위 일곱 가지는 다음 후보 재선정 시 다시 확인할 exclusion note로만 남아 있다.
+- 이번 `rumdb` landed 작업 자체의 잔여 차단은 없고, 위 열 가지는 다음 후보 재선정 시 다시 확인할 exclusion note로만 남아 있다.
 - sandboxed run에서는 commit/push/WebSocket 통합 테스트가 계속 차단될 수 있다. 현재 스크립트와 운영 규칙은 이 차단을 없애는 것이 아니라 조기에 탐지하고 unrestricted 실행으로 분리하는 용도다.
 
 ## WS / Yrs Follow-up Items
@@ -80,6 +83,8 @@
 - [x] config-driven `RoomCoordinator` selection과 logging dry-run mode 추가
 
 ## Execution Log
+
+- 2026-04-21: 미완료 다음 작업 1건으로 additional durability backend 재선정을 위한 후보 screening pass를 한 번 더 수행했다. 이번 run에서는 `struct_db`, `aurora-db`, `edma`를 검토해 배제 사유를 상태 문서에 추가했다. `struct_db`는 upstream README와 `cargo info --verbose` 기준으로 이미 `native_db`로 rename된 redb wrapper라 현재 저장소가 이미 지원하는 `native_db`/`redb`와 storage surface가 중복돼 신규 backend 가치가 낮았고, `aurora-db`는 upstream `Cargo.toml.orig` 기준 `sled`와 `zstd`를 기본 dependency로 끌어와 existing `sled` durability 경계와 겹치면서 `zstd-safe`/`zstd-sys` native compression surface까지 추가해 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 분류했으며, `edma`는 TUI/management utility crate로 실제 durability engine을 별도 `edma_storage`에 위임해 현재 `SnapshotStore`의 direct embedded adapter 후보로는 맞지 않았다. 관련 변경은 `docs/checklist.md`에만 남겼다. 검증은 `cargo search --limit 20 "embedded database"`, `cargo info --verbose struct_db`, `cargo info --verbose aurora-db`, `cargo info --verbose edma`, `cargo info --verbose zstd`, `git diff --check -- docs/checklist.md` 순서로 수행했다. 다음 작업 후보는 같은 제약을 유지하면서 restart recovery 회귀까지 통과할 additional durability backend 재선정이다. 현재 차단/제외 사유는 기존 `feoxdb`의 reopen/recovery 불안정성, `anvil_db`의 nightly 전용 `#![feature(async_iterator)]` 요구, `grebedb`의 `zstd-sys` links conflict, `unqlite`의 bindgen/`libclang` 의존성, `bitcasky`의 upstream `open()` 플래그 버그, `sqjson`의 page당 4KB payload 한계, `mhdb`의 506B key-value 상한, `rapiddb`의 AGPL-3.0 라이선스, `buffdb`의 SQLite 의존성, `struct_db`의 기존 `native_db`/`redb`와의 중복, `aurora-db`의 `zstd-sys` native compression surface, `edma`의 direct embedded engine 부재다.
 
 - 2026-04-21: 미완료 다음 작업 1건으로 additional durability backend 재선정을 위한 후보 screening pass를 수행했다. 이번 run에서는 새 backend를 억지로 착지시키지 않고 현재 제약선(pure-Rust/no-bindgen/no-native-conflict, restart recovery 가능한 snapshot payload 수용성)에 맞는 후보만 남기도록 `mhdb`, `rapiddb`, `buffdb`를 검토해 배제 사유를 문서화했다. `mhdb`는 docs.rs limitation 기준 key-value pair가 506B를 넘을 수 없어 `PersistedSnapshot`과 Yrs full-state payload를 담는 현재 snapshot 경계에 맞지 않았고, `rapiddb`는 `cargo info` 기준 AGPL-3.0 라이선스라 현재 저장소 dependency/license surface에 바로 섞지 않기로 했으며, `buffdb`는 default feature가 `vendored-sqlite`라 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 분류했다. 관련 변경은 `docs/checklist.md`에만 남겼다. 검증은 `cargo info mhdb`, `cargo info rapiddb`, `cargo info buffdb`, `git diff --check -- docs/checklist.md` 순서로 수행했다. 다음 작업 후보는 같은 제약을 유지하면서 restart recovery 회귀까지 통과할 additional durability backend 재선정이다. 현재 차단 사유는 기존 `feoxdb`의 reopen/recovery 불안정성, `anvil_db`의 nightly 전용 `#![feature(async_iterator)]` 요구, `grebedb`의 `zstd-sys` links conflict, `unqlite`의 bindgen/`libclang` 의존성, `bitcasky`의 upstream `open()` 플래그 버그, `sqjson`의 page당 4KB payload 한계, 그리고 방금 확정한 `mhdb`의 506B key-value 상한, `rapiddb`의 AGPL-3.0 라이선스, `buffdb`의 SQLite 의존성이다.
 
