@@ -383,6 +383,7 @@ dependencies = [
  "dashmap 6.1.0",
  "dbless",
  "dblite",
+ "docdb",
  "dotenvy",
  "fjall",
  "flash-kv",
@@ -1148,6 +1149,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "docdb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "826488a93c0e5a4ec30d65f4132c7aa0cf17f9ef3571d1df5686142858ac6a05"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
