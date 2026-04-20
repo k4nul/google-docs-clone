@@ -350,6 +350,7 @@ dependencies = [
  "rustbreak",
  "rustlite",
  "s3",
+ "sanakirja",
  "scdb",
  "serde",
  "serde_json",
@@ -1342,6 +1343,16 @@ dependencies = [
 
 [[package]]
 name = "fs4"
+version = "0.6.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eeb4ed9e12f43b7fa0baae3f9cdda28352770132ef2e09a23760c29cae8bd47"
+dependencies = [
+ "rustix 0.38.44",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "fs4"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29f9df8a11882c4e3335eb2d18a0137c505d9ca927470b0cac9c6f0ae07d28f7"
@@ -2033,7 +2044,7 @@ dependencies = [
  "bumpalo",
  "bytes",
  "fnv",
- "fs4",
+ "fs4 0.7.0",
  "libc",
  "memmap2",
  "page_size",
@@ -3488,6 +3499,28 @@ checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "sanakirja"
+version = "2.0.0-beta"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fc53a1e7a19d27c070749c0d2717427d1612c9b100274b205dbb438e605e34a"
+dependencies = [
+ "fs4 0.6.6",
+ "libc",
+ "log",
+ "memmap2",
+ "parking_lot 0.11.2",
+ "sanakirja-core",
+ "serde",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "sanakirja-core"
+version = "2.0.0-beta"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48a8500bcb79fe605b1433c30e8c5c078810b24dc4d04ffda35e88d712ff16f0"
 
 [[package]]
 name = "scdb"

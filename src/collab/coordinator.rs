@@ -1810,6 +1810,7 @@ mod tests {
             snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
             snapshot_aeternusdb_path: "./data/test-snapshots.aeternusdb".to_owned(),
             snapshot_thunderdb_path: "./data/test-snapshots.thunderdb".to_owned(),
+            snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

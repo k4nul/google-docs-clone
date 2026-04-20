@@ -20,6 +20,7 @@ mod rskey_snapshot_store;
 mod rustbreak_snapshot_store;
 mod rustlite_snapshot_store;
 mod s3_snapshot_store;
+mod sanakirja_snapshot_store;
 mod scdb_snapshot_store;
 mod siamesedb_snapshot_store;
 mod sled_snapshot_store;
@@ -66,6 +67,7 @@ pub use rskey_snapshot_store::RskeySnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
 pub use rustlite_snapshot_store::RustliteSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
+pub use sanakirja_snapshot_store::SanakirjaSnapshotStore;
 pub use scdb_snapshot_store::ScdbSnapshotStore;
 pub use siamesedb_snapshot_store::SiamesedbSnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
@@ -289,6 +291,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "thunderdb" => Ok(Arc::new(ThunderdbSnapshotStore::new(
             &config.snapshot_thunderdb_path,
         )?)),
+        "sanakirja" => Ok(Arc::new(SanakirjaSnapshotStore::new(
+            &config.snapshot_sanakirja_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -330,7 +335,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
