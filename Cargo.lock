@@ -426,6 +426,7 @@ dependencies = [
  "flash-kv",
  "futures-util",
  "heed",
+ "highlandcows-isam",
  "hightower-kv",
  "hmdb",
  "jammdb",
@@ -2147,6 +2148,17 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "highlandcows-isam"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "151ce87c4f1bdc2ce0fc2019b9775142100bf71a9105f3c0101e621a3dc84c7f"
+dependencies = [
+ "bincode",
+ "serde",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "hightower-kv"
