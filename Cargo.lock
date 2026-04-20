@@ -297,6 +297,7 @@ dependencies = [
  "pickledb",
  "readb",
  "redb 2.6.3",
+ "rskey",
  "rusqlite",
  "rustbreak",
  "rustlite",
@@ -3051,6 +3052,17 @@ checksum = "72f81bee8c8ef9b577d1681a70ebbc962c232461e397b22c208c43c04b67a155"
 dependencies = [
  "rmp",
  "serde",
+]
+
+[[package]]
+name = "rskey"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b464392f64e75bffaffb93c726688b63f11c9a6c4643d4c737a1a69432be92e"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -21,6 +21,7 @@ pub const DEFAULT_SNAPSHOT_PARITY_DB_PATH: &str = "./data/snapshots.parity_db";
 pub const DEFAULT_SNAPSHOT_PICKLEDB_PATH: &str = "./data/snapshots.pickledb";
 pub const DEFAULT_SNAPSHOT_MICROKV_PATH: &str = "./data/snapshots_microkv";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
+pub const DEFAULT_SNAPSHOT_RSKEY_PATH: &str = "./data/snapshots.rskey";
 pub const DEFAULT_SNAPSHOT_READB_PATH: &str = "./data/snapshots.readb";
 pub const DEFAULT_SNAPSHOT_RUSTLITE_PATH: &str = "./data/snapshots.rustlite";
 pub const DEFAULT_SNAPSHOT_CANOPYDB_PATH: &str = "./data/snapshots.canopydb";
@@ -69,6 +70,7 @@ pub struct Config {
     pub snapshot_pickledb_path: String,
     pub snapshot_microkv_path: String,
     pub snapshot_redb_path: String,
+    pub snapshot_rskey_path: String,
     pub snapshot_readb_path: String,
     pub snapshot_rustlite_path: String,
     pub snapshot_canopydb_path: String,
@@ -137,6 +139,7 @@ impl Config {
         let snapshot_microkv_path =
             env_string("SNAPSHOT_MICROKV_PATH", DEFAULT_SNAPSHOT_MICROKV_PATH)?;
         let snapshot_redb_path = env_string("SNAPSHOT_REDB_PATH", DEFAULT_SNAPSHOT_REDB_PATH)?;
+        let snapshot_rskey_path = env_string("SNAPSHOT_RSKEY_PATH", DEFAULT_SNAPSHOT_RSKEY_PATH)?;
         let snapshot_readb_path = env_string("SNAPSHOT_READB_PATH", DEFAULT_SNAPSHOT_READB_PATH)?;
         let snapshot_rustlite_path =
             env_string("SNAPSHOT_RUSTLITE_PATH", DEFAULT_SNAPSHOT_RUSTLITE_PATH)?;
@@ -231,6 +234,7 @@ impl Config {
             snapshot_pickledb_path,
             snapshot_microkv_path,
             snapshot_redb_path,
+            snapshot_rskey_path,
             snapshot_readb_path,
             snapshot_rustlite_path,
             snapshot_canopydb_path,

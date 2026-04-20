@@ -1791,6 +1791,7 @@ mod tests {
             snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
             snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
+            snapshot_rskey_path: "./data/test-snapshots.rskey".to_owned(),
             snapshot_readb_path: "./data/test-snapshots.readb".to_owned(),
             snapshot_rustlite_path: "./data/test-snapshots.rustlite".to_owned(),
             snapshot_canopydb_path: "./data/test-snapshots.canopydb".to_owned(),

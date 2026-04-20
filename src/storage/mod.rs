@@ -15,6 +15,7 @@ mod persy_snapshot_store;
 mod pickledb_snapshot_store;
 mod readb_snapshot_store;
 mod redb_snapshot_store;
+mod rskey_snapshot_store;
 mod rustbreak_snapshot_store;
 mod rustlite_snapshot_store;
 mod s3_snapshot_store;
@@ -59,6 +60,7 @@ pub use persy_snapshot_store::PersySnapshotStore;
 pub use pickledb_snapshot_store::PickleDbSnapshotStore;
 pub use readb_snapshot_store::ReadbSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
+pub use rskey_snapshot_store::RskeySnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
 pub use rustlite_snapshot_store::RustliteSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
@@ -234,6 +236,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
         )?)),
+        "rskey" => Ok(Arc::new(RskeySnapshotStore::new(
+            &config.snapshot_rskey_path,
+        )?)),
         "readb" => Ok(Arc::new(ReadbSnapshotStore::new(
             &config.snapshot_readb_path,
         )?)),
@@ -320,7 +325,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

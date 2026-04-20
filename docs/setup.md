@@ -16,7 +16,7 @@ cargo run
 기본 바인드 주소는 `127.0.0.1:4000`입니다.
 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`이므로 로컬 프런트엔드 개발 서버를 별도 포트에서 띄우는 흐름을 바로 재현할 수 있습니다.
 기본 `API_TOKEN`은 `dev-admin-token`이며, 개발 환경에서는 이 토큰으로 문서 생성/목록 API를 호출합니다.
-기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`, `SNAPSHOT_STORE=sqlite`와 `SNAPSHOT_SQLITE_PATH`, `SNAPSHOT_STORE=heed`와 `SNAPSHOT_HEED_PATH`, `SNAPSHOT_STORE=jammdb`와 `SNAPSHOT_JAMMDB_PATH`, `SNAPSHOT_STORE=fjall`와 `SNAPSHOT_FJALL_PATH`, `SNAPSHOT_STORE=persy`와 `SNAPSHOT_PERSY_PATH`, `SNAPSHOT_STORE=native_db`와 `SNAPSHOT_NATIVE_DB_PATH`, `SNAPSHOT_STORE=parity_db`와 `SNAPSHOT_PARITY_DB_PATH`, `SNAPSHOT_STORE=pickledb`와 `SNAPSHOT_PICKLEDB_PATH`, `SNAPSHOT_STORE=microkv`와 `SNAPSHOT_MICROKV_PATH`, `SNAPSHOT_STORE=redb`와 `SNAPSHOT_REDB_PATH`, `SNAPSHOT_STORE=readb`와 `SNAPSHOT_READB_PATH`, `SNAPSHOT_STORE=rustlite`와 `SNAPSHOT_RUSTLITE_PATH`, `SNAPSHOT_STORE=canopydb`와 `SNAPSHOT_CANOPYDB_PATH`, `SNAPSHOT_STORE=ckydb`와 `SNAPSHOT_CKYDB_PATH`, `SNAPSHOT_STORE=scdb`와 `SNAPSHOT_SCDB_PATH`, `SNAPSHOT_STORE=surrealkv`와 `SNAPSHOT_SURREALKV_PATH`, `SNAPSHOT_STORE=sled`와 `SNAPSHOT_SLED_PATH`, `SNAPSHOT_STORE=rustbreak`와 `SNAPSHOT_RUSTBREAK_PATH`, `SNAPSHOT_STORE=yedb`와 `SNAPSHOT_YEDB_PATH`, `SNAPSHOT_STORE=btree_store`와 `SNAPSHOT_BTREE_STORE_PATH`, `SNAPSHOT_STORE=siamesedb`와 `SNAPSHOT_SIAMESDB_PATH`, `SNAPSHOT_STORE=structsy`와 `SNAPSHOT_STRUCTSY_PATH`, `SNAPSHOT_STORE=abyssiniandb`와 `SNAPSHOT_ABYSSINIANDB_PATH`, `SNAPSHOT_STORE=aeternusdb`와 `SNAPSHOT_AETERNUSDB_PATH`, `SNAPSHOT_STORE=thunderdb`와 `SNAPSHOT_THUNDERDB_PATH`, `SNAPSHOT_STORE=s3`와 `SNAPSHOT_S3_*`, 또는 `SNAPSHOT_STORE=managed`와 `SNAPSHOT_MANAGED_BASE_URL`을 함께 설정합니다.
+기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`, `SNAPSHOT_STORE=sqlite`와 `SNAPSHOT_SQLITE_PATH`, `SNAPSHOT_STORE=heed`와 `SNAPSHOT_HEED_PATH`, `SNAPSHOT_STORE=jammdb`와 `SNAPSHOT_JAMMDB_PATH`, `SNAPSHOT_STORE=fjall`와 `SNAPSHOT_FJALL_PATH`, `SNAPSHOT_STORE=persy`와 `SNAPSHOT_PERSY_PATH`, `SNAPSHOT_STORE=native_db`와 `SNAPSHOT_NATIVE_DB_PATH`, `SNAPSHOT_STORE=parity_db`와 `SNAPSHOT_PARITY_DB_PATH`, `SNAPSHOT_STORE=pickledb`와 `SNAPSHOT_PICKLEDB_PATH`, `SNAPSHOT_STORE=microkv`와 `SNAPSHOT_MICROKV_PATH`, `SNAPSHOT_STORE=redb`와 `SNAPSHOT_REDB_PATH`, `SNAPSHOT_STORE=rskey`와 `SNAPSHOT_RSKEY_PATH`, `SNAPSHOT_STORE=readb`와 `SNAPSHOT_READB_PATH`, `SNAPSHOT_STORE=rustlite`와 `SNAPSHOT_RUSTLITE_PATH`, `SNAPSHOT_STORE=canopydb`와 `SNAPSHOT_CANOPYDB_PATH`, `SNAPSHOT_STORE=ckydb`와 `SNAPSHOT_CKYDB_PATH`, `SNAPSHOT_STORE=scdb`와 `SNAPSHOT_SCDB_PATH`, `SNAPSHOT_STORE=surrealkv`와 `SNAPSHOT_SURREALKV_PATH`, `SNAPSHOT_STORE=sled`와 `SNAPSHOT_SLED_PATH`, `SNAPSHOT_STORE=rustbreak`와 `SNAPSHOT_RUSTBREAK_PATH`, `SNAPSHOT_STORE=yedb`와 `SNAPSHOT_YEDB_PATH`, `SNAPSHOT_STORE=btree_store`와 `SNAPSHOT_BTREE_STORE_PATH`, `SNAPSHOT_STORE=siamesedb`와 `SNAPSHOT_SIAMESDB_PATH`, `SNAPSHOT_STORE=structsy`와 `SNAPSHOT_STRUCTSY_PATH`, `SNAPSHOT_STORE=abyssiniandb`와 `SNAPSHOT_ABYSSINIANDB_PATH`, `SNAPSHOT_STORE=aeternusdb`와 `SNAPSHOT_AETERNUSDB_PATH`, `SNAPSHOT_STORE=thunderdb`와 `SNAPSHOT_THUNDERDB_PATH`, `SNAPSHOT_STORE=s3`와 `SNAPSHOT_S3_*`, 또는 `SNAPSHOT_STORE=managed`와 `SNAPSHOT_MANAGED_BASE_URL`을 함께 설정합니다.
 기본 `ROOM_LOCATOR`는 `local`이며, `static`으로 바꾸면 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 설정해 문서별 owner 힌트를 읽습니다. `file`로 바꾸면 `ROOM_COORDINATOR_STATE_DIR` 아래의 active room state JSON을 읽고, `sqlite`로 바꾸면 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블을 읽어 현재 노드 비소유 문서를 거절합니다. `managed`로 바꾸면 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service `GET /v1/leases/:doc_id`를 읽어 현재 노드 비소유 문서를 거절합니다.
 기본 `ROOM_COORDINATOR`는 `noop`이며, `logging`으로 바꾸면 room 활성/비활성 lifecycle을 `NODE_ID` 기준 tracing log로만 남깁니다. `file`로 바꾸면 `ROOM_COORDINATOR_STATE_DIR` 아래에 active room lease JSON을 남기고, `sqlite`로 바꾸면 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블에 lease row를 남긴 뒤 `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS` / `ROOM_COORDINATOR_LEASE_TTL_SECS`에 맞춰 heartbeat를 갱신합니다. `managed`로 바꾸면 같은 heartbeat/TTL 정책을 유지한 채 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service `POST /v1/leases/:doc_id/acquire|renew|release`를 호출합니다.
 
@@ -39,7 +39,7 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_SQLITE_PATH`: sqlite snapshot store DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: heed snapshot store DB 디렉터리 경로
@@ -51,6 +51,7 @@ cargo run
 - `SNAPSHOT_PICKLEDB_PATH`: PickleDB snapshot store 파일 경로
 - `SNAPSHOT_MICROKV_PATH`: MicroKV snapshot store base path. 실제 DB 파일은 `<path>.kv`
 - `SNAPSHOT_REDB_PATH`: redb snapshot store DB 파일 경로
+- `SNAPSHOT_RSKEY_PATH`: rskey snapshot store JSON hashmap 파일 경로
 - `SNAPSHOT_READB_PATH`: readb snapshot store 디렉터리 경로
 - `SNAPSHOT_RUSTLITE_PATH`: rustlite snapshot store 디렉터리 경로
 - `SNAPSHOT_CANOPYDB_PATH`: canopydb snapshot store 디렉터리 경로
@@ -99,10 +100,10 @@ cargo run
 | 질문 | 선택 기준 |
 | --- | --- |
 | 실제 multi-node owner handoff가 필요한가 | `SNAPSHOT_STORE=sqlite`를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`와 함께 쓰거나, `SNAPSHOT_STORE=managed`를 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 함께 쓴다. embedded backend는 snapshot durability만 제공한다. |
-| 단일 노드 재시작 복구만 필요하고 파일 단위 백업/교체가 중요하나 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `surrealkv`, `thunderdb` 중 단일 path 기반 store를 우선 검토한다. |
+| 단일 노드 재시작 복구만 필요하고 파일 단위 백업/교체가 중요하나 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rskey`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `surrealkv`, `thunderdb` 중 단일 path 기반 store를 우선 검토한다. |
 | 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `heed`, `fjall`, `parity_db`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`처럼 디렉터리 기반 store를 쓴다. |
 | 운영자가 payload를 직접 열어보며 수동 복구해야 하나 | `file`, `pickledb`, `microkv`가 가장 단순하다. 대신 binary engine보다 payload 크기와 catalog scan 비용을 더 보수적으로 본다. |
-| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `rskey`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
 
 backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기준으로 본다.
 
@@ -118,6 +119,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `pickledb` | 단일 JSON 유사 DB 파일 | 높음 | 사람이 읽기 쉽지만 대용량 catalog에서는 scan 비용을 더 보수적으로 본다 | text-oriented store |
 | `microkv` | 단일 `.kv` 파일 | 중간 | key-value 구조는 단순하지만 payload는 binary 직렬화라 완전 수동 복구엔 한계가 있다 | simple local KV |
 | `redb` | 단일 파일 | 낮음 | tree 내부 payload는 직접 읽기 어렵지만 entry skip 전략과 잘 맞는다 | single-file engine |
+| `rskey` | 단일 JSON hashmap 파일 | 높음 | store 전체를 한 파일로 다시 쓰므로 파일 손상이 startup 전체 복구 실패로 이어질 수 있다. 대신 `doc_id -> persisted snapshot JSON string` 구조라 수동 점검과 부분 복구는 쉽다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `readb` | 디렉터리 + append-only data/index | 낮음 | `__catalog__` key와 data/index 파일을 함께 백업해야 catalog 복구 경로가 유지된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rustlite` | 디렉터리 + WAL/SSTable engine | 낮음 | `__catalog__` key와 engine 디렉터리를 함께 백업해야 catalog 복구 경로가 유지된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `canopydb` | 디렉터리 + transactional tree/WAL | 낮음 | `snapshots` tree iter scan으로 catalog를 복구하므로 engine 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -141,6 +143,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `aeternusdb`는 directory-backed LSM embedded durability 기준선이다.
 - `surrealkv`는 single-file embedded durability 기준선이다.
 - `thunderdb`는 single-file embedded durability 기준선이다.
+- `rskey`는 single-file embedded durability 기준선이다.
 - `readb`는 directory-backed embedded durability 기준선이다.
 - `rustlite`는 directory-backed embedded durability 기준선이다.
 - `canopydb`는 directory-backed embedded durability 기준선이다.
@@ -148,6 +151,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `scdb`는 directory-backed embedded durability 기준선이다.
 - `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으므로 운영 기본값으로 둘 때 별도 백업/검증 절차가 필요하다.
 - corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `surrealkv`, `thunderdb` 쪽이 기본값 후보로 더 안전하다.
+- `rskey`는 JSON hashmap 전체를 다시 쓰는 구조라 payload 가시성은 높지만 store 파일 하나 손상이 startup 전체 복구 실패로 이어질 수 있다.
 - embedded backend를 고르더라도 실제 ownership authority는 `ROOM_COORDINATOR=file|static`에 두지 않는다. handoff가 필요하면 `sqlite` 또는 `managed` coordination과 조합한다.
 
 ## Static Room Locator File
@@ -218,6 +222,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - 손상된 snapshot payload는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛰고, 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=redb`는 `SNAPSHOT_REDB_PATH` 단일 redb 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 redb `snapshots` 테이블에 `doc_id -> persisted snapshot JSON` key-value로 저장된다.
+- `SNAPSHOT_STORE=rskey`는 `SNAPSHOT_RSKEY_PATH` 단일 rskey JSON hashmap 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 rskey store에 `doc_id -> persisted snapshot JSON string` key-value로 저장되고, `GET /api/documents` catalog는 same hashmap key scan으로 복원된다.
 - `SNAPSHOT_STORE=readb`는 `SNAPSHOT_READB_PATH` readb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 readb keyspace에 `doc_id -> persisted snapshot JSON` key-value로 저장되고, document catalog는 별도 `__catalog__` key로 유지된다.
 - 기본 local ownership 모드에서는 startup catalog lookup 뒤 eager hydrate를 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
@@ -303,7 +309,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `renew`는 active room 동안 heartbeat loop로 반복되어야 하고, `release`는 마지막 세션 종료 뒤 snapshot 저장이 성공했을 때만 허용된다.
 - stale owner 판단은 반드시 `expires_at` 기준으로만 해야 한다. 로컬 파일 timestamp나 프로세스 uptime만으로 handoff를 결정하지 않는다.
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `max_missed_heartbeats_before_stale=2`다.
-- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, vendor-specific embedded DB durability surface(`SNAPSHOT_STORE=heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb`), S3-compatible object storage durability surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, object storage durability 후보로 `SNAPSHOT_STORE=s3`를 쓸 수 있으며, 외부 service durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있고, managed-managed actual handoff rehearsal까지 회귀 테스트로 검증됐다.
+- 현재 저장소에는 filesystem rehearsal용 coordination surface, SQLite-backed authoritative coordination surface, vendor-specific embedded DB durability surface(`SNAPSHOT_STORE=heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb`), S3-compatible object storage durability surface, external lease service를 쓰는 managed coordination surface, 그리고 external snapshot service를 쓰는 managed durability surface가 함께 있다. shared snapshot durability 후보로 `SNAPSHOT_STORE=sqlite`를 쓸 수 있고, object storage durability 후보로 `SNAPSHOT_STORE=s3`를 쓸 수 있으며, 외부 service durability 후보로 `SNAPSHOT_STORE=managed`를 쓸 수 있다. 이를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite` 또는 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`에 연결해 owner lease와 snapshot durability를 분리 구성할 수 있고, managed-managed actual handoff rehearsal까지 회귀 테스트로 검증됐다.
 
 ## Local Development Procedure
 
@@ -316,4 +322,4 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
 8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
 9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`, `owner` metadata, `x-collab-owner-node-id` 헤더가 반환되는지 확인한다. `ROOM_LOCATOR=file`을 쓰는 경우에는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json` state를 준비하고, `ROOM_LOCATOR=sqlite`를 쓰는 경우에는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 준비한다. `ROOM_LOCATOR=managed`를 쓰는 경우에는 managed lease service `GET /v1/leases/:doc_id`가 current lease record를 반환하도록 준비한 뒤 같은 응답이 `owner.node_id`, optional `owner.base_url`, optional `x-collab-redirect-location`/`Location` 기준으로 반환되는지 확인한다.
-10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`, `SNAPSHOT_STORE=sqlite`, `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=readb`, `SNAPSHOT_STORE=rustlite`, `SNAPSHOT_STORE=canopydb`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=scdb`, `SNAPSHOT_STORE=surrealkv`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=s3`, 또는 `SNAPSHOT_STORE=managed`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다. 단, `ROOM_LOCATOR != local` 또는 `ROOM_COORDINATOR=file|sqlite|managed` 같은 distributed ownership 모드에서는 startup eager hydrate 대신 ownership 확인 뒤 on-demand restore가 일어나므로, 실제 owner handoff 검증은 snapshot store와 authoritative coordination backend를 함께 맞춘 뒤 이전 owner 종료 후 새 owner의 detail/WS 진입이 최신 snapshot을 복구하는지 확인해야 한다.
+10. 재시작 복구를 검증하려면 `SNAPSHOT_STORE=file`, `SNAPSHOT_STORE=sqlite`, `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=rskey`, `SNAPSHOT_STORE=readb`, `SNAPSHOT_STORE=rustlite`, `SNAPSHOT_STORE=canopydb`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=scdb`, `SNAPSHOT_STORE=surrealkv`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=s3`, 또는 `SNAPSHOT_STORE=managed`로 서버를 띄운 뒤 문서를 만든 다음 프로세스를 재시작해 같은 문서 ID가 hydrate되는지 확인한다. 단, `ROOM_LOCATOR != local` 또는 `ROOM_COORDINATOR=file|sqlite|managed` 같은 distributed ownership 모드에서는 startup eager hydrate 대신 ownership 확인 뒤 on-demand restore가 일어나므로, 실제 owner handoff 검증은 snapshot store와 authoritative coordination backend를 함께 맞춘 뒤 이전 owner 종료 후 새 owner의 detail/WS 진입이 최신 snapshot을 복구하는지 확인해야 한다.
