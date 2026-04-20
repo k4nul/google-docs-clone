@@ -31,7 +31,7 @@ use backend::{
         SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
         SimpleDbSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
         SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThunderdbSnapshotStore,
-        TinybaseSnapshotStore, TinykvSnapshotStore, YedbSnapshotStore,
+        TinybaseSnapshotStore, TinykvSnapshotStore, YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -105,6 +105,7 @@ fn test_config() -> Config {
         snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
         snapshot_snaildb_path: "./data/test-snapshots.snaildb".to_owned(),
         snapshot_tinykv_path: "./data/test-snapshots.tinykv.json".to_owned(),
+        snapshot_yakv_path: "./data/test-snapshots.yakv".to_owned(),
         snapshot_saberdb_path: "./data/test-snapshots.saberdb.json".to_owned(),
         snapshot_s3_endpoint: None,
         snapshot_s3_region: "us-east-1".to_owned(),
@@ -458,6 +459,11 @@ fn configure_tinykv_snapshot_store(config: &mut Config, root: &std::path::Path) 
         .join("snapshots.tinykv.json")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_yakv_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "yakv".to_owned();
+    config.snapshot_yakv_path = root.join("snapshots.yakv").to_string_lossy().into_owned();
 }
 
 fn configure_saberdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -4709,6 +4715,52 @@ fn app_state_uses_tinykv_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_yakv_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("yakv-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.yakv");
+    configure_yakv_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with yakv store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to yakv".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to yakv on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted yakv snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_saberdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("saberdb-store-config");
@@ -6970,6 +7022,38 @@ fn jsondb_snapshot_store_round_trips_document_catalog() {
     let loaded_snapshot = store
         .load_snapshot(&document.id)
         .expect("snapshot should load from jsondb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn yakv_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("yakv-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.yakv");
+    let store =
+        YakvSnapshotStore::new(&snapshot_path).expect("yakv snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("YAKV".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to yakv");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from yakv");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from yakv")
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);

@@ -56,6 +56,7 @@ pub const DEFAULT_SNAPSHOT_DBLESS_PATH: &str = "./data/snapshots.dbless";
 pub const DEFAULT_SNAPSHOT_SANAKIRJA_PATH: &str = "./data/snapshots.sanakirja";
 pub const DEFAULT_SNAPSHOT_SNAILDB_PATH: &str = "./data/snapshots.snaildb";
 pub const DEFAULT_SNAPSHOT_TINYKV_PATH: &str = "./data/snapshots.tinykv.json";
+pub const DEFAULT_SNAPSHOT_YAKV_PATH: &str = "./data/snapshots.yakv";
 pub const DEFAULT_SNAPSHOT_SABERDB_PATH: &str = "./data/snapshots.saberdb.json";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
 pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
@@ -125,6 +126,7 @@ pub struct Config {
     pub snapshot_sanakirja_path: String,
     pub snapshot_snaildb_path: String,
     pub snapshot_tinykv_path: String,
+    pub snapshot_yakv_path: String,
     pub snapshot_saberdb_path: String,
     pub snapshot_s3_endpoint: Option<String>,
     pub snapshot_s3_region: String,
@@ -247,6 +249,7 @@ impl Config {
             env_string("SNAPSHOT_SNAILDB_PATH", DEFAULT_SNAPSHOT_SNAILDB_PATH)?;
         let snapshot_tinykv_path =
             env_string("SNAPSHOT_TINYKV_PATH", DEFAULT_SNAPSHOT_TINYKV_PATH)?;
+        let snapshot_yakv_path = env_string("SNAPSHOT_YAKV_PATH", DEFAULT_SNAPSHOT_YAKV_PATH)?;
         let snapshot_saberdb_path =
             env_string("SNAPSHOT_SABERDB_PATH", DEFAULT_SNAPSHOT_SABERDB_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
@@ -349,6 +352,7 @@ impl Config {
             snapshot_sanakirja_path,
             snapshot_snaildb_path,
             snapshot_tinykv_path,
+            snapshot_yakv_path,
             snapshot_saberdb_path,
             snapshot_s3_endpoint,
             snapshot_s3_region,

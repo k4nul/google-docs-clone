@@ -1828,6 +1828,7 @@ mod tests {
             snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
             snapshot_snaildb_path: "./data/test-snapshots.snaildb".to_owned(),
             snapshot_tinykv_path: "./data/test-snapshots.tinykv.json".to_owned(),
+            snapshot_yakv_path: "./data/test-snapshots.yakv".to_owned(),
             snapshot_saberdb_path: "./data/test-snapshots.saberdb.json".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
