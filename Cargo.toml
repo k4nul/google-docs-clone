@@ -15,6 +15,7 @@ chrono = { version = "0.4", features = ["serde"] }
 ckydb = "0.0.5"
 dashmap = "6"
 dblite = { version = "0.1.2", default-features = false }
+dbless = "0.2.0"
 dotenvy = "0.15"
 flash-kv = "0.2.1"
 fjall = "3.1.4"
