@@ -28,6 +28,7 @@ mod sqlite_snapshot_store;
 mod structsy_snapshot_store;
 mod surrealkv_snapshot_store;
 mod thunderdb_snapshot_store;
+mod tinykv_snapshot_store;
 mod yedb_snapshot_store;
 
 use std::{
@@ -75,6 +76,7 @@ pub use sqlite_snapshot_store::SqliteSnapshotStore;
 pub use structsy_snapshot_store::StructsySnapshotStore;
 pub use surrealkv_snapshot_store::SurrealkvSnapshotStore;
 pub use thunderdb_snapshot_store::ThunderdbSnapshotStore;
+pub use tinykv_snapshot_store::TinykvSnapshotStore;
 pub use yedb_snapshot_store::YedbSnapshotStore;
 
 #[derive(Debug, Clone)]
@@ -294,6 +296,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "sanakirja" => Ok(Arc::new(SanakirjaSnapshotStore::new(
             &config.snapshot_sanakirja_path,
         )?)),
+        "tinykv" => Ok(Arc::new(TinykvSnapshotStore::new(
+            &config.snapshot_tinykv_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -335,7 +340,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `tinykv`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

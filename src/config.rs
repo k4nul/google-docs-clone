@@ -39,6 +39,7 @@ pub const DEFAULT_SNAPSHOT_ABYSSINIANDB_PATH: &str = "./data/snapshots.abyssinia
 pub const DEFAULT_SNAPSHOT_AETERNUSDB_PATH: &str = "./data/snapshots.aeternusdb";
 pub const DEFAULT_SNAPSHOT_THUNDERDB_PATH: &str = "./data/snapshots.thunderdb";
 pub const DEFAULT_SNAPSHOT_SANAKIRJA_PATH: &str = "./data/snapshots.sanakirja";
+pub const DEFAULT_SNAPSHOT_TINYKV_PATH: &str = "./data/snapshots.tinykv.json";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
 pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
 pub const DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS: u64 = 5;
@@ -90,6 +91,7 @@ pub struct Config {
     pub snapshot_aeternusdb_path: String,
     pub snapshot_thunderdb_path: String,
     pub snapshot_sanakirja_path: String,
+    pub snapshot_tinykv_path: String,
     pub snapshot_s3_endpoint: Option<String>,
     pub snapshot_s3_region: String,
     pub snapshot_s3_bucket: Option<String>,
@@ -179,6 +181,8 @@ impl Config {
             env_string("SNAPSHOT_THUNDERDB_PATH", DEFAULT_SNAPSHOT_THUNDERDB_PATH)?;
         let snapshot_sanakirja_path =
             env_string("SNAPSHOT_SANAKIRJA_PATH", DEFAULT_SNAPSHOT_SANAKIRJA_PATH)?;
+        let snapshot_tinykv_path =
+            env_string("SNAPSHOT_TINYKV_PATH", DEFAULT_SNAPSHOT_TINYKV_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
         let snapshot_s3_region = env_string("SNAPSHOT_S3_REGION", DEFAULT_SNAPSHOT_S3_REGION)?;
         let snapshot_s3_bucket = env_optional_string("SNAPSHOT_S3_BUCKET")?;
@@ -262,6 +266,7 @@ impl Config {
             snapshot_aeternusdb_path,
             snapshot_thunderdb_path,
             snapshot_sanakirja_path,
+            snapshot_tinykv_path,
             snapshot_s3_endpoint,
             snapshot_s3_region,
             snapshot_s3_bucket,
