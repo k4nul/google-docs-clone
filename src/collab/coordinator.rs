@@ -1800,6 +1800,7 @@ mod tests {
             snapshot_siamesedb_path: "./data/test-snapshots.siamesedb".to_owned(),
             snapshot_structsy_path: "./data/test-snapshots.structsy".to_owned(),
             snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
+            snapshot_thunderdb_path: "./data/test-snapshots.thunderdb".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

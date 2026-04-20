@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/thunderdb/s3/managed snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 memory/file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/s3/managed adapter
+- `SnapshotStore` trait 및 memory/file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/thunderdb/s3/managed adapter
 - `RoomLocator` 경계와 config-driven `local`/`static`/`file`/`sqlite`/`managed` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file`/`sqlite`/`managed` session lifecycle hook
 
@@ -99,7 +99,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `SNAPSHOT_SQLITE_PATH`: `SNAPSHOT_STORE=sqlite`일 때 snapshot SQLite DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: `SNAPSHOT_STORE=heed`일 때 snapshot heed DB 디렉터리 경로
@@ -118,6 +118,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_SIAMESDB_PATH`: `SNAPSHOT_STORE=siamesedb`일 때 snapshot siamesedb DB 디렉터리 경로
 - `SNAPSHOT_STRUCTSY_PATH`: `SNAPSHOT_STORE=structsy`일 때 snapshot structsy 단일 파일 경로
 - `SNAPSHOT_ABYSSINIANDB_PATH`: `SNAPSHOT_STORE=abyssiniandb`일 때 snapshot abyssiniandb 단일 파일 경로
+- `SNAPSHOT_THUNDERDB_PATH`: `SNAPSHOT_STORE=thunderdb`일 때 snapshot thunderdb 단일 파일 경로
 - `SNAPSHOT_S3_ENDPOINT`: `SNAPSHOT_STORE=s3`일 때 S3-compatible object storage endpoint
 - `SNAPSHOT_S3_REGION`: S3 signing region
 - `SNAPSHOT_S3_BUCKET`: snapshot object를 저장할 bucket 이름
@@ -150,7 +151,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
-- 기본 in-memory snapshot store와 로컬 file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb, S3-compatible object storage, external managed snapshot store 지원
+- 기본 in-memory snapshot store와 로컬 file/sqlite/heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/thunderdb, S3-compatible object storage, external managed snapshot store 지원
 - config-driven room locator local/static/file/sqlite/managed 모드와 room coordinator dry-run logging/file/sqlite/managed state 모드 지원
 
 ## 비범위
@@ -159,22 +160,22 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서 수정용 REST API
 - 추가 vendor-specific database durability backend
 
-현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`는 같은 `SnapshotStore` 경계를 vendor-specific embedded database durability로 확장해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
+현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. `SNAPSHOT_STORE=heed`, `SNAPSHOT_STORE=jammdb`, `SNAPSHOT_STORE=fjall`, `SNAPSHOT_STORE=persy`, `SNAPSHOT_STORE=native_db`, `SNAPSHOT_STORE=parity_db`, `SNAPSHOT_STORE=pickledb`, `SNAPSHOT_STORE=microkv`, `SNAPSHOT_STORE=redb`, `SNAPSHOT_STORE=sled`, `SNAPSHOT_STORE=rustbreak`, `SNAPSHOT_STORE=yedb`, `SNAPSHOT_STORE=btree_store`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=thunderdb`는 같은 `SnapshotStore` 경계를 vendor-specific embedded database durability로 확장해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
 
-현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 vendor-specific embedded database durability backend인 heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb, S3-compatible object storage durability backend, shared SQLite를 넘어서는 external durability backend 자체, managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
+현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 vendor-specific embedded database durability backend인 heed/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/thunderdb, S3-compatible object storage durability backend, shared SQLite를 넘어서는 external durability backend 자체, managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
 
 ## Embedded Snapshot Store Selection Guide
 
-다음 기준은 `SNAPSHOT_STORE=heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb` 중 어떤 embedded durability backend를 운영 기본값으로 둘지 고를 때 사용한다.
+다음 기준은 `SNAPSHOT_STORE=heed|jammdb|fjall|persy|native_db|parity_db|pickledb|microkv|redb|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|thunderdb` 중 어떤 embedded durability backend를 운영 기본값으로 둘지 고를 때 사용한다.
 
 | 운영 목표 | 우선 후보 | 이유 |
 | --- | --- | --- |
 | 실제 multi-node owner handoff까지 같은 저장소에서 끝내기 | `sqlite` 또는 `managed` | embedded backend는 snapshot durability만 제공한다. authoritative lease CAS까지 묶으려면 `ROOM_LOCATOR`/`ROOM_COORDINATOR`와 같은 coordination plane을 함께 제공하는 `sqlite` 또는 `managed`가 필요하다. |
-| 단일 노드 재시작 복구를 가장 단순하게 운영하기 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb` | 모두 단일 path 기준 백업/복사 절차를 잡기 쉽다. 운영자가 파일 단위 스냅샷, 교체, 롤백을 직접 다루기 편하다. |
+| 단일 노드 재시작 복구를 가장 단순하게 운영하기 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `thunderdb` | 모두 단일 path 기준 백업/복사 절차를 잡기 쉽다. 운영자가 파일 단위 스냅샷, 교체, 롤백을 직접 다루기 편하다. |
 | 디렉터리 단위 엔진과 내부 keyspace/map 구조를 유지하기 | `heed`, `fjall`, `parity_db`, `sled`, `yedb`, `siamesedb` | 엔진이 디렉터리 아래 여러 파일과 내부 카탈로그를 관리한다. 파일 하나만 교체하는 운영보다 디렉터리 전체 백업/restore 절차가 자연스럽다. |
 | 사람이 직접 payload를 확인하거나 임시 복구하기 쉽게 유지하기 | `file`, `pickledb`, `microkv` | 구현이 JSON 또는 단순 key-value 파일 경계에 가깝다. 반면 엔진 주도 포맷보다 대용량 catalog scan과 payload 손상 대응은 더 보수적으로 봐야 한다. |
-| catalog 한 파일 손상이 전체 startup 복구 실패로 바로 번지는 경로를 피하기 | `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb` | 현재 구현 기준으로 corrupt entry는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛴다. `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으니 운영 기본값으로 둘 때 별도 주의가 필요하다. |
-| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 그대로 유지하기 | `btree_store`, `siamesedb`, `structsy`, `abyssiniandb` | 최근 추가 backend가 이 제약을 실제 landed change로 통과했다. 같은 조건의 추가 후보를 검토할 때도 이 넷을 기준선으로 삼고, native `links` 충돌이나 bindgen 의존성이 생기면 제외한다. |
+| catalog 한 파일 손상이 전체 startup 복구 실패로 바로 번지는 경로를 피하기 | `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `thunderdb` | 현재 구현 기준으로 corrupt entry는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛴다. `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으니 운영 기본값으로 둘 때 별도 주의가 필요하다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 그대로 유지하기 | `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb` | 최근 추가 backend가 이 제약을 실제 landed change로 통과했다. 같은 조건의 추가 후보를 검토할 때도 이 다섯을 기준선으로 삼고, native `links` 충돌이나 bindgen 의존성이 생기면 제외한다. |
 
 운영 중 backend를 바꿔야 할 때는 아래 매트릭스로 실제 파일 단위, payload 가시성, 손상 격리 특성을 먼저 비교한다.
 
@@ -197,11 +198,13 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 | `siamesedb` | 디렉터리 map store | 낮음 | map key는 분리되지만 engine iterator 특성 때문에 catalog key 보조 관리가 필요하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `structsy` | 단일 파일 record store | 중간 | record scan은 단순하지만 payload는 struct record라 임의 수정 대신 export/import 절차가 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `abyssiniandb` | 단일 파일 key-value store | 낮음 | key/value는 단순하지만 payload와 catalog 모두 binary value라 수동 복구보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `thunderdb` | 단일 파일 transactional KV | 낮음 | bucket iter scan은 단순하지만 payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 
 - `siamesedb`는 directory-backed map 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 최신 기준선이다.
 - `btree_store`는 single-file backup/restore 절차를 원하는 경우의 기준선이다.
 - `structsy`는 single-file struct 레코드 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `abyssiniandb`는 single-file key-value 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
+- `thunderdb`는 single-file transactional key-value 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `file`/`pickledb`/`microkv`는 운영자가 payload를 직접 읽기 쉽지만, authoritative coordination plane을 대체하지는 못한다.
 - embedded backend를 어떤 것으로 고르더라도 `ROOM_LOCATOR=file|static`은 rehearsal/best-effort 경계로만 보고, 실제 handoff가 필요하면 `sqlite` 또는 `managed` coordination을 함께 사용한다.
 
@@ -249,6 +252,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=siamesedb`이면 snapshot과 문서 토큰이 `SNAPSHOT_SIAMESDB_PATH` siamesedb 디렉터리의 `snapshots` map에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 siamesedb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=structsy`이면 snapshot과 문서 토큰이 `SNAPSHOT_STRUCTSY_PATH` structsy 단일 파일의 persisted record catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 structsy catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=abyssiniandb`이면 snapshot과 문서 토큰이 `SNAPSHOT_ABYSSINIANDB_PATH` abyssiniandb 단일 파일의 `snapshots` map key-value catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 abyssiniandb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=thunderdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_THUNDERDB_PATH` thunderdb 단일 파일의 `snapshots` bucket key-value catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 thunderdb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=s3`이면 snapshot과 문서 토큰이 `SNAPSHOT_S3_ENDPOINT` / `SNAPSHOT_S3_BUCKET` / `SNAPSHOT_S3_PREFIX` 조합의 S3 object key `<prefix><doc_id>.json`에 저장된다. startup hydrate는 bucket listing 뒤 각 object를 읽어 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=managed`이면 snapshot과 문서 토큰이 `SNAPSHOT_MANAGED_BASE_URL` 아래의 external snapshot service `GET /v1/snapshots`, `GET|PUT|DELETE /v1/snapshots/:doc_id`를 통해 저장된다. 기본 local ownership 모드에서는 startup catalog lookup 뒤 eager hydrate를 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SqliteSnapshotStore`는 row-level upsert로 기존 snapshot을 교체하며, 잘못된 timestamp나 손상된 row는 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛰고 직접 load 시에는 corrupt snapshot 오류로 취급한다.
