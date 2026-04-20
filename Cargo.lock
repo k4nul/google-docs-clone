@@ -381,6 +381,7 @@ dependencies = [
  "chrono",
  "ckydb",
  "dashmap 6.1.0",
+ "dblite",
  "dotenvy",
  "fjall",
  "flash-kv",
@@ -1036,6 +1037,15 @@ name = "data-encoding"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
+
+[[package]]
+name = "dblite"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "880f2d3022cbdcff6eb1268670e13a2acd768e6eff3511670220d8042280b5d3"
+dependencies = [
+ "fs4 0.7.0",
+]
 
 [[package]]
 name = "deranged"
