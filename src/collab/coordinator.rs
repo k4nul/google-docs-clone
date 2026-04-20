@@ -1793,6 +1793,7 @@ mod tests {
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
+            snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
             snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
             snapshot_nikidb_path: "./data/test-snapshots.nikidb".to_owned(),
             snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),

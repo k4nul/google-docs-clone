@@ -23,13 +23,13 @@ use backend::{
         DocDbSnapshotStore, DocumentSnapshot, FileSnapshotStore, FjallSnapshotStore,
         FlashKvSnapshotStore, HeedSnapshotStore, HightowerKvSnapshotStore, InMemorySnapshotStore,
         JammdbSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore,
-        NikidbSnapshotStore, NodbSnapshotStore, ParityDbSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
-        RustbreakSnapshotStore, RustliteSnapshotStore, S3SnapshotStore, SanakirjaSnapshotStore,
-        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
-        SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore,
-        StructsySnapshotStore, SurrealkvSnapshotStore, ThunderdbSnapshotStore, TinykvSnapshotStore,
-        YedbSnapshotStore,
+        NikidbSnapshotStore, NodbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
+        PersySnapshotStore, PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
+        RskeySnapshotStore, RustbreakSnapshotStore, RustliteSnapshotStore, S3SnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
+        SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThunderdbSnapshotStore,
+        TinykvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -68,6 +68,7 @@ fn test_config() -> Config {
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
         snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
         snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
+        snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
         snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
         snapshot_nikidb_path: "./data/test-snapshots.nikidb".to_owned(),
         snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),
@@ -223,6 +224,14 @@ fn configure_fjall_snapshot_store(config: &mut Config, root: &std::path::Path) {
 fn configure_persy_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "persy".to_owned();
     config.snapshot_persy_path = root.join("snapshots.persy").to_string_lossy().into_owned();
+}
+
+fn configure_persistent_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "persistent_kv".to_owned();
+    config.snapshot_persistent_kv_path = root
+        .join("snapshots.persistent_kv")
+        .to_string_lossy()
+        .into_owned();
 }
 
 fn configure_native_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -4597,6 +4606,53 @@ fn app_state_uses_tinykv_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_persistent_kv_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("persistent-kv-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.persistent_kv");
+    configure_persistent_kv_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with persistent_kv store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to persistent_kv".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to persistent_kv on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state = AppState::from_config(&config)
+        .expect("state should reload persisted persistent_kv snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_native_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("native-db-store-config");
@@ -6442,6 +6498,38 @@ fn native_db_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn persistent_kv_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("persistent-kv-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.persistent_kv");
+    let store = PersistentKvSnapshotStore::new(&snapshot_path)
+        .expect("persistent_kv snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("PersistentKV".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to persistent_kv");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from persistent_kv");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from persistent_kv")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

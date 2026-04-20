@@ -412,6 +412,7 @@ dependencies = [
  "nikidb",
  "nodb",
  "parity-db",
+ "persistent-kv",
  "persy",
  "pickledb",
  "readb",
@@ -3140,6 +3141,17 @@ name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
+
+[[package]]
+name = "persistent-kv"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fd849ab9582d6bff5cf1629a6375940204b06de034f17a0768aed1d27594cd3"
+dependencies = [
+ "fs2",
+ "prost",
+ "regex",
+]
 
 [[package]]
 name = "persy"

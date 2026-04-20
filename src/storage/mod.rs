@@ -18,6 +18,7 @@ mod native_db_snapshot_store;
 mod nikidb_snapshot_store;
 mod nodb_snapshot_store;
 mod parity_db_snapshot_store;
+mod persistent_kv_snapshot_store;
 mod persy_snapshot_store;
 mod pickledb_snapshot_store;
 mod readb_snapshot_store;
@@ -75,6 +76,7 @@ pub use native_db_snapshot_store::NativeDbSnapshotStore;
 pub use nikidb_snapshot_store::NikidbSnapshotStore;
 pub use nodb_snapshot_store::NodbSnapshotStore;
 pub use parity_db_snapshot_store::ParityDbSnapshotStore;
+pub use persistent_kv_snapshot_store::PersistentKvSnapshotStore;
 pub use persy_snapshot_store::PersySnapshotStore;
 pub use pickledb_snapshot_store::PickleDbSnapshotStore;
 pub use readb_snapshot_store::ReadbSnapshotStore;
@@ -260,6 +262,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "persy" => Ok(Arc::new(PersySnapshotStore::new(
             &config.snapshot_persy_path,
         )?)),
+        "persistent_kv" => Ok(Arc::new(PersistentKvSnapshotStore::new(
+            &config.snapshot_persistent_kv_path,
+        )?)),
         "native_db" => Ok(Arc::new(NativeDbSnapshotStore::new(
             &config.snapshot_native_db_path,
         )?)),
@@ -385,7 +390,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
