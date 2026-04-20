@@ -476,6 +476,7 @@ dependencies = [
  "json_store",
  "jsondb",
  "koit",
+ "kopperdb",
  "kv",
  "microkv",
  "native_db",
@@ -3053,6 +3054,16 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "kopperdb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8eac03e3539639c1375378b0e7982e05c40bba653f1b3424b9c2fd91f99d83c"
+dependencies = [
+ "anyhow",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

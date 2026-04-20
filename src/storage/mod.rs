@@ -25,6 +25,7 @@ mod jfs_snapshot_store;
 mod json_store_snapshot_store;
 mod jsondb_snapshot_store;
 mod koit_snapshot_store;
+mod kopperdb_snapshot_store;
 mod kv_snapshot_store;
 mod managed_snapshot_store;
 mod microkv_snapshot_store;
@@ -106,6 +107,7 @@ pub use jfs_snapshot_store::JfsSnapshotStore;
 pub use json_store_snapshot_store::JsonStoreSnapshotStore;
 pub use jsondb_snapshot_store::JsondbSnapshotStore;
 pub use koit_snapshot_store::KoitSnapshotStore;
+pub use kopperdb_snapshot_store::KopperdbSnapshotStore;
 pub use kv_snapshot_store::KvSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
 pub use microkv_snapshot_store::MicroKvSnapshotStore;
@@ -333,6 +335,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "jsondb" => Ok(Arc::new(JsondbSnapshotStore::new(
             &config.snapshot_jsondb_path,
         )?)),
+        "kopperdb" => Ok(Arc::new(KopperdbSnapshotStore::new(
+            &config.snapshot_kopperdb_path,
+        )?)),
         "kv" => Ok(Arc::new(KvSnapshotStore::new(&config.snapshot_kv_path)?)),
         "koit" => Ok(Arc::new(KoitSnapshotStore::new(
             &config.snapshot_koit_path,
@@ -499,7 +504,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kopperdb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
