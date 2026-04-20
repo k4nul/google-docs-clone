@@ -422,6 +422,7 @@ dependencies = [
  "rustbreak",
  "rustlite",
  "s3",
+ "saberdb",
  "sanakirja",
  "scdb",
  "serde",
@@ -4136,6 +4137,19 @@ dependencies = [
  "serde",
  "time",
  "url",
+]
+
+[[package]]
+name = "saberdb"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa114f66c954bb34d9a6aedf273b486f8f957858309b4d5d47f6c376d1a32035"
+dependencies = [
+ "async-trait",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
