@@ -25,14 +25,14 @@ use backend::{
         FlashKvSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
         HightowerKvSnapshotStore, HmdbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore,
         JsondbSnapshotStore, KoitSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
-        NativeDbSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, ParityDbSnapshotStore,
-        PersistentKvSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore, ReadbSnapshotStore,
-        RedbSnapshotStore, RskeySnapshotStore, RustbreakSnapshotStore, RustliteSnapshotStore,
-        S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore, ScdbSnapshotStore,
-        ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore, SledSnapshotStore,
-        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
-        SurrealkvSnapshotStore, ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore,
-        YakvSnapshotStore, YedbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
+        RustbreakSnapshotStore, RustliteSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
+        SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThunderdbSnapshotStore,
+        TinybaseSnapshotStore, TinykvSnapshotStore, YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -79,6 +79,7 @@ fn test_config() -> Config {
         snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
         snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
         snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
+        snapshot_nebari_path: "./data/test-snapshots.nebari".to_owned(),
         snapshot_nikidb_path: "./data/test-snapshots.nikidb".to_owned(),
         snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),
         snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
@@ -261,6 +262,11 @@ fn configure_native_db_snapshot_store(config: &mut Config, root: &std::path::Pat
         .join("snapshots.native_db")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_nebari_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "nebari".to_owned();
+    config.snapshot_nebari_path = root.join("snapshots.nebari").to_string_lossy().into_owned();
 }
 
 fn configure_nodb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -5242,6 +5248,52 @@ fn app_state_uses_native_db_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_nebari_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("nebari-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.nebari");
+    configure_nebari_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with nebari store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to nebari".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to nebari on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted nebari snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_root.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_nodb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nodb-store-config");
@@ -7363,6 +7415,38 @@ fn native_db_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn nebari_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("nebari-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.nebari");
+    let store =
+        NebariSnapshotStore::new(&snapshot_root).expect("nebari snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Nebari".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to nebari");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from nebari");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from nebari")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

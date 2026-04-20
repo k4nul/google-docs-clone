@@ -1801,6 +1801,7 @@ mod tests {
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
             snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
             snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
+            snapshot_nebari_path: "./data/test-snapshots.nebari".to_owned(),
             snapshot_nikidb_path: "./data/test-snapshots.nikidb".to_owned(),
             snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),
             snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
