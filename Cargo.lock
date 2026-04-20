@@ -450,6 +450,7 @@ dependencies = [
  "surrealkv",
  "thiserror 2.0.18",
  "thunderdb",
+ "tinybase",
  "tinykv",
  "tokio",
  "tower-http",
@@ -5010,6 +5011,18 @@ checksum = "2e70e4c5a0e0a8a4823ad65dfe1a6930e4f4d756dcd9dd7939022b5e8c501215"
 dependencies = [
  "num-conv",
  "time-core",
+]
+
+[[package]]
+name = "tinybase"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "273766c3ac3dfeabcb183aa73b5e3dc2a47d0e5a4c09fdbf825faeff52139639"
+dependencies = [
+ "bincode",
+ "serde",
+ "sled",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

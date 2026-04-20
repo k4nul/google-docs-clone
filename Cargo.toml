@@ -57,6 +57,7 @@ structsy = { version = "0.5.2", features = ["derive"] }
 surrealkv = "0.21.0"
 thunderdb = "0.4.0"
 thiserror = "2"
+tinybase = "0.1.5"
 tinykv = "0.4.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "sync"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }

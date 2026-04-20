@@ -1821,6 +1821,7 @@ mod tests {
             snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
             snapshot_aeternusdb_path: "./data/test-snapshots.aeternusdb".to_owned(),
             snapshot_thunderdb_path: "./data/test-snapshots.thunderdb".to_owned(),
+            snapshot_tinybase_path: "./data/test-snapshots.tinybase".to_owned(),
             snapshot_dblite_path: "./data/test-snapshots.dblite".to_owned(),
             snapshot_dbless_path: "./data/test-snapshots.dbless".to_owned(),
             snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
