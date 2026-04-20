@@ -17,6 +17,7 @@ mod redb_snapshot_store;
 mod rustbreak_snapshot_store;
 mod rustlite_snapshot_store;
 mod s3_snapshot_store;
+mod scdb_snapshot_store;
 mod siamesedb_snapshot_store;
 mod sled_snapshot_store;
 mod sqlite_snapshot_store;
@@ -59,6 +60,7 @@ pub use redb_snapshot_store::RedbSnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
 pub use rustlite_snapshot_store::RustliteSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
+pub use scdb_snapshot_store::ScdbSnapshotStore;
 pub use siamesedb_snapshot_store::SiamesedbSnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
@@ -242,6 +244,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "ckydb" => Ok(Arc::new(CkydbSnapshotStore::new(
             &config.snapshot_ckydb_path,
         )?)),
+        "scdb" => Ok(Arc::new(ScdbSnapshotStore::new(
+            &config.snapshot_scdb_path,
+        )?)),
         "surrealkv" => Ok(Arc::new(SurrealkvSnapshotStore::new(
             &config.snapshot_surrealkv_path,
         )?)),
@@ -310,7 +315,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
