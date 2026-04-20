@@ -13,6 +13,7 @@ pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_SNAPSHOT_HEED_PATH: &str = "./data/snapshots.heed";
+pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower_kv";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
@@ -62,6 +63,7 @@ pub struct Config {
     pub snapshot_dir: String,
     pub snapshot_sqlite_path: String,
     pub snapshot_heed_path: String,
+    pub snapshot_hightower_kv_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_fjall_path: String,
     pub snapshot_persy_path: String,
@@ -126,6 +128,10 @@ impl Config {
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
         let snapshot_heed_path = env_string("SNAPSHOT_HEED_PATH", DEFAULT_SNAPSHOT_HEED_PATH)?;
+        let snapshot_hightower_kv_path = env_string(
+            "SNAPSHOT_HIGHTOWER_KV_PATH",
+            DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH,
+        )?;
         let snapshot_jammdb_path =
             env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_fjall_path = env_string("SNAPSHOT_FJALL_PATH", DEFAULT_SNAPSHOT_FJALL_PATH)?;
@@ -226,6 +232,7 @@ impl Config {
             snapshot_dir,
             snapshot_sqlite_path,
             snapshot_heed_path,
+            snapshot_hightower_kv_path,
             snapshot_jammdb_path,
             snapshot_fjall_path,
             snapshot_persy_path,

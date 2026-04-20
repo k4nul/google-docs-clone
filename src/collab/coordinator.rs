@@ -1785,6 +1785,7 @@ mod tests {
             snapshot_dir: "./data/test-snapshots".to_owned(),
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
+            snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
