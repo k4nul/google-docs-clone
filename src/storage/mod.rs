@@ -39,6 +39,7 @@ mod readb_snapshot_store;
 mod redb_snapshot_store;
 mod rskey_snapshot_store;
 mod rustbreak_snapshot_store;
+mod rustcask_snapshot_store;
 mod rustlite_snapshot_store;
 mod rusty_leveldb_snapshot_store;
 mod s3_snapshot_store;
@@ -115,6 +116,7 @@ pub use readb_snapshot_store::ReadbSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
 pub use rskey_snapshot_store::RskeySnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
+pub use rustcask_snapshot_store::RustcaskSnapshotStore;
 pub use rustlite_snapshot_store::RustliteSnapshotStore;
 pub use rusty_leveldb_snapshot_store::RustyLeveldbSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
@@ -384,6 +386,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "rustbreak" => Ok(Arc::new(RustbreakSnapshotStore::new(
             &config.snapshot_rustbreak_path,
         )?)),
+        "rustcask" => Ok(Arc::new(RustcaskSnapshotStore::new(
+            &config.snapshot_rustcask_path,
+        )?)),
         "rusty_leveldb" => Ok(Arc::new(RustyLeveldbSnapshotStore::new(
             &config.snapshot_rusty_leveldb_path,
         )?)),
@@ -476,7 +481,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

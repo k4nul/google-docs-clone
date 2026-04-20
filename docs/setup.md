@@ -312,6 +312,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - 손상된 snapshot payload는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛰고, 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=rustlite`는 `SNAPSHOT_RUSTLITE_PATH` rustlite 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 rustlite keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` key-value로 저장되고, document catalog는 별도 `__catalog__` key로 유지된다.
+- `SNAPSHOT_STORE=rustcask`는 `SNAPSHOT_RUSTCASK_PATH` rustcask append-only Bitcask 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 rustcask keyspace의 `doc_id` key에 저장되고, document catalog는 explicit `__catalog__` key와 startup log replay 결과로 복구된다.
 - `SNAPSHOT_STORE=rusty_leveldb`는 `SNAPSHOT_RUSTY_LEVELDB_PATH` rusty-leveldb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 rusty-leveldb keyspace에 `doc_id -> persisted snapshot JSON` key-value로 저장되고, `GET /api/documents` catalog는 same keyspace full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - `SNAPSHOT_STORE=canopydb`는 `SNAPSHOT_CANOPYDB_PATH` canopydb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.

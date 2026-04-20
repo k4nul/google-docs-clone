@@ -1814,6 +1814,7 @@ mod tests {
             snapshot_rskey_path: "./data/test-snapshots.rskey".to_owned(),
             snapshot_readb_path: "./data/test-snapshots.readb".to_owned(),
             snapshot_rustlite_path: "./data/test-snapshots.rustlite".to_owned(),
+            snapshot_rustcask_path: "./data/test-snapshots.rustcask".to_owned(),
             snapshot_rusty_leveldb_path: "./data/test-snapshots.rusty_leveldb".to_owned(),
             snapshot_canopydb_path: "./data/test-snapshots.canopydb".to_owned(),
             snapshot_caves_path: "./data/test-snapshots.caves".to_owned(),

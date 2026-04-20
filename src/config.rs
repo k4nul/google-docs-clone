@@ -44,6 +44,7 @@ pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
 pub const DEFAULT_SNAPSHOT_RSKEY_PATH: &str = "./data/snapshots.rskey";
 pub const DEFAULT_SNAPSHOT_READB_PATH: &str = "./data/snapshots.readb";
 pub const DEFAULT_SNAPSHOT_RUSTLITE_PATH: &str = "./data/snapshots.rustlite";
+pub const DEFAULT_SNAPSHOT_RUSTCASK_PATH: &str = "./data/snapshots.rustcask";
 pub const DEFAULT_SNAPSHOT_RUSTY_LEVELDB_PATH: &str = "./data/snapshots.rusty_leveldb";
 pub const DEFAULT_SNAPSHOT_CANOPYDB_PATH: &str = "./data/snapshots.canopydb";
 pub const DEFAULT_SNAPSHOT_CAVES_PATH: &str = "./data/snapshots.caves";
@@ -124,6 +125,7 @@ pub struct Config {
     pub snapshot_rskey_path: String,
     pub snapshot_readb_path: String,
     pub snapshot_rustlite_path: String,
+    pub snapshot_rustcask_path: String,
     pub snapshot_rusty_leveldb_path: String,
     pub snapshot_canopydb_path: String,
     pub snapshot_caves_path: String,
@@ -244,6 +246,8 @@ impl Config {
         let snapshot_readb_path = env_string("SNAPSHOT_READB_PATH", DEFAULT_SNAPSHOT_READB_PATH)?;
         let snapshot_rustlite_path =
             env_string("SNAPSHOT_RUSTLITE_PATH", DEFAULT_SNAPSHOT_RUSTLITE_PATH)?;
+        let snapshot_rustcask_path =
+            env_string("SNAPSHOT_RUSTCASK_PATH", DEFAULT_SNAPSHOT_RUSTCASK_PATH)?;
         let snapshot_rusty_leveldb_path = env_string(
             "SNAPSHOT_RUSTY_LEVELDB_PATH",
             DEFAULT_SNAPSHOT_RUSTY_LEVELDB_PATH,
@@ -379,6 +383,7 @@ impl Config {
             snapshot_rskey_path,
             snapshot_readb_path,
             snapshot_rustlite_path,
+            snapshot_rustcask_path,
             snapshot_rusty_leveldb_path,
             snapshot_canopydb_path,
             snapshot_caves_path,

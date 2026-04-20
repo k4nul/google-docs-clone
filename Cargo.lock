@@ -473,6 +473,7 @@ dependencies = [
  "rskey",
  "rusqlite",
  "rustbreak",
+ "rustcask",
  "rustlite",
  "rusty-leveldb",
  "s3",
@@ -4535,6 +4536,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver 1.0.28",
+]
+
+[[package]]
+name = "rustcask"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e17ed1a2733a60fea8495ddcb42c22cabd17afec7ffa7b024b161dd662da4003"
+dependencies = [
+ "bincode",
+ "bytes",
+ "clap",
+ "log",
+ "rand 0.8.6",
+ "regex",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
