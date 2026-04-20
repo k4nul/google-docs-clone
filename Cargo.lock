@@ -266,6 +266,7 @@ dependencies = [
  "parity-db",
  "persy",
  "pickledb",
+ "readb",
  "redb 2.6.3",
  "rusqlite",
  "rustbreak",
@@ -2597,6 +2598,17 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "readb"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af63d1c12d2a795b56c91509c563591f8ef15ddcbea5b5b2c0e428559710597d"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "fs2",
 ]
 
 [[package]]

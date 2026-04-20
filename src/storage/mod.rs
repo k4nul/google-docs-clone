@@ -10,6 +10,7 @@ mod native_db_snapshot_store;
 mod parity_db_snapshot_store;
 mod persy_snapshot_store;
 mod pickledb_snapshot_store;
+mod readb_snapshot_store;
 mod redb_snapshot_store;
 mod rustbreak_snapshot_store;
 mod s3_snapshot_store;
@@ -47,6 +48,7 @@ pub use native_db_snapshot_store::NativeDbSnapshotStore;
 pub use parity_db_snapshot_store::ParityDbSnapshotStore;
 pub use persy_snapshot_store::PersySnapshotStore;
 pub use pickledb_snapshot_store::PickleDbSnapshotStore;
+pub use readb_snapshot_store::ReadbSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
@@ -219,6 +221,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "redb" => Ok(Arc::new(RedbSnapshotStore::new(
             &config.snapshot_redb_path,
+        )?)),
+        "readb" => Ok(Arc::new(ReadbSnapshotStore::new(
+            &config.snapshot_readb_path,
         )?)),
         "sled" => Ok(Arc::new(SledSnapshotStore::new(
             &config.snapshot_sled_path,

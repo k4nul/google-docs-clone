@@ -22,6 +22,7 @@ persy = "1.7.1"
 pickledb = "0.5.1"
 microkv = "0.2.9"
 redb = "2"
+readb = { version = "0.4.1", features = ["write"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 rustbreak = { version = "2", features = ["bin_enc"] }
 s3 = { version = "0.1.27", default-features = false, features = ["blocking", "rustls"] }
