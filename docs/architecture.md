@@ -11,7 +11,7 @@
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rusty_leveldb/canopydb/caves/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/tinybase/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
+- `src/storage`: snapshot store trait과 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rusty_leveldb/canopydb/caves/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/tinybase/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
 
 ## Request Flow
 

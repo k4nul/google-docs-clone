@@ -1808,6 +1808,7 @@ mod tests {
             snapshot_nebari_path: "./data/test-snapshots.nebari".to_owned(),
             snapshot_nikidb_path: "./data/test-snapshots.nikidb".to_owned(),
             snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),
+            snapshot_okofdb_path: "./data/test-snapshots.okofdb".to_owned(),
             snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
             snapshot_rskey_path: "./data/test-snapshots.rskey".to_owned(),

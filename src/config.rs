@@ -36,6 +36,7 @@ pub const DEFAULT_SNAPSHOT_NATIVE_DB_PATH: &str = "./data/snapshots.native_db";
 pub const DEFAULT_SNAPSHOT_NEBARI_PATH: &str = "./data/snapshots.nebari";
 pub const DEFAULT_SNAPSHOT_NIKIDB_PATH: &str = "./data/snapshots.nikidb";
 pub const DEFAULT_SNAPSHOT_NODB_PATH: &str = "./data/snapshots.nodb";
+pub const DEFAULT_SNAPSHOT_OKOFDB_PATH: &str = "./data/snapshots.okofdb";
 pub const DEFAULT_SNAPSHOT_PARITY_DB_PATH: &str = "./data/snapshots.parity_db";
 pub const DEFAULT_SNAPSHOT_PICKLEDB_PATH: &str = "./data/snapshots.pickledb";
 pub const DEFAULT_SNAPSHOT_MICROKV_PATH: &str = "./data/snapshots_microkv";
@@ -115,6 +116,7 @@ pub struct Config {
     pub snapshot_nebari_path: String,
     pub snapshot_nikidb_path: String,
     pub snapshot_nodb_path: String,
+    pub snapshot_okofdb_path: String,
     pub snapshot_parity_db_path: String,
     pub snapshot_pickledb_path: String,
     pub snapshot_microkv_path: String,
@@ -229,6 +231,8 @@ impl Config {
         let snapshot_nikidb_path =
             env_string("SNAPSHOT_NIKIDB_PATH", DEFAULT_SNAPSHOT_NIKIDB_PATH)?;
         let snapshot_nodb_path = env_string("SNAPSHOT_NODB_PATH", DEFAULT_SNAPSHOT_NODB_PATH)?;
+        let snapshot_okofdb_path =
+            env_string("SNAPSHOT_OKOFDB_PATH", DEFAULT_SNAPSHOT_OKOFDB_PATH)?;
         let snapshot_parity_db_path =
             env_string("SNAPSHOT_PARITY_DB_PATH", DEFAULT_SNAPSHOT_PARITY_DB_PATH)?;
         let snapshot_pickledb_path =
@@ -367,6 +371,7 @@ impl Config {
             snapshot_nebari_path,
             snapshot_nikidb_path,
             snapshot_nodb_path,
+            snapshot_okofdb_path,
             snapshot_parity_db_path,
             snapshot_pickledb_path,
             snapshot_microkv_path,

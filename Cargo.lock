@@ -463,6 +463,7 @@ dependencies = [
  "nebari",
  "nikidb",
  "nodb",
+ "okofdb",
  "parity-db",
  "persistent-kv",
  "persy",
@@ -3507,6 +3508,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "okofdb"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c4fda36e5a50dbb3b5007809deed12c04cf5e641688b984d025aaa9694512ad"
+dependencies = [
+ "snap 0.2.5",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3582,7 +3592,7 @@ dependencies = [
  "parking_lot 0.12.5",
  "rand 0.9.4",
  "siphasher",
- "snap",
+ "snap 1.1.1",
  "winapi",
 ]
 
@@ -4706,7 +4716,7 @@ dependencies = [
  "fs2",
  "integer-encoding 3.0.4",
  "rand 0.8.6",
- "snap",
+ "snap 1.1.1",
 ]
 
 [[package]]
@@ -5215,6 +5225,16 @@ dependencies = [
 
 [[package]]
 name = "snap"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95d697d63d44ad8b78b8d235bf85b34022a78af292c8918527c5f0cffdde7f43"
+dependencies = [
+ "byteorder",
+ "lazy_static",
+]
+
+[[package]]
+name = "snap"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
@@ -5330,7 +5350,7 @@ dependencies = [
  "rand 0.9.4",
  "scopeguard 1.2.0",
  "sha2 0.10.9",
- "snap",
+ "snap 1.1.1",
  "tokio",
 ]
 

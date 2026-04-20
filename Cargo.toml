@@ -81,6 +81,7 @@ yedb = "0.5.1"
 yrs = "=0.18.2"
 yrs-axum = "0.8.2"
 shorterDB = "0.2.0"
+okofdb = "0.1.3"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }
