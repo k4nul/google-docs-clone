@@ -7,9 +7,11 @@ edition = "2024"
 anyhow = "1"
 abyssiniandb = "0.1.4"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
+base64 = "0.22.1"
 btree-store = "0.1.4"
 canopydb = "0.2.5"
 chrono = { version = "0.4", features = ["serde"] }
+ckydb = "0.0.5"
 dashmap = "6"
 dotenvy = "0.15"
 fjall = "3.1.4"

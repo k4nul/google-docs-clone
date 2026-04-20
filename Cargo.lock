@@ -263,9 +263,11 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-test",
+ "base64 0.22.1",
  "btree-store",
  "canopydb",
  "chrono",
+ "ckydb",
  "dashmap 6.1.0",
  "dotenvy",
  "fjall",
@@ -575,6 +577,12 @@ dependencies = [
  "wasm-bindgen",
  "windows-link",
 ]
+
+[[package]]
+name = "ckydb"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5eb115567d7acfaa3dfd7a24757a581fc775e1d3ced263390e5b6e7ab0d6cc"
 
 [[package]]
 name = "cmake"
