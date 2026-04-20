@@ -14,6 +14,7 @@ pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
 pub const DEFAULT_SNAPSHOT_SIMPLE_DB_PATH: &str = "./data/snapshots.simple_db";
 pub const DEFAULT_SNAPSHOT_DOCDB_PATH: &str = "./data/snapshots.docdb.json";
+pub const DEFAULT_SNAPSHOT_SHORTERDB_PATH: &str = "./data/snapshots.shorterdb";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_SNAPSHOT_HEED_PATH: &str = "./data/snapshots.heed";
 pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower_kv";
@@ -72,6 +73,7 @@ pub struct Config {
     pub snapshot_flash_kv_path: String,
     pub snapshot_simple_db_path: String,
     pub snapshot_docdb_path: String,
+    pub snapshot_shorterdb_path: String,
     pub snapshot_sqlite_path: String,
     pub snapshot_heed_path: String,
     pub snapshot_hightower_kv_path: String,
@@ -146,6 +148,8 @@ impl Config {
         let snapshot_simple_db_path =
             env_string("SNAPSHOT_SIMPLE_DB_PATH", DEFAULT_SNAPSHOT_SIMPLE_DB_PATH)?;
         let snapshot_docdb_path = env_string("SNAPSHOT_DOCDB_PATH", DEFAULT_SNAPSHOT_DOCDB_PATH)?;
+        let snapshot_shorterdb_path =
+            env_string("SNAPSHOT_SHORTERDB_PATH", DEFAULT_SNAPSHOT_SHORTERDB_PATH)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
         let snapshot_heed_path = env_string("SNAPSHOT_HEED_PATH", DEFAULT_SNAPSHOT_HEED_PATH)?;
@@ -264,6 +268,7 @@ impl Config {
             snapshot_flash_kv_path,
             snapshot_simple_db_path,
             snapshot_docdb_path,
+            snapshot_shorterdb_path,
             snapshot_sqlite_path,
             snapshot_heed_path,
             snapshot_hightower_kv_path,
