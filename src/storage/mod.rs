@@ -11,6 +11,7 @@ mod dbless_snapshot_store;
 mod dblite_snapshot_store;
 mod docdb_snapshot_store;
 mod eight_snapshot_store;
+mod epoch_db_snapshot_store;
 mod file_snapshot_store;
 mod fjall_snapshot_store;
 mod flash_kv_snapshot_store;
@@ -88,6 +89,7 @@ pub use dbless_snapshot_store::DblessSnapshotStore;
 pub use dblite_snapshot_store::DbliteSnapshotStore;
 pub use docdb_snapshot_store::DocDbSnapshotStore;
 pub use eight_snapshot_store::EightSnapshotStore;
+pub use epoch_db_snapshot_store::EpochDbSnapshotStore;
 pub use file_snapshot_store::FileSnapshotStore;
 pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use flash_kv_snapshot_store::FlashKvSnapshotStore;
@@ -284,6 +286,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "eight" => Ok(Arc::new(EightSnapshotStore::new(
             &config.snapshot_eight_path,
+        )?)),
+        "epoch_db" => Ok(Arc::new(EpochDbSnapshotStore::new(
+            &config.snapshot_epoch_db_path,
         )?)),
         "shorterdb" => Ok(Arc::new(ShorterDbSnapshotStore::new(
             &config.snapshot_shorterdb_path,

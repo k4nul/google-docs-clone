@@ -16,6 +16,7 @@ pub const DEFAULT_SNAPSHOT_HIGHLANDCOWS_ISAM_PATH: &str = "./data/snapshots.high
 pub const DEFAULT_SNAPSHOT_SIMPLE_DB_PATH: &str = "./data/snapshots.simple_db";
 pub const DEFAULT_SNAPSHOT_DOCDB_PATH: &str = "./data/snapshots.docdb.json";
 pub const DEFAULT_SNAPSHOT_EIGHT_PATH: &str = "./data/snapshots.eight";
+pub const DEFAULT_SNAPSHOT_EPOCH_DB_PATH: &str = "./data/snapshots.epoch_db";
 pub const DEFAULT_SNAPSHOT_SHORTERDB_PATH: &str = "./data/snapshots.shorterdb";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_SNAPSHOT_HEED_PATH: &str = "./data/snapshots.heed";
@@ -97,6 +98,7 @@ pub struct Config {
     pub snapshot_simple_db_path: String,
     pub snapshot_docdb_path: String,
     pub snapshot_eight_path: String,
+    pub snapshot_epoch_db_path: String,
     pub snapshot_shorterdb_path: String,
     pub snapshot_sqlite_path: String,
     pub snapshot_heed_path: String,
@@ -197,6 +199,8 @@ impl Config {
             env_string("SNAPSHOT_SIMPLE_DB_PATH", DEFAULT_SNAPSHOT_SIMPLE_DB_PATH)?;
         let snapshot_docdb_path = env_string("SNAPSHOT_DOCDB_PATH", DEFAULT_SNAPSHOT_DOCDB_PATH)?;
         let snapshot_eight_path = env_string("SNAPSHOT_EIGHT_PATH", DEFAULT_SNAPSHOT_EIGHT_PATH)?;
+        let snapshot_epoch_db_path =
+            env_string("SNAPSHOT_EPOCH_DB_PATH", DEFAULT_SNAPSHOT_EPOCH_DB_PATH)?;
         let snapshot_shorterdb_path =
             env_string("SNAPSHOT_SHORTERDB_PATH", DEFAULT_SNAPSHOT_SHORTERDB_PATH)?;
         let snapshot_sqlite_path =
@@ -355,6 +359,7 @@ impl Config {
             snapshot_simple_db_path,
             snapshot_docdb_path,
             snapshot_eight_path,
+            snapshot_epoch_db_path,
             snapshot_shorterdb_path,
             snapshot_sqlite_path,
             snapshot_heed_path,
