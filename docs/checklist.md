@@ -58,10 +58,13 @@
 - `tinybase`는 sled-backed typed table/secondary index 디렉터리 store라 `doc_id` query와 constant catalog index로 복구 경계를 단순화할 수 있지만, payload와 인덱스가 bincode binary라 운영자는 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다.
 - `caves`는 key-per-file directory store라 운영자가 개별 payload를 직접 점검하기 쉽지만, upstream caveat대로 write/delete 뒤 매번 sync를 보장하지 않으므로 crash-consistency는 directory-level backup/restore와 회귀 테스트 기반 검증으로 보완해야 한다.
 - 다음 작업 후보는 같은 제약(pure-Rust/no-bindgen/no-native-conflict)을 만족하는 additional durability backend를 한 건 더 재선정하는 것이다.
+- 방금 screening한 후보 중 `mhdb`는 docs 기준으로 key-value pair 크기가 506B를 넘을 수 없어 `PersistedSnapshot` + Yrs full-state payload를 담는 현재 snapshot 경계에는 맞지 않아 제외했다.
+- `rapiddb`는 `cargo info` 기준 라이선스가 AGPL-3.0이라 현재 저장소 dependency/license surface에 바로 섞지 않는 쪽으로 정리했다.
+- `buffdb`는 default feature가 `vendored-sqlite`이고 저장 엔진도 SQLite에 기대므로, 이번 backlog가 유지하는 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 보고 제외했다.
 - 방금 시도한 후보 중 `grebedb`는 기존 `s3` 경로가 끌어오는 `zstd-sys`와 links conflict로 차단됐고, `unqlite`는 local toolchain에 `libclang`이 없어 build script bindgen 단계에서 차단됐다.
 - `bitcasky`는 upstream `Bitcasky::open()` 초기화 경로가 directory lock 파일을 열 때 read/write/append 플래그 없이 `open()`을 호출해 `must specify at least one of read, write, or append access`로 실패하므로 이번 후보에서는 제외했다.
 - `sqjson`는 fixed page size가 4096 byte라 Yrs full-state payload를 page당 저장하는 현재 후보 조건에서는 4KB payload 한계가 너무 낮아 이번 후보에서는 제외했다.
-- 이번 `rumdb` landed 작업 자체의 잔여 차단은 없고, 위 네 가지는 다음 후보 재선정 시 다시 확인할 exclusion note로만 남아 있다.
+- 이번 `rumdb` landed 작업 자체의 잔여 차단은 없고, 위 일곱 가지는 다음 후보 재선정 시 다시 확인할 exclusion note로만 남아 있다.
 - sandboxed run에서는 commit/push/WebSocket 통합 테스트가 계속 차단될 수 있다. 현재 스크립트와 운영 규칙은 이 차단을 없애는 것이 아니라 조기에 탐지하고 unrestricted 실행으로 분리하는 용도다.
 
 ## WS / Yrs Follow-up Items
@@ -77,6 +80,8 @@
 - [x] config-driven `RoomCoordinator` selection과 logging dry-run mode 추가
 
 ## Execution Log
+
+- 2026-04-21: 미완료 다음 작업 1건으로 additional durability backend 재선정을 위한 후보 screening pass를 수행했다. 이번 run에서는 새 backend를 억지로 착지시키지 않고 현재 제약선(pure-Rust/no-bindgen/no-native-conflict, restart recovery 가능한 snapshot payload 수용성)에 맞는 후보만 남기도록 `mhdb`, `rapiddb`, `buffdb`를 검토해 배제 사유를 문서화했다. `mhdb`는 docs.rs limitation 기준 key-value pair가 506B를 넘을 수 없어 `PersistedSnapshot`과 Yrs full-state payload를 담는 현재 snapshot 경계에 맞지 않았고, `rapiddb`는 `cargo info` 기준 AGPL-3.0 라이선스라 현재 저장소 dependency/license surface에 바로 섞지 않기로 했으며, `buffdb`는 default feature가 `vendored-sqlite`라 pure-Rust/no-bindgen/no-native-conflict 기준선 밖으로 분류했다. 관련 변경은 `docs/checklist.md`에만 남겼다. 검증은 `cargo info mhdb`, `cargo info rapiddb`, `cargo info buffdb`, `git diff --check -- docs/checklist.md` 순서로 수행했다. 다음 작업 후보는 같은 제약을 유지하면서 restart recovery 회귀까지 통과할 additional durability backend 재선정이다. 현재 차단 사유는 기존 `feoxdb`의 reopen/recovery 불안정성, `anvil_db`의 nightly 전용 `#![feature(async_iterator)]` 요구, `grebedb`의 `zstd-sys` links conflict, `unqlite`의 bindgen/`libclang` 의존성, `bitcasky`의 upstream `open()` 플래그 버그, `sqjson`의 page당 4KB payload 한계, 그리고 방금 확정한 `mhdb`의 506B key-value 상한, `rapiddb`의 AGPL-3.0 라이선스, `buffdb`의 SQLite 의존성이다.
 
 - 2026-04-21: 미완료 다음 작업 1건으로 pure-Rust/no-bindgen/no-native-conflict 조건의 additional vendor-specific embedded durability backend를 수행해 `skv` snapshot store를 추가했다. `Cargo.toml`, `Cargo.lock`, `src/storage/skv_snapshot_store.rs`, `src/storage/mod.rs`, `src/config.rs`, `src/collab/coordinator.rs`, `src/collab/locator.rs`, `tests/health.rs`, `.env.example`, `README.md`, `docs/api.md`, `docs/setup.md`, `docs/architecture.md`, `docs/checklist.md`를 갱신했고 `SNAPSHOT_STORE=skv` / `SNAPSHOT_SKV_PATH` 설정, direct round-trip 회귀 테스트, `AppState::from_config` 재시작 복구 회귀 테스트를 추가했다. skv는 base path 아래 `.data` / `.index` 파일 쌍에 `doc_id -> persisted snapshot JSON` 엔트리와 explicit `__catalog__` key를 저장하고, reopen 시 두 파일이 함께 존재해야 restart recovery를 보장한다. 검증은 `cargo fmt`, `cargo fmt --check`, `cargo check`, `cargo test skv_snapshot_store_round_trips_document_catalog -- --exact`, `cargo test app_state_uses_skv_snapshot_store_from_config -- --exact`, `cargo test` 순서로 실행했고 모두 통과했다. 다음 작업 후보는 같은 제약을 만족하는 additional durability backend 재선정이다. 현재 알려진 차단 사유는 신규 후보 검토 시 다시 만날 수 있는 `feoxdb`의 reopen/recovery 불안정성, `anvil_db`의 nightly 전용 `#![feature(async_iterator)]` 요구, `grebedb`의 `zstd-sys` links conflict, `unqlite`의 bindgen/`libclang` 의존성, `bitcasky`의 upstream `open()` 플래그 버그, `sqjson`의 page당 4KB payload 한계다.
 
