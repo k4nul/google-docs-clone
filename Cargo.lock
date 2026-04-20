@@ -430,6 +430,7 @@ dependencies = [
  "hmdb",
  "jammdb",
  "jsondb",
+ "koit",
  "microkv",
  "native_db",
  "native_model",
@@ -2690,6 +2691,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
 dependencies = [
  "cpufeatures 0.2.17",
+]
+
+[[package]]
+name = "koit"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a12d102495b027b9f0034d7d7e4a94df5dfebce1c0e3255f199351ebe7faca4"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
