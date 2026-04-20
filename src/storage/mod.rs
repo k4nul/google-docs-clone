@@ -18,6 +18,7 @@ mod hightower_kv_snapshot_store;
 mod hmdb_snapshot_store;
 mod jammdb_snapshot_store;
 mod jfs_snapshot_store;
+mod json_store_snapshot_store;
 mod jsondb_snapshot_store;
 mod koit_snapshot_store;
 mod managed_snapshot_store;
@@ -88,6 +89,7 @@ pub use hightower_kv_snapshot_store::HightowerKvSnapshotStore;
 pub use hmdb_snapshot_store::HmdbSnapshotStore;
 pub use jammdb_snapshot_store::JammdbSnapshotStore;
 pub use jfs_snapshot_store::JfsSnapshotStore;
+pub use json_store_snapshot_store::JsonStoreSnapshotStore;
 pub use jsondb_snapshot_store::JsondbSnapshotStore;
 pub use koit_snapshot_store::KoitSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
@@ -293,6 +295,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             &config.snapshot_jammdb_path,
         )?)),
         "jfs" => Ok(Arc::new(JfsSnapshotStore::new(&config.snapshot_jfs_path)?)),
+        "json_store" => Ok(Arc::new(JsonStoreSnapshotStore::new(
+            &config.snapshot_json_store_path,
+        )?)),
         "jsondb" => Ok(Arc::new(JsondbSnapshotStore::new(
             &config.snapshot_jsondb_path,
         )?)),
@@ -448,7 +453,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `jammdb`, `jfs`, `jsondb`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `jammdb`, `jfs`, `json_store`, `jsondb`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
