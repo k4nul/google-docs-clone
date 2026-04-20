@@ -16,6 +16,7 @@ canopydb = "0.2.5"
 caves = "0.2.1"
 chrono = { version = "0.4", features = ["serde"] }
 ckydb = "0.0.5"
+cuendillar = "0.1.0"
 dashmap = "6"
 db-rs = "0.3.6"
 db-rs-derive = "0.3.6"

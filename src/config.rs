@@ -25,6 +25,7 @@ pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower
 pub const DEFAULT_SNAPSHOT_HMDB_PATH: &str = "./data/snapshots.hmdb";
 pub const DEFAULT_SNAPSHOT_BITASK_PATH: &str = "./data/snapshots.bitask";
 pub const DEFAULT_SNAPSHOT_CANDYSTORE_PATH: &str = "./data/snapshots.candystore";
+pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_JFS_PATH: &str = "./data/snapshots.jfs.json";
 pub const DEFAULT_SNAPSHOT_JSON_STORE_PATH: &str = "./data/snapshots.json_store.jsonl";
@@ -109,6 +110,7 @@ pub struct Config {
     pub snapshot_hmdb_path: String,
     pub snapshot_bitask_path: String,
     pub snapshot_candystore_path: String,
+    pub snapshot_cuendillar_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_jfs_path: String,
     pub snapshot_json_store_path: String,
@@ -220,6 +222,8 @@ impl Config {
             env_string("SNAPSHOT_BITASK_PATH", DEFAULT_SNAPSHOT_BITASK_PATH)?;
         let snapshot_candystore_path =
             env_string("SNAPSHOT_CANDYSTORE_PATH", DEFAULT_SNAPSHOT_CANDYSTORE_PATH)?;
+        let snapshot_cuendillar_path =
+            env_string("SNAPSHOT_CUENDILLAR_PATH", DEFAULT_SNAPSHOT_CUENDILLAR_PATH)?;
         let snapshot_jammdb_path =
             env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_jfs_path = env_string("SNAPSHOT_JFS_PATH", DEFAULT_SNAPSHOT_JFS_PATH)?;
@@ -374,6 +378,7 @@ impl Config {
             snapshot_hmdb_path,
             snapshot_bitask_path,
             snapshot_candystore_path,
+            snapshot_cuendillar_path,
             snapshot_jammdb_path,
             snapshot_jfs_path,
             snapshot_json_store_path,

@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
+- `SnapshotStore` trait 및 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
 - `RoomLocator` 경계와 config-driven `local`/`static`/`file`/`sqlite`/`managed` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file`/`sqlite`/`managed` session lifecycle hook
 
@@ -99,7 +99,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `kv`, `koit`, `jfs`, `json_store`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `kv`, `koit`, `jfs`, `json_store`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `SNAPSHOT_FLASH_KV_PATH`: `SNAPSHOT_STORE=flash_kv`일 때 snapshot flash-kv 디렉터리 경로
 - `SNAPSHOT_HIGHLANDCOWS_ISAM_PATH`: `SNAPSHOT_STORE=highlandcows_isam`일 때 snapshot highlandcows-isam path prefix. 실제 저장 파일은 `<path>.idb`, `<path>.idx`
@@ -115,6 +115,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_HMDB_PATH`: `SNAPSHOT_STORE=hmdb`일 때 snapshot hmdb append-only 로그 디렉터리 경로
 - `SNAPSHOT_BITASK_PATH`: `SNAPSHOT_STORE=bitask`일 때 snapshot bitask append-only log 디렉터리 경로
 - `SNAPSHOT_CANDYSTORE_PATH`: `SNAPSHOT_STORE=candystore`일 때 snapshot candystore 디렉터리 경로
+- `SNAPSHOT_CUENDILLAR_PATH`: `SNAPSHOT_STORE=cuendillar`일 때 snapshot cuendillar 루트 디렉터리 경로. 내부에 `wal/`, `sstable/` 디렉터리가 함께 생성된다
 - `SNAPSHOT_JAMMDB_PATH`: `SNAPSHOT_STORE=jammdb`일 때 snapshot jammdb 파일 경로
 - `SNAPSHOT_FJALL_PATH`: `SNAPSHOT_STORE=fjall`일 때 snapshot fjall DB 디렉터리 경로
 - `SNAPSHOT_PERSY_PATH`: `SNAPSHOT_STORE=persy`일 때 snapshot persy 파일 경로
@@ -194,7 +195,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
-- 기본 in-memory snapshot store와 로컬 file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/tinybase/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store, S3-compatible object storage, external managed snapshot store 지원
+- 기본 in-memory snapshot store와 로컬 file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/tinybase/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/yakv/saberdb/jsondb/kv/koit/jfs/json_store, S3-compatible object storage, external managed snapshot store 지원
 - config-driven room locator local/static/file/sqlite/managed 모드와 room coordinator dry-run logging/file/sqlite/managed state 모드 지원
 
 ## 비범위
@@ -215,7 +216,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 | --- | --- | --- |
 | 실제 multi-node owner handoff까지 같은 저장소에서 끝내기 | `sqlite` 또는 `managed` | embedded backend는 snapshot durability만 제공한다. authoritative lease CAS까지 묶으려면 `ROOM_LOCATOR`/`ROOM_COORDINATOR`와 같은 coordination plane을 함께 제공하는 `sqlite` 또는 `managed`가 필요하다. |
 | 단일 노드 재시작 복구를 가장 단순하게 운영하기 | `file`, `jammdb`, `persy`, `native_db`, `nikidb`, `nodb`, `redb`, `rskey`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `surrealkv`, `thunderdb`, `dblite`, `dbless`, `sanakirja`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `simple_db`, `docdb`, `rumdb` | 단일 path 또는 단일 directory 기준 백업/복사 절차를 잡기 쉽다. 운영자가 파일 또는 로그 디렉터리 단위 스냅샷, 교체, 롤백을 직접 다루기 편하다. |
-| 디렉터리 단위 엔진과 내부 keyspace/map 구조를 유지하기 | `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `highlandcows_isam`, `epoch_db`, `rumdb`, `fjall`, `parity_db`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`, `shorterdb`, `tinybase`, `db_rs` | 엔진이 디렉터리 아래 여러 파일과 내부 카탈로그를 관리하거나 index/log/data 파일을 분리한다. 파일 하나만 교체하는 운영보다 디렉터리 전체 백업/restore 절차가 자연스럽다. |
+| 디렉터리 단위 엔진과 내부 keyspace/map 구조를 유지하기 | `heed`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `cuendillar`, `highlandcows_isam`, `epoch_db`, `rumdb`, `fjall`, `parity_db`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`, `shorterdb`, `tinybase`, `db_rs` | 엔진이 디렉터리 아래 여러 파일과 내부 카탈로그를 관리하거나 index/log/data 파일을 분리한다. `cuendillar`도 `wal/`, `sstable/` 하위 디렉터리를 함께 관리하므로 파일 하나만 교체하는 운영보다 디렉터리 전체 백업/restore 절차가 자연스럽다. |
 | 사람이 직접 payload를 확인하거나 임시 복구하기 쉽게 유지하기 | `file`, `pickledb`, `microkv`, `rskey`, `docdb`, `json_store` | 구현이 JSON 또는 단순 key-value 파일 경계에 가깝다. 반면 엔진 주도 포맷보다 대용량 catalog scan과 payload 손상 대응은 더 보수적으로 봐야 한다. |
 | catalog 한 파일 손상이 전체 startup 복구 실패로 바로 번지는 경로를 피하기 | `hightower_kv`, `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `skv`, `surrealkv`, `thunderdb`, `sanakirja`, `snaildb`, `shorterdb` | 현재 구현 기준으로 corrupt entry는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛴다. `hmdb`, `rustbreak`, `tinykv`, `yakv`, `saberdb`, `docdb`는 startup 시 로그/파일 전체 역직렬화에 더 의존하므로 운영 기본값으로 둘 때 별도 주의가 필요하다. |
 | pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 그대로 유지하기 | `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `kv`, `eight`, `epoch_db`, `rumdb`, `koit`, `jfs`, `json_store`, `simple_db`, `docdb`, `shorterdb`, `highlandcows_isam`, `nikidb`, `nodb`, `persistent_kv`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `rskey`, `hightower_kv`, `hmdb`, `bitask`, `candystore`, `nebari` | 최근 추가 backend가 이 제약을 실제 landed change로 통과했다. 같은 조건의 추가 후보를 검토할 때도 이 기준선을 먼저 보고, native `links` 충돌이나 bindgen 의존성이 생기면 제외한다. |
