@@ -481,6 +481,7 @@ dependencies = [
  "readb",
  "redb 2.6.3",
  "rskey",
+ "rumdb",
  "rusqlite",
  "rustbreak",
  "rustcask",
@@ -4680,6 +4681,17 @@ dependencies = [
  "heapless 0.8.0",
  "num-traits",
  "smallvec 1.15.1",
+]
+
+[[package]]
+name = "rumdb"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5983943473c01eba8d418d5bade26e4c3dcd30b72e249d118aba2542887b91d2"
+dependencies = [
+ "chrono",
+ "log",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

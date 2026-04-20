@@ -50,6 +50,7 @@ pickledb = "0.5.1"
 microkv = "0.2.9"
 redb = "2"
 readb = { version = "0.4.1", features = ["write"] }
+rumdb = "0.3.0"
 rskey = "0.4.0"
 rustlite = "0.8.0"
 rusqlite = { version = "0.37", features = ["bundled"] }
