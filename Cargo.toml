@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
+aeternusdb = "1.0.1"
 abyssiniandb = "0.1.4"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"

@@ -1,4 +1,5 @@
 mod abyssiniandb_snapshot_store;
+mod aeternusdb_snapshot_store;
 mod btree_store_snapshot_store;
 mod canopydb_snapshot_store;
 mod ckydb_snapshot_store;
@@ -42,6 +43,7 @@ use uuid::Uuid;
 use crate::{config::Config, models::document::Document};
 
 pub use abyssiniandb_snapshot_store::AbyssiniandbSnapshotStore;
+pub use aeternusdb_snapshot_store::AeternusdbSnapshotStore;
 pub use btree_store_snapshot_store::BtreeStoreSnapshotStore;
 pub use canopydb_snapshot_store::CanopydbSnapshotStore;
 pub use ckydb_snapshot_store::CkydbSnapshotStore;
@@ -271,6 +273,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "abyssiniandb" => Ok(Arc::new(AbyssiniandbSnapshotStore::new(
             &config.snapshot_abyssiniandb_path,
         )?)),
+        "aeternusdb" => Ok(Arc::new(AeternusdbSnapshotStore::new(
+            &config.snapshot_aeternusdb_path,
+        )?)),
         "thunderdb" => Ok(Arc::new(ThunderdbSnapshotStore::new(
             &config.snapshot_thunderdb_path,
         )?)),
@@ -315,7 +320,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
