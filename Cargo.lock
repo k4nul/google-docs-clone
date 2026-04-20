@@ -449,6 +449,7 @@ dependencies = [
  "hightower-kv",
  "hmdb",
  "jammdb",
+ "jfs",
  "jsondb",
  "koit",
  "microkv",
@@ -2621,6 +2622,20 @@ dependencies = [
  "memmap2",
  "page_size 0.6.0",
  "sha3",
+]
+
+[[package]]
+name = "jfs"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f428b1cf5248265f8358cf96c602323ce4bea140827eaefd8901e3106fec5e44"
+dependencies = [
+ "fs2",
+ "log",
+ "parking_lot 0.12.5",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]
