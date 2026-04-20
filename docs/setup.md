@@ -95,6 +95,27 @@ cargo run
 | 운영자가 payload를 직접 열어보며 수동 복구해야 하나 | `file`, `pickledb`, `microkv`가 가장 단순하다. 대신 binary engine보다 payload 크기와 catalog scan 비용을 더 보수적으로 본다. |
 | pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `btree_store`, `siamesedb`, `structsy`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
 
+backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기준으로 본다.
+
+| Backend | 저장 단위 | 운영자 payload 가시성 | 손상/복구 주의점 | 제약 메모 |
+| --- | --- | --- | --- | --- |
+| `file` | 문서별 JSON 파일 | 가장 높음 | 파일 하나 손상 시 해당 문서만 직접 격리 가능 | baseline filesystem store |
+| `heed` | 디렉터리 + LMDB data file | 낮음 | 엔진 파일 단위 백업이 필요하고 수동 entry 복구는 어렵다 | mmap 기반, pure-Rust baseline에는 포함하지 않음 |
+| `jammdb` | 단일 파일 | 낮음 | bucket 내부 key는 분리되지만 payload는 binary라 수동 복구가 어렵다 | single-file backup에 유리 |
+| `fjall` | 디렉터리 keyspace | 낮음 | LSM directory 전체를 함께 백업해야 한다 | directory-backed engine |
+| `persy` | 단일 파일 + index | 낮음 | entry 단위 skip은 가능하지만 index 일관성 검증이 필요하다 | single-file engine |
+| `native_db` | 단일 파일 | 낮음 | primary-key catalog라 payload 직접 점검은 어렵다 | single-file engine |
+| `parity_db` | 디렉터리 column store | 낮음 | ordered column 전체를 묶어 관리해야 한다 | directory-backed engine |
+| `pickledb` | 단일 JSON 유사 DB 파일 | 높음 | 사람이 읽기 쉽지만 대용량 catalog에서는 scan 비용을 더 보수적으로 본다 | text-oriented store |
+| `microkv` | 단일 `.kv` 파일 | 중간 | key-value 구조는 단순하지만 payload는 binary 직렬화라 완전 수동 복구엔 한계가 있다 | simple local KV |
+| `redb` | 단일 파일 | 낮음 | tree 내부 payload는 직접 읽기 어렵지만 entry skip 전략과 잘 맞는다 | single-file engine |
+| `sled` | 디렉터리 DB | 낮음 | 엔진 디렉터리 전체 백업과 restore가 기본 절차다 | directory-backed engine |
+| `rustbreak` | 단일 파일 catalog | 중간 | catalog 전체 역직렬화 실패가 startup 실패로 이어질 수 있어 사전 백업 검증이 중요하다 | single-file but whole-file risk |
+| `yedb` | 디렉터리 + per-key files | 중간 | key 파일이 나뉘어 있어 수동 탐색은 가능하지만 directory 전체 일관성을 같이 봐야 한다 | directory-backed text-friendly KV |
+| `btree_store` | 단일 파일 | 낮음 | btree bucket은 binary지만 entry 단위 skip 전략과 잘 맞는다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `siamesedb` | 디렉터리 map store | 낮음 | map key는 분리되지만 engine iterator 특성 때문에 catalog key 보조 관리가 필요하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `structsy` | 단일 파일 record store | 중간 | record scan은 단순하지만 payload는 struct record라 임의 수정 대신 export/import 절차가 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+
 - `btree_store`는 single-file embedded durability 기준선이다.
 - `siamesedb`는 directory-backed embedded durability 기준선이다.
 - `structsy`는 single-file embedded durability 기준선이다.
