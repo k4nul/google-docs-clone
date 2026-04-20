@@ -1822,6 +1822,7 @@ mod tests {
             snapshot_caves_path: "./data/test-snapshots.caves".to_owned(),
             snapshot_ckydb_path: "./data/test-snapshots.ckydb".to_owned(),
             snapshot_scdb_path: "./data/test-snapshots.scdb".to_owned(),
+            snapshot_skv_path: "./data/test-snapshots.skv".to_owned(),
             snapshot_surrealkv_path: "./data/test-snapshots.surrealkv".to_owned(),
             snapshot_pickledb_path: "./data/test-snapshots.pickledb".to_owned(),
             snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),

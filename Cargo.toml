@@ -62,6 +62,7 @@ saberdb = "1.1.0"
 scdb = "0.2.1"
 s3 = { version = "0.1.27", default-features = false, features = ["blocking", "rustls"] }
 sanakirja = "2.0.0-beta"
+skv = "0.1.2"
 siamesedb = "0.1.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

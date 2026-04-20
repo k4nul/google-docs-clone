@@ -496,6 +496,7 @@ dependencies = [
  "shorterDB",
  "siamesedb",
  "simple_db",
+ "skv",
  "sled",
  "snaildb",
  "structsy",
@@ -5410,6 +5411,17 @@ name = "sketches-ddsketch"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c6f73aeb92d671e0cc4dca167e59b2deb6387c375391bc99ee743f326994a2b"
+
+[[package]]
+name = "skv"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63950123750b5f949dd14bd33932f04456addec37d62cf9b0ceef86ee75beb8b"
+dependencies = [
+ "anyhow",
+ "bincode 1.3.3",
+ "serde",
+]
 
 [[package]]
 name = "slab"
