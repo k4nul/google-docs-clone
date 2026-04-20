@@ -1,3 +1,4 @@
+mod abyssiniandb_snapshot_store;
 mod btree_store_snapshot_store;
 mod file_snapshot_store;
 mod fjall_snapshot_store;
@@ -33,6 +34,7 @@ use uuid::Uuid;
 
 use crate::{config::Config, models::document::Document};
 
+pub use abyssiniandb_snapshot_store::AbyssiniandbSnapshotStore;
 pub use btree_store_snapshot_store::BtreeStoreSnapshotStore;
 pub use file_snapshot_store::FileSnapshotStore;
 pub use fjall_snapshot_store::FjallSnapshotStore;
@@ -234,6 +236,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "structsy" => Ok(Arc::new(StructsySnapshotStore::new(
             &config.snapshot_structsy_path,
         )?)),
+        "abyssiniandb" => Ok(Arc::new(AbyssiniandbSnapshotStore::new(
+            &config.snapshot_abyssiniandb_path,
+        )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {
                 StorageError::Config(
@@ -275,7 +280,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

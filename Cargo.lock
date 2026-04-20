@@ -3,6 +3,17 @@
 version = 4
 
 [[package]]
+name = "abyssiniandb"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "408b08fd869c3aee03971d51914b2c76af834fcac316f458f7befab93aac54f5"
+dependencies = [
+ "itertools",
+ "rabuf",
+ "vu64",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -237,6 +248,7 @@ dependencies = [
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "abyssiniandb",
  "anyhow",
  "axum",
  "axum-test",
@@ -818,6 +830,12 @@ checksum = "91cff35c70bba8a626e3185d8cd48cc11b5437e1a5bcd15b9b5fa3c64b6dfee7"
 dependencies = [
  "signature",
 ]
+
+[[package]]
+name = "either"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "email_address"
@@ -1636,6 +1654,15 @@ checksum = "25e659a4bb38e810ebc252e53b5814ff908a8c58c2a9ce2fae1bbec24cbf4e20"
 dependencies = [
  "memchr",
  "serde",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
 ]
 
 [[package]]

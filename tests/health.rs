@@ -18,12 +18,12 @@ use backend::{
     errors::AppError,
     state::AppState,
     storage::{
-        BtreeStoreSnapshotStore, DocumentSnapshot, FileSnapshotStore, FjallSnapshotStore,
-        HeedSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, ManagedSnapshotStore,
-        MicroKvSnapshotStore, NativeDbSnapshotStore, ParityDbSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, RedbSnapshotStore, RustbreakSnapshotStore, S3SnapshotStore,
-        SiamesedbSnapshotStore, SledSnapshotStore, SnapshotStore, SqliteSnapshotStore,
-        StructsySnapshotStore, YedbSnapshotStore,
+        AbyssiniandbSnapshotStore, BtreeStoreSnapshotStore, DocumentSnapshot, FileSnapshotStore,
+        FjallSnapshotStore, HeedSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore,
+        ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore, ParityDbSnapshotStore,
+        PersySnapshotStore, PickleDbSnapshotStore, RedbSnapshotStore, RustbreakSnapshotStore,
+        S3SnapshotStore, SiamesedbSnapshotStore, SledSnapshotStore, SnapshotStore,
+        SqliteSnapshotStore, StructsySnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -68,6 +68,7 @@ fn test_config() -> Config {
         snapshot_btree_store_path: "./data/test-snapshots.btree_store".to_owned(),
         snapshot_siamesedb_path: "./data/test-snapshots.siamesedb".to_owned(),
         snapshot_structsy_path: "./data/test-snapshots.structsy".to_owned(),
+        snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
         snapshot_s3_endpoint: None,
         snapshot_s3_region: "us-east-1".to_owned(),
         snapshot_s3_bucket: None,
@@ -245,6 +246,14 @@ fn configure_structsy_snapshot_store(config: &mut Config, root: &std::path::Path
     config.snapshot_store = "structsy".to_owned();
     config.snapshot_structsy_path = root
         .join("snapshots.structsy")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_abyssiniandb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "abyssiniandb".to_owned();
+    config.snapshot_abyssiniandb_path = root
+        .join("snapshots.abyssiniandb")
         .to_string_lossy()
         .into_owned();
 }
@@ -3486,6 +3495,53 @@ fn app_state_uses_structsy_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_abyssiniandb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("abyssiniandb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.abyssiniandb");
+    configure_abyssiniandb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with abyssiniandb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to abyssiniandb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to abyssiniandb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state = AppState::from_config(&config)
+        .expect("state should reload persisted abyssiniandb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_native_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("native-db-store-config");
@@ -4562,6 +4618,38 @@ fn structsy_snapshot_store_round_trips_document_catalog() {
     let loaded_snapshot = store
         .load_snapshot(&document.id)
         .expect("snapshot should load from structsy")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn abyssiniandb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("abyssiniandb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.abyssiniandb");
+    let store = AbyssiniandbSnapshotStore::new(&snapshot_path)
+        .expect("abyssiniandb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Abyssiniandb".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to abyssiniandb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from abyssiniandb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from abyssiniandb")
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);
