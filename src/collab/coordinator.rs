@@ -1798,6 +1798,7 @@ mod tests {
             snapshot_yedb_path: "./data/test-snapshots.yedb".to_owned(),
             snapshot_btree_store_path: "./data/test-snapshots.btree_store".to_owned(),
             snapshot_siamesedb_path: "./data/test-snapshots.siamesedb".to_owned(),
+            snapshot_structsy_path: "./data/test-snapshots.structsy".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,
