@@ -26,6 +26,7 @@ pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_JFS_PATH: &str = "./data/snapshots.jfs.json";
 pub const DEFAULT_SNAPSHOT_JSON_STORE_PATH: &str = "./data/snapshots.json_store.jsonl";
 pub const DEFAULT_SNAPSHOT_JSONDB_PATH: &str = "./data/snapshots.jsondb.json";
+pub const DEFAULT_SNAPSHOT_KV_PATH: &str = "./data/snapshots.kv";
 pub const DEFAULT_SNAPSHOT_KOIT_PATH: &str = "./data/snapshots.koit.json";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
@@ -103,6 +104,7 @@ pub struct Config {
     pub snapshot_jfs_path: String,
     pub snapshot_json_store_path: String,
     pub snapshot_jsondb_path: String,
+    pub snapshot_kv_path: String,
     pub snapshot_koit_path: String,
     pub snapshot_fjall_path: String,
     pub snapshot_persy_path: String,
@@ -209,6 +211,7 @@ impl Config {
             env_string("SNAPSHOT_JSON_STORE_PATH", DEFAULT_SNAPSHOT_JSON_STORE_PATH)?;
         let snapshot_jsondb_path =
             env_string("SNAPSHOT_JSONDB_PATH", DEFAULT_SNAPSHOT_JSONDB_PATH)?;
+        let snapshot_kv_path = env_string("SNAPSHOT_KV_PATH", DEFAULT_SNAPSHOT_KV_PATH)?;
         let snapshot_koit_path = env_string("SNAPSHOT_KOIT_PATH", DEFAULT_SNAPSHOT_KOIT_PATH)?;
         let snapshot_fjall_path = env_string("SNAPSHOT_FJALL_PATH", DEFAULT_SNAPSHOT_FJALL_PATH)?;
         let snapshot_persy_path = env_string("SNAPSHOT_PERSY_PATH", DEFAULT_SNAPSHOT_PERSY_PATH)?;
@@ -351,6 +354,7 @@ impl Config {
             snapshot_jfs_path,
             snapshot_json_store_path,
             snapshot_jsondb_path,
+            snapshot_kv_path,
             snapshot_koit_path,
             snapshot_fjall_path,
             snapshot_persy_path,

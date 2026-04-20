@@ -1798,6 +1798,7 @@ mod tests {
             snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
             snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
             snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
+            snapshot_kv_path: "./data/test-snapshots.kv".to_owned(),
             snapshot_koit_path: "./data/test-snapshots.koit.json".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
