@@ -16,7 +16,7 @@ cargo run
 기본 바인드 주소는 `127.0.0.1:4000`입니다.
 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`이므로 로컬 프런트엔드 개발 서버를 별도 포트에서 띄우는 흐름을 바로 재현할 수 있습니다.
 기본 `API_TOKEN`은 `dev-admin-token`이며, 개발 환경에서는 이 토큰으로 문서 생성/목록 API를 호출합니다.
-기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`, `SNAPSHOT_STORE=sqlite`와 `SNAPSHOT_SQLITE_PATH`, `SNAPSHOT_STORE=heed`와 `SNAPSHOT_HEED_PATH`, `SNAPSHOT_STORE=hightower_kv`와 `SNAPSHOT_HIGHTOWER_KV_PATH`, `SNAPSHOT_STORE=jammdb`와 `SNAPSHOT_JAMMDB_PATH`, `SNAPSHOT_STORE=fjall`와 `SNAPSHOT_FJALL_PATH`, `SNAPSHOT_STORE=persy`와 `SNAPSHOT_PERSY_PATH`, `SNAPSHOT_STORE=native_db`와 `SNAPSHOT_NATIVE_DB_PATH`, `SNAPSHOT_STORE=parity_db`와 `SNAPSHOT_PARITY_DB_PATH`, `SNAPSHOT_STORE=pickledb`와 `SNAPSHOT_PICKLEDB_PATH`, `SNAPSHOT_STORE=microkv`와 `SNAPSHOT_MICROKV_PATH`, `SNAPSHOT_STORE=redb`와 `SNAPSHOT_REDB_PATH`, `SNAPSHOT_STORE=rskey`와 `SNAPSHOT_RSKEY_PATH`, `SNAPSHOT_STORE=readb`와 `SNAPSHOT_READB_PATH`, `SNAPSHOT_STORE=rustlite`와 `SNAPSHOT_RUSTLITE_PATH`, `SNAPSHOT_STORE=canopydb`와 `SNAPSHOT_CANOPYDB_PATH`, `SNAPSHOT_STORE=ckydb`와 `SNAPSHOT_CKYDB_PATH`, `SNAPSHOT_STORE=scdb`와 `SNAPSHOT_SCDB_PATH`, `SNAPSHOT_STORE=surrealkv`와 `SNAPSHOT_SURREALKV_PATH`, `SNAPSHOT_STORE=sled`와 `SNAPSHOT_SLED_PATH`, `SNAPSHOT_STORE=rustbreak`와 `SNAPSHOT_RUSTBREAK_PATH`, `SNAPSHOT_STORE=yedb`와 `SNAPSHOT_YEDB_PATH`, `SNAPSHOT_STORE=btree_store`와 `SNAPSHOT_BTREE_STORE_PATH`, `SNAPSHOT_STORE=siamesedb`와 `SNAPSHOT_SIAMESDB_PATH`, `SNAPSHOT_STORE=structsy`와 `SNAPSHOT_STRUCTSY_PATH`, `SNAPSHOT_STORE=abyssiniandb`와 `SNAPSHOT_ABYSSINIANDB_PATH`, `SNAPSHOT_STORE=aeternusdb`와 `SNAPSHOT_AETERNUSDB_PATH`, `SNAPSHOT_STORE=thunderdb`와 `SNAPSHOT_THUNDERDB_PATH`, `SNAPSHOT_STORE=sanakirja`와 `SNAPSHOT_SANAKIRJA_PATH`, `SNAPSHOT_STORE=snaildb`와 `SNAPSHOT_SNAILDB_PATH`, `SNAPSHOT_STORE=tinykv`와 `SNAPSHOT_TINYKV_PATH`, `SNAPSHOT_STORE=s3`와 `SNAPSHOT_S3_*`, 또는 `SNAPSHOT_STORE=managed`와 `SNAPSHOT_MANAGED_BASE_URL`을 함께 설정합니다.
+기본 `SNAPSHOT_STORE`는 `memory`이며, 프로세스 재시작 뒤에도 문서 snapshot을 유지하려면 `SNAPSHOT_STORE=file`과 `SNAPSHOT_DIR`, `SNAPSHOT_STORE=flash_kv`와 `SNAPSHOT_FLASH_KV_PATH`, `SNAPSHOT_STORE=sqlite`와 `SNAPSHOT_SQLITE_PATH`, `SNAPSHOT_STORE=heed`와 `SNAPSHOT_HEED_PATH`, `SNAPSHOT_STORE=hightower_kv`와 `SNAPSHOT_HIGHTOWER_KV_PATH`, `SNAPSHOT_STORE=jammdb`와 `SNAPSHOT_JAMMDB_PATH`, `SNAPSHOT_STORE=fjall`와 `SNAPSHOT_FJALL_PATH`, `SNAPSHOT_STORE=persy`와 `SNAPSHOT_PERSY_PATH`, `SNAPSHOT_STORE=native_db`와 `SNAPSHOT_NATIVE_DB_PATH`, `SNAPSHOT_STORE=parity_db`와 `SNAPSHOT_PARITY_DB_PATH`, `SNAPSHOT_STORE=pickledb`와 `SNAPSHOT_PICKLEDB_PATH`, `SNAPSHOT_STORE=microkv`와 `SNAPSHOT_MICROKV_PATH`, `SNAPSHOT_STORE=redb`와 `SNAPSHOT_REDB_PATH`, `SNAPSHOT_STORE=rskey`와 `SNAPSHOT_RSKEY_PATH`, `SNAPSHOT_STORE=readb`와 `SNAPSHOT_READB_PATH`, `SNAPSHOT_STORE=rustlite`와 `SNAPSHOT_RUSTLITE_PATH`, `SNAPSHOT_STORE=canopydb`와 `SNAPSHOT_CANOPYDB_PATH`, `SNAPSHOT_STORE=ckydb`와 `SNAPSHOT_CKYDB_PATH`, `SNAPSHOT_STORE=scdb`와 `SNAPSHOT_SCDB_PATH`, `SNAPSHOT_STORE=surrealkv`와 `SNAPSHOT_SURREALKV_PATH`, `SNAPSHOT_STORE=sled`와 `SNAPSHOT_SLED_PATH`, `SNAPSHOT_STORE=rustbreak`와 `SNAPSHOT_RUSTBREAK_PATH`, `SNAPSHOT_STORE=yedb`와 `SNAPSHOT_YEDB_PATH`, `SNAPSHOT_STORE=btree_store`와 `SNAPSHOT_BTREE_STORE_PATH`, `SNAPSHOT_STORE=siamesedb`와 `SNAPSHOT_SIAMESDB_PATH`, `SNAPSHOT_STORE=structsy`와 `SNAPSHOT_STRUCTSY_PATH`, `SNAPSHOT_STORE=abyssiniandb`와 `SNAPSHOT_ABYSSINIANDB_PATH`, `SNAPSHOT_STORE=aeternusdb`와 `SNAPSHOT_AETERNUSDB_PATH`, `SNAPSHOT_STORE=thunderdb`와 `SNAPSHOT_THUNDERDB_PATH`, `SNAPSHOT_STORE=sanakirja`와 `SNAPSHOT_SANAKIRJA_PATH`, `SNAPSHOT_STORE=snaildb`와 `SNAPSHOT_SNAILDB_PATH`, `SNAPSHOT_STORE=tinykv`와 `SNAPSHOT_TINYKV_PATH`, `SNAPSHOT_STORE=s3`와 `SNAPSHOT_S3_*`, 또는 `SNAPSHOT_STORE=managed`와 `SNAPSHOT_MANAGED_BASE_URL`을 함께 설정합니다.
 기본 `ROOM_LOCATOR`는 `local`이며, `static`으로 바꾸면 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 설정해 문서별 owner 힌트를 읽습니다. `file`로 바꾸면 `ROOM_COORDINATOR_STATE_DIR` 아래의 active room state JSON을 읽고, `sqlite`로 바꾸면 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블을 읽어 현재 노드 비소유 문서를 거절합니다. `managed`로 바꾸면 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service `GET /v1/leases/:doc_id`를 읽어 현재 노드 비소유 문서를 거절합니다.
 기본 `ROOM_COORDINATOR`는 `noop`이며, `logging`으로 바꾸면 room 활성/비활성 lifecycle을 `NODE_ID` 기준 tracing log로만 남깁니다. `file`로 바꾸면 `ROOM_COORDINATOR_STATE_DIR` 아래에 active room lease JSON을 남기고, `sqlite`로 바꾸면 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블에 lease row를 남긴 뒤 `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS` / `ROOM_COORDINATOR_LEASE_TTL_SECS`에 맞춰 heartbeat를 갱신합니다. `managed`로 바꾸면 같은 heartbeat/TTL 정책을 유지한 채 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service `POST /v1/leases/:doc_id/acquire|renew|release`를 호출합니다.
 
@@ -39,8 +39,9 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
+- `SNAPSHOT_FLASH_KV_PATH`: flash-kv snapshot store 디렉터리 경로
 - `SNAPSHOT_SQLITE_PATH`: sqlite snapshot store DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: heed snapshot store DB 디렉터리 경로
 - `SNAPSHOT_HIGHTOWER_KV_PATH`: hightower-kv snapshot store 데이터 디렉터리 경로
@@ -105,9 +106,9 @@ cargo run
 | --- | --- |
 | 실제 multi-node owner handoff가 필요한가 | `SNAPSHOT_STORE=sqlite`를 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`와 함께 쓰거나, `SNAPSHOT_STORE=managed`를 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`와 함께 쓴다. embedded backend는 snapshot durability만 제공한다. |
 | 단일 노드 재시작 복구만 필요하고 파일 단위 백업/교체가 중요하나 | `file`, `jammdb`, `persy`, `native_db`, `redb`, `rskey`, `rustbreak`, `btree_store`, `structsy`, `abyssiniandb`, `surrealkv`, `thunderdb`, `sanakirja`, `tinykv` 중 단일 path 기반 store를 우선 검토한다. |
-| 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `heed`, `hightower_kv`, `fjall`, `parity_db`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`처럼 디렉터리 기반 store를 쓴다. |
+| 디렉터리 단위 엔진 백업/restore 절차가 더 자연스러운가 | `flash_kv`, `heed`, `hightower_kv`, `fjall`, `parity_db`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `sled`, `yedb`, `siamesedb`, `snaildb`처럼 디렉터리 기반 store를 쓴다. |
 | 운영자가 payload를 직접 열어보며 수동 복구해야 하나 | `file`, `pickledb`, `microkv`가 가장 단순하다. 대신 binary engine보다 payload 크기와 catalog scan 비용을 더 보수적으로 본다. |
-| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `rskey`, `hightower_kv`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
+| pure-Rust/no-bindgen/no-native-conflict 제약을 현재 빌드 그래프에서 유지해야 하나 | 현재 landed baseline은 `flash_kv`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `rskey`, `hightower_kv`다. 추가 후보를 검토할 때도 native `links` 충돌과 bindgen 필요 여부를 먼저 배제한다. |
 
 backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기준으로 본다.
 
@@ -141,6 +142,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `aeternusdb` | 디렉터리 + WAL/SSTable LSM engine | 낮음 | `__catalog__` key와 엔진 디렉터리를 함께 백업해야 하고 payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `thunderdb` | 단일 파일 transactional KV | 낮음 | bucket iter scan은 단순하지만 payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `sanakirja` | 단일 파일 copy-on-write B-tree | 낮음 | full scan catalog는 단순하지만 payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `flash_kv` | 디렉터리 + append-only bitcask-style engine | 낮음 | `__catalog__` key와 active data file sync 경계를 함께 백업해야 하고, payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `snaildb` | 디렉터리 + WAL/SSTable LSM engine | 낮음 | `__catalog__` key와 엔진 디렉터리를 함께 백업해야 하고, payload는 binary value라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `tinykv` | 단일 JSON 파일 store | 중간 | payload 가시성은 가장 높지만 whole-file rewrite와 전체 JSON 역직렬화에 의존하므로 파일 손상 시 startup 전체 복구 실패로 이어질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 
@@ -153,6 +155,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `surrealkv`는 single-file embedded durability 기준선이다.
 - `thunderdb`는 single-file embedded durability 기준선이다.
 - `sanakirja`는 single-file copy-on-write B-tree embedded durability 기준선이다.
+- `flash_kv`는 append-only directory-backed embedded durability 기준선이다.
 - `snaildb`는 WAL/SSTable directory-backed embedded durability 기준선이다.
 - `tinykv`는 human-readable single-file embedded durability 기준선이다.
 - `rskey`는 single-file embedded durability 기준선이다.
@@ -162,7 +165,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `ckydb`는 directory-backed embedded durability 기준선이다.
 - `scdb`는 directory-backed embedded durability 기준선이다.
 - `rustbreak`는 catalog 파일 전체 역직렬화 실패가 startup 복구 실패로 이어질 수 있으므로 운영 기본값으로 둘 때 별도 백업/검증 절차가 필요하다.
-- corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `hightower_kv`, `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `surrealkv`, `thunderdb`, `sanakirja`, `snaildb` 쪽이 기본값 후보로 더 안전하다.
+- corrupt entry를 warning과 함께 건너뛰는 현재 catalog 정책을 적극 활용하려면 `flash_kv`, `hightower_kv`, `jammdb`, `persy`, `native_db`, `redb`, `btree_store`, `siamesedb`, `abyssiniandb`, `ckydb`, `scdb`, `surrealkv`, `thunderdb`, `sanakirja`, `snaildb` 쪽이 기본값 후보로 더 안전하다.
 - `rskey`는 JSON hashmap 전체를 다시 쓰는 구조라 payload 가시성은 높지만 store 파일 하나 손상이 startup 전체 복구 실패로 이어질 수 있다.
 - embedded backend를 고르더라도 실제 ownership authority는 `ROOM_COORDINATOR=file|static`에 두지 않는다. handoff가 필요하면 `sqlite` 또는 `managed` coordination과 조합한다.
 

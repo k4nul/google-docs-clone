@@ -11,6 +11,7 @@ pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
 pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
+pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
 pub const DEFAULT_SNAPSHOT_HEED_PATH: &str = "./data/snapshots.heed";
 pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower_kv";
@@ -64,6 +65,7 @@ pub struct Config {
     pub api_token: String,
     pub snapshot_store: String,
     pub snapshot_dir: String,
+    pub snapshot_flash_kv_path: String,
     pub snapshot_sqlite_path: String,
     pub snapshot_heed_path: String,
     pub snapshot_hightower_kv_path: String,
@@ -131,6 +133,8 @@ impl Config {
         let api_token = env_string("API_TOKEN", DEFAULT_API_TOKEN)?;
         let snapshot_store = env_string("SNAPSHOT_STORE", DEFAULT_SNAPSHOT_STORE)?;
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
+        let snapshot_flash_kv_path =
+            env_string("SNAPSHOT_FLASH_KV_PATH", DEFAULT_SNAPSHOT_FLASH_KV_PATH)?;
         let snapshot_sqlite_path =
             env_string("SNAPSHOT_SQLITE_PATH", DEFAULT_SNAPSHOT_SQLITE_PATH)?;
         let snapshot_heed_path = env_string("SNAPSHOT_HEED_PATH", DEFAULT_SNAPSHOT_HEED_PATH)?;
@@ -242,6 +246,7 @@ impl Config {
             api_token,
             snapshot_store,
             snapshot_dir,
+            snapshot_flash_kv_path,
             snapshot_sqlite_path,
             snapshot_heed_path,
             snapshot_hightower_kv_path,

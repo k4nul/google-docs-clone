@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/flash_kv/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv/s3/managed snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 memory/file/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv/s3/managed adapter
+- `SnapshotStore` trait 및 memory/file/flash_kv/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv/s3/managed adapter
 - `RoomLocator` 경계와 config-driven `local`/`static`/`file`/`sqlite`/`managed` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file`/`sqlite`/`managed` session lifecycle hook
 
@@ -99,8 +99,9 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
+- `SNAPSHOT_FLASH_KV_PATH`: `SNAPSHOT_STORE=flash_kv`일 때 snapshot flash-kv 디렉터리 경로
 - `SNAPSHOT_SQLITE_PATH`: `SNAPSHOT_STORE=sqlite`일 때 snapshot SQLite DB 파일 경로
 - `SNAPSHOT_HEED_PATH`: `SNAPSHOT_STORE=heed`일 때 snapshot heed DB 디렉터리 경로
 - `SNAPSHOT_HIGHTOWER_KV_PATH`: `SNAPSHOT_STORE=hightower_kv`일 때 snapshot hightower-kv 데이터 디렉터리 경로
@@ -163,7 +164,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
-- 기본 in-memory snapshot store와 로컬 file/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv, S3-compatible object storage, external managed snapshot store 지원
+- 기본 in-memory snapshot store와 로컬 file/flash_kv/sqlite/heed/hightower_kv/jammdb/fjall/persy/native_db/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/canopydb/ckydb/scdb/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/sanakirja/snaildb/tinykv, S3-compatible object storage, external managed snapshot store 지원
 - config-driven room locator local/static/file/sqlite/managed 모드와 room coordinator dry-run logging/file/sqlite/managed state 모드 지원
 
 ## 비범위
