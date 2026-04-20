@@ -406,6 +406,7 @@ dependencies = [
  "serde",
  "serde_json",
  "siamesedb",
+ "simple_db",
  "sled",
  "snaildb",
  "structsy",
@@ -3976,6 +3977,16 @@ name = "simd-adler32"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
+
+[[package]]
+name = "simple_db"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "099ba10d2383c92c824ec8545a32193ccd73f7637ee8d030d7905653c9f3c7fd"
+dependencies = [
+ "anyhow",
+ "indexmap 2.14.0",
+]
 
 [[package]]
 name = "siphasher"

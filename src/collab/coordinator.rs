@@ -1784,6 +1784,7 @@ mod tests {
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
             snapshot_flash_kv_path: "./data/test-snapshots.flash_kv".to_owned(),
+            snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
             snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),

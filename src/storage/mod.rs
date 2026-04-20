@@ -24,6 +24,7 @@ mod s3_snapshot_store;
 mod sanakirja_snapshot_store;
 mod scdb_snapshot_store;
 mod siamesedb_snapshot_store;
+mod simple_db_snapshot_store;
 mod sled_snapshot_store;
 mod snaildb_snapshot_store;
 mod sqlite_snapshot_store;
@@ -74,6 +75,7 @@ pub use s3_snapshot_store::S3SnapshotStore;
 pub use sanakirja_snapshot_store::SanakirjaSnapshotStore;
 pub use scdb_snapshot_store::ScdbSnapshotStore;
 pub use siamesedb_snapshot_store::SiamesedbSnapshotStore;
+pub use simple_db_snapshot_store::SimpleDbSnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
 pub use snaildb_snapshot_store::SnaildbSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
@@ -219,6 +221,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "flash_kv" => Ok(Arc::new(FlashKvSnapshotStore::new(
             &config.snapshot_flash_kv_path,
         )?)),
+        "simple_db" => Ok(Arc::new(SimpleDbSnapshotStore::new(
+            &config.snapshot_simple_db_path,
+        )?)),
         "sqlite" => Ok(Arc::new(SqliteSnapshotStore::new(
             &config.snapshot_sqlite_path,
         )?)),
@@ -350,7 +355,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `simple_db`, `sqlite`, `heed`, `hightower_kv`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `ckydb`, `scdb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `sanakirja`, `snaildb`, `tinykv`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
