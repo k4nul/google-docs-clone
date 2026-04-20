@@ -23,6 +23,7 @@ dblite = { version = "0.1.2", default-features = false }
 dbless = "0.2.0"
 docdb = "0.1.0"
 dotenvy = "0.15"
+eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"] }
 flash-kv = "0.2.1"
 fjall = "3.1.4"
 futures-util = "0.3"

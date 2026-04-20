@@ -1787,6 +1787,7 @@ mod tests {
             snapshot_highlandcows_isam_path: "./data/test-snapshots.highlandcows_isam".to_owned(),
             snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
             snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),
+            snapshot_eight_path: "./data/test-snapshots.eight".to_owned(),
             snapshot_shorterdb_path: "./data/test-snapshots.shorterdb".to_owned(),
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
