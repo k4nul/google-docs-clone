@@ -104,7 +104,7 @@ Response: `201 Created`
 - `Authorization: Bearer <access_token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
-- snapshot restore source는 현재 `SNAPSHOT_STORE=file|flash_kv|simple_db|docdb|shorterdb|sqlite|heed|hightower_kv|jammdb|fjall|persy|native_db|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|s3|managed` 중 하나다.
+- snapshot restore source는 현재 `SNAPSHOT_STORE=file|flash_kv|simple_db|docdb|shorterdb|sqlite|heed|hightower_kv|jammdb|fjall|persy|native_db|nikidb|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|s3|managed` 중 하나다.
 - 문서가 없으면 `404` JSON 에러를 반환한다.
 - 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
@@ -154,7 +154,7 @@ Response: `204 No Content`
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
-- snapshot restore source는 현재 `SNAPSHOT_STORE=file|flash_kv|simple_db|docdb|shorterdb|sqlite|heed|hightower_kv|jammdb|fjall|persy|native_db|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|s3|managed` 중 하나다.
+- snapshot restore source는 현재 `SNAPSHOT_STORE=file|flash_kv|simple_db|docdb|shorterdb|sqlite|heed|hightower_kv|jammdb|fjall|persy|native_db|nikidb|nodb|parity_db|pickledb|microkv|redb|rskey|readb|rustlite|canopydb|ckydb|scdb|surrealkv|sled|rustbreak|yedb|btree_store|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|dblite|dbless|sanakirja|snaildb|tinykv|s3|managed` 중 하나다.
 - 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, `file`, `sqlite`, 또는 `managed` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
@@ -198,7 +198,7 @@ Response: `204 No Content`
 - `SNAPSHOT_STORE=rustbreak`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=yedb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=btree_store`도 vendor-specific embedded database durability backend다.
-- `SNAPSHOT_STORE=flash_kv`, `SNAPSHOT_STORE=simple_db`, `SNAPSHOT_STORE=docdb`, `SNAPSHOT_STORE=shorterdb`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=aeternusdb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=dblite`, `SNAPSHOT_STORE=dbless`, `SNAPSHOT_STORE=sanakirja`, `SNAPSHOT_STORE=snaildb`, `SNAPSHOT_STORE=tinykv`, `SNAPSHOT_STORE=nodb`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=hightower_kv`도 vendor-specific embedded database durability backend다.
+- `SNAPSHOT_STORE=flash_kv`, `SNAPSHOT_STORE=simple_db`, `SNAPSHOT_STORE=docdb`, `SNAPSHOT_STORE=shorterdb`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=aeternusdb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=dblite`, `SNAPSHOT_STORE=dbless`, `SNAPSHOT_STORE=sanakirja`, `SNAPSHOT_STORE=snaildb`, `SNAPSHOT_STORE=tinykv`, `SNAPSHOT_STORE=nikidb`, `SNAPSHOT_STORE=nodb`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=hightower_kv`도 vendor-specific embedded database durability backend다.
 - 필수 env는 `SNAPSHOT_HEED_PATH`다.
 - heed LMDB `snapshots` database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_JAMMDB_PATH`다.

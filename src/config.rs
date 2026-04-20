@@ -22,6 +22,7 @@ pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
 pub const DEFAULT_SNAPSHOT_NATIVE_DB_PATH: &str = "./data/snapshots.native_db";
+pub const DEFAULT_SNAPSHOT_NIKIDB_PATH: &str = "./data/snapshots.nikidb";
 pub const DEFAULT_SNAPSHOT_NODB_PATH: &str = "./data/snapshots.nodb";
 pub const DEFAULT_SNAPSHOT_PARITY_DB_PATH: &str = "./data/snapshots.parity_db";
 pub const DEFAULT_SNAPSHOT_PICKLEDB_PATH: &str = "./data/snapshots.pickledb";
@@ -82,6 +83,7 @@ pub struct Config {
     pub snapshot_fjall_path: String,
     pub snapshot_persy_path: String,
     pub snapshot_native_db_path: String,
+    pub snapshot_nikidb_path: String,
     pub snapshot_nodb_path: String,
     pub snapshot_parity_db_path: String,
     pub snapshot_pickledb_path: String,
@@ -165,6 +167,8 @@ impl Config {
         let snapshot_persy_path = env_string("SNAPSHOT_PERSY_PATH", DEFAULT_SNAPSHOT_PERSY_PATH)?;
         let snapshot_native_db_path =
             env_string("SNAPSHOT_NATIVE_DB_PATH", DEFAULT_SNAPSHOT_NATIVE_DB_PATH)?;
+        let snapshot_nikidb_path =
+            env_string("SNAPSHOT_NIKIDB_PATH", DEFAULT_SNAPSHOT_NIKIDB_PATH)?;
         let snapshot_nodb_path = env_string("SNAPSHOT_NODB_PATH", DEFAULT_SNAPSHOT_NODB_PATH)?;
         let snapshot_parity_db_path =
             env_string("SNAPSHOT_PARITY_DB_PATH", DEFAULT_SNAPSHOT_PARITY_DB_PATH)?;
@@ -279,6 +283,7 @@ impl Config {
             snapshot_fjall_path,
             snapshot_persy_path,
             snapshot_native_db_path,
+            snapshot_nikidb_path,
             snapshot_nodb_path,
             snapshot_parity_db_path,
             snapshot_pickledb_path,
