@@ -1794,6 +1794,7 @@ mod tests {
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
             snapshot_native_db_path: "./data/test-snapshots.native_db".to_owned(),
+            snapshot_nodb_path: "./data/test-snapshots.nodb".to_owned(),
             snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
             snapshot_rskey_path: "./data/test-snapshots.rskey".to_owned(),
