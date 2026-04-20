@@ -1830,6 +1830,7 @@ mod tests {
             snapshot_tinybase_path: "./data/test-snapshots.tinybase".to_owned(),
             snapshot_dblite_path: "./data/test-snapshots.dblite".to_owned(),
             snapshot_dbless_path: "./data/test-snapshots.dbless".to_owned(),
+            snapshot_db_rs_path: "./data/test-snapshots.db_rs".to_owned(),
             snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
             snapshot_snaildb_path: "./data/test-snapshots.snaildb".to_owned(),
             snapshot_tinykv_path: "./data/test-snapshots.tinykv.json".to_owned(),

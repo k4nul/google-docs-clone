@@ -17,6 +17,8 @@ caves = "0.2.1"
 chrono = { version = "0.4", features = ["serde"] }
 ckydb = "0.0.5"
 dashmap = "6"
+db-rs = "0.3.6"
+db-rs-derive = "0.3.6"
 dblite = { version = "0.1.2", default-features = false }
 dbless = "0.2.0"
 docdb = "0.1.0"

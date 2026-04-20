@@ -6,6 +6,7 @@ mod candystore_snapshot_store;
 mod canopydb_snapshot_store;
 mod caves_snapshot_store;
 mod ckydb_snapshot_store;
+mod db_rs_snapshot_store;
 mod dbless_snapshot_store;
 mod dblite_snapshot_store;
 mod docdb_snapshot_store;
@@ -77,6 +78,7 @@ pub use candystore_snapshot_store::CandystoreSnapshotStore;
 pub use canopydb_snapshot_store::CanopydbSnapshotStore;
 pub use caves_snapshot_store::CavesSnapshotStore;
 pub use ckydb_snapshot_store::CkydbSnapshotStore;
+pub use db_rs_snapshot_store::DbRsSnapshotStore;
 pub use dbless_snapshot_store::DblessSnapshotStore;
 pub use dblite_snapshot_store::DbliteSnapshotStore;
 pub use docdb_snapshot_store::DocDbSnapshotStore;
@@ -396,6 +398,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "dbless" => Ok(Arc::new(DblessSnapshotStore::new(
             &config.snapshot_dbless_path,
+        )?)),
+        "db_rs" => Ok(Arc::new(DbRsSnapshotStore::new(
+            &config.snapshot_db_rs_path,
         )?)),
         "sanakirja" => Ok(Arc::new(SanakirjaSnapshotStore::new(
             &config.snapshot_sanakirja_path,

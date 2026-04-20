@@ -58,6 +58,7 @@ pub const DEFAULT_SNAPSHOT_THUNDERDB_PATH: &str = "./data/snapshots.thunderdb";
 pub const DEFAULT_SNAPSHOT_TINYBASE_PATH: &str = "./data/snapshots.tinybase";
 pub const DEFAULT_SNAPSHOT_DBLITE_PATH: &str = "./data/snapshots.dblite";
 pub const DEFAULT_SNAPSHOT_DBLESS_PATH: &str = "./data/snapshots.dbless";
+pub const DEFAULT_SNAPSHOT_DB_RS_PATH: &str = "./data/snapshots.db_rs";
 pub const DEFAULT_SNAPSHOT_SANAKIRJA_PATH: &str = "./data/snapshots.sanakirja";
 pub const DEFAULT_SNAPSHOT_SNAILDB_PATH: &str = "./data/snapshots.snaildb";
 pub const DEFAULT_SNAPSHOT_TINYKV_PATH: &str = "./data/snapshots.tinykv.json";
@@ -133,6 +134,7 @@ pub struct Config {
     pub snapshot_tinybase_path: String,
     pub snapshot_dblite_path: String,
     pub snapshot_dbless_path: String,
+    pub snapshot_db_rs_path: String,
     pub snapshot_sanakirja_path: String,
     pub snapshot_snaildb_path: String,
     pub snapshot_tinykv_path: String,
@@ -263,6 +265,7 @@ impl Config {
             env_string("SNAPSHOT_DBLITE_PATH", DEFAULT_SNAPSHOT_DBLITE_PATH)?;
         let snapshot_dbless_path =
             env_string("SNAPSHOT_DBLESS_PATH", DEFAULT_SNAPSHOT_DBLESS_PATH)?;
+        let snapshot_db_rs_path = env_string("SNAPSHOT_DB_RS_PATH", DEFAULT_SNAPSHOT_DB_RS_PATH)?;
         let snapshot_sanakirja_path =
             env_string("SNAPSHOT_SANAKIRJA_PATH", DEFAULT_SNAPSHOT_SANAKIRJA_PATH)?;
         let snapshot_snaildb_path =
@@ -374,6 +377,7 @@ impl Config {
             snapshot_tinybase_path,
             snapshot_dblite_path,
             snapshot_dbless_path,
+            snapshot_db_rs_path,
             snapshot_sanakirja_path,
             snapshot_snaildb_path,
             snapshot_tinykv_path,
