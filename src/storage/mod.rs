@@ -1,5 +1,6 @@
 mod abyssiniandb_snapshot_store;
 mod btree_store_snapshot_store;
+mod canopydb_snapshot_store;
 mod file_snapshot_store;
 mod fjall_snapshot_store;
 mod heed_snapshot_store;
@@ -39,6 +40,7 @@ use crate::{config::Config, models::document::Document};
 
 pub use abyssiniandb_snapshot_store::AbyssiniandbSnapshotStore;
 pub use btree_store_snapshot_store::BtreeStoreSnapshotStore;
+pub use canopydb_snapshot_store::CanopydbSnapshotStore;
 pub use file_snapshot_store::FileSnapshotStore;
 pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use heed_snapshot_store::HeedSnapshotStore;
@@ -230,6 +232,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "rustlite" => Ok(Arc::new(RustliteSnapshotStore::new(
             &config.snapshot_rustlite_path,
         )?)),
+        "canopydb" => Ok(Arc::new(CanopydbSnapshotStore::new(
+            &config.snapshot_canopydb_path,
+        )?)),
         "sled" => Ok(Arc::new(SledSnapshotStore::new(
             &config.snapshot_sled_path,
         )?)),
@@ -295,7 +300,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

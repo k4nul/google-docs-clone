@@ -8,6 +8,7 @@ anyhow = "1"
 abyssiniandb = "0.1.4"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 btree-store = "0.1.4"
+canopydb = "0.2.5"
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6"
 dotenvy = "0.15"

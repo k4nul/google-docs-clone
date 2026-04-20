@@ -1793,6 +1793,7 @@ mod tests {
             snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
             snapshot_readb_path: "./data/test-snapshots.readb".to_owned(),
             snapshot_rustlite_path: "./data/test-snapshots.rustlite".to_owned(),
+            snapshot_canopydb_path: "./data/test-snapshots.canopydb".to_owned(),
             snapshot_pickledb_path: "./data/test-snapshots.pickledb".to_owned(),
             snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),
             snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
