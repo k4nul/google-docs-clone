@@ -9,6 +9,7 @@ aeternusdb = "1.0.1"
 abyssiniandb = "0.1.4"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"
+bitask = "0.1.1"
 btree-store = "0.1.4"
 canopydb = "0.2.5"
 caves = "0.2.1"

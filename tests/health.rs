@@ -18,19 +18,19 @@ use backend::{
     errors::AppError,
     state::AppState,
     storage::{
-        AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, BtreeStoreSnapshotStore,
-        CanopydbSnapshotStore, CavesSnapshotStore, CkydbSnapshotStore, DblessSnapshotStore,
-        DbliteSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, FileSnapshotStore,
-        FjallSnapshotStore, FlashKvSnapshotStore, HeedSnapshotStore, HightowerKvSnapshotStore,
-        HmdbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JsondbSnapshotStore,
-        ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore, NikidbSnapshotStore,
-        NodbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
-        RustbreakSnapshotStore, RustliteSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
-        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
-        SimpleDbSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
-        SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThunderdbSnapshotStore,
-        TinykvSnapshotStore, YedbSnapshotStore,
+        AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, BitaskSnapshotStore,
+        BtreeStoreSnapshotStore, CanopydbSnapshotStore, CavesSnapshotStore, CkydbSnapshotStore,
+        DblessSnapshotStore, DbliteSnapshotStore, DocDbSnapshotStore, DocumentSnapshot,
+        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, HeedSnapshotStore,
+        HightowerKvSnapshotStore, HmdbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore,
+        JsondbSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore,
+        NikidbSnapshotStore, NodbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
+        PersySnapshotStore, PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
+        RskeySnapshotStore, RustbreakSnapshotStore, RustliteSnapshotStore, S3SnapshotStore,
+        SaberdbSnapshotStore, SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore,
+        SiamesedbSnapshotStore, SimpleDbSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore,
+        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
+        ThunderdbSnapshotStore, TinykvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -67,6 +67,7 @@ fn test_config() -> Config {
         snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
         snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
         snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
+        snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
         snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
         snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
@@ -467,6 +468,11 @@ fn configure_jsondb_snapshot_store(config: &mut Config, root: &std::path::Path) 
 fn configure_hmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "hmdb".to_owned();
     config.snapshot_hmdb_path = root.join("snapshots.hmdb").to_string_lossy().into_owned();
+}
+
+fn configure_bitask_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "bitask".to_owned();
+    config.snapshot_bitask_path = root.join("snapshots.bitask").to_string_lossy().into_owned();
 }
 
 fn configure_managed_coordination_with_shared_sqlite_snapshots(
@@ -4776,6 +4782,52 @@ fn app_state_uses_hmdb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_bitask_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("bitask-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.bitask");
+    configure_bitask_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with bitask store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to bitask".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to bitask on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted bitask snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_caves_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("caves-store-config");
@@ -6804,6 +6856,37 @@ fn hmdb_snapshot_store_round_trips_document_catalog() {
     let loaded_snapshot = store
         .load_snapshot(&document.id)
         .expect("snapshot should load from hmdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn bitask_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("bitask-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let store =
+        BitaskSnapshotStore::new(&snapshot_dir).expect("bitask snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Bitask".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to bitask");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from bitask");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from bitask")
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);
