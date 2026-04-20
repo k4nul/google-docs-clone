@@ -270,6 +270,7 @@ dependencies = [
  "redb 2.6.3",
  "rusqlite",
  "rustbreak",
+ "rustlite",
  "s3",
  "serde",
  "serde_json",
@@ -632,6 +633,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
+dependencies = [
+ "crossbeam-utils",
 ]
 
 [[package]]
@@ -2916,6 +2926,67 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustlite"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "767adaeb2d45b948e100bb021fef67a2a950f2bfaafa00b6e4b52efa70443daa"
+dependencies = [
+ "rustlite-core",
+ "rustlite-snapshot",
+ "rustlite-storage",
+ "rustlite-wal",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "rustlite-core"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "799be0a65709daaf466792f850c6b434713502360f4d9040666192b2fe419d32"
+
+[[package]]
+name = "rustlite-snapshot"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c0c1c0b8423d41d86511fc1c5f1abf099321496ee148f916fed0d5409e452ea"
+dependencies = [
+ "bincode",
+ "crc32fast",
+ "rustlite-core",
+ "rustlite-storage",
+ "serde",
+]
+
+[[package]]
+name = "rustlite-storage"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74c23d3d13c60d62e981aee9b3f1c098ab829ef16978cea87d1c72fe5660d63e"
+dependencies = [
+ "bincode",
+ "crc32fast",
+ "rustlite-core",
+ "rustlite-wal",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "rustlite-wal"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e54120fd4e8257b5a28914f6d118f0a6fc6cc0b1258f20ef8a325701975d98d"
+dependencies = [
+ "bincode",
+ "crc32fast",
+ "rustlite-core",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "rustls"
 version = "0.23.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3412,6 +3483,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
+name = "symlink"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7973cce6668464ea31f176d85b13c7ab3bba2cb3b77a2ed26abd7801688010a"
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3720,6 +3797,19 @@ dependencies = [
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-appender"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "050686193eb999b4bb3bc2acfa891a13da00f79734704c4b8b4ef1a10b368a3c"
+dependencies = [
+ "crossbeam-channel",
+ "symlink",
+ "thiserror 2.0.18",
+ "time",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -13,6 +13,7 @@ mod pickledb_snapshot_store;
 mod readb_snapshot_store;
 mod redb_snapshot_store;
 mod rustbreak_snapshot_store;
+mod rustlite_snapshot_store;
 mod s3_snapshot_store;
 mod siamesedb_snapshot_store;
 mod sled_snapshot_store;
@@ -51,6 +52,7 @@ pub use pickledb_snapshot_store::PickleDbSnapshotStore;
 pub use readb_snapshot_store::ReadbSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
 pub use rustbreak_snapshot_store::RustbreakSnapshotStore;
+pub use rustlite_snapshot_store::RustliteSnapshotStore;
 pub use s3_snapshot_store::S3SnapshotStore;
 pub use siamesedb_snapshot_store::SiamesedbSnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
@@ -225,6 +227,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "readb" => Ok(Arc::new(ReadbSnapshotStore::new(
             &config.snapshot_readb_path,
         )?)),
+        "rustlite" => Ok(Arc::new(RustliteSnapshotStore::new(
+            &config.snapshot_rustlite_path,
+        )?)),
         "sled" => Ok(Arc::new(SledSnapshotStore::new(
             &config.snapshot_sled_path,
         )?)),
@@ -290,7 +295,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
