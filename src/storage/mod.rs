@@ -20,6 +20,7 @@ mod siamesedb_snapshot_store;
 mod sled_snapshot_store;
 mod sqlite_snapshot_store;
 mod structsy_snapshot_store;
+mod surrealkv_snapshot_store;
 mod thunderdb_snapshot_store;
 mod yedb_snapshot_store;
 
@@ -60,6 +61,7 @@ pub use siamesedb_snapshot_store::SiamesedbSnapshotStore;
 pub use sled_snapshot_store::SledSnapshotStore;
 pub use sqlite_snapshot_store::SqliteSnapshotStore;
 pub use structsy_snapshot_store::StructsySnapshotStore;
+pub use surrealkv_snapshot_store::SurrealkvSnapshotStore;
 pub use thunderdb_snapshot_store::ThunderdbSnapshotStore;
 pub use yedb_snapshot_store::YedbSnapshotStore;
 
@@ -235,6 +237,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "canopydb" => Ok(Arc::new(CanopydbSnapshotStore::new(
             &config.snapshot_canopydb_path,
         )?)),
+        "surrealkv" => Ok(Arc::new(SurrealkvSnapshotStore::new(
+            &config.snapshot_surrealkv_path,
+        )?)),
         "sled" => Ok(Arc::new(SledSnapshotStore::new(
             &config.snapshot_sled_path,
         )?)),
@@ -300,7 +305,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `sqlite`, `heed`, `jammdb`, `fjall`, `persy`, `native_db`, `parity_db`, `pickledb`, `microkv`, `redb`, `readb`, `rustlite`, `canopydb`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `thunderdb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
