@@ -22,6 +22,7 @@ pub const DEFAULT_SNAPSHOT_SIMPLE_DB_PATH: &str = "./data/snapshots.simple_db";
 pub const DEFAULT_SNAPSHOT_DOCDB_PATH: &str = "./data/snapshots.docdb.json";
 pub const DEFAULT_SNAPSHOT_EIGHT_PATH: &str = "./data/snapshots.eight";
 pub const DEFAULT_SNAPSHOT_EPOCH_DB_PATH: &str = "./data/snapshots.epoch_db";
+pub const DEFAULT_SNAPSHOT_FERRUMDB_PATH: &str = "./data/snapshots.ferrumdb";
 pub const DEFAULT_SNAPSHOT_RUMDB_PATH: &str = "./data/snapshots.rumdb";
 pub const DEFAULT_SNAPSHOT_SHORTERDB_PATH: &str = "./data/snapshots.shorterdb";
 pub const DEFAULT_SNAPSHOT_SQLITE_PATH: &str = "./data/snapshots.sqlite3";
@@ -130,6 +131,7 @@ pub struct Config {
     pub snapshot_docdb_path: String,
     pub snapshot_eight_path: String,
     pub snapshot_epoch_db_path: String,
+    pub snapshot_ferrumdb_path: String,
     pub snapshot_rumdb_path: String,
     pub snapshot_shorterdb_path: String,
     pub snapshot_sqlite_path: String,
@@ -264,6 +266,8 @@ impl Config {
         let snapshot_eight_path = env_string("SNAPSHOT_EIGHT_PATH", DEFAULT_SNAPSHOT_EIGHT_PATH)?;
         let snapshot_epoch_db_path =
             env_string("SNAPSHOT_EPOCH_DB_PATH", DEFAULT_SNAPSHOT_EPOCH_DB_PATH)?;
+        let snapshot_ferrumdb_path =
+            env_string("SNAPSHOT_FERRUMDB_PATH", DEFAULT_SNAPSHOT_FERRUMDB_PATH)?;
         let snapshot_rumdb_path = env_string("SNAPSHOT_RUMDB_PATH", DEFAULT_SNAPSHOT_RUMDB_PATH)?;
         let snapshot_shorterdb_path =
             env_string("SNAPSHOT_SHORTERDB_PATH", DEFAULT_SNAPSHOT_SHORTERDB_PATH)?;
@@ -464,6 +468,7 @@ impl Config {
             snapshot_docdb_path,
             snapshot_eight_path,
             snapshot_epoch_db_path,
+            snapshot_ferrumdb_path,
             snapshot_rumdb_path,
             snapshot_shorterdb_path,
             snapshot_sqlite_path,
