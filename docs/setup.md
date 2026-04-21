@@ -39,7 +39,7 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `flash_kv`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `candystore`, `cuendillar`, `jammdb`, `mace`, `janql`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lsm_storage_engine`, `mmdb`, `nanodb`, `jfs`, `json_store`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `flash_kv`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `candystore`, `cuendillar`, `jammdb`, `mace`, `janql`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lsm_storage_engine`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_FLASH_KV_PATH`: flash-kv snapshot store 디렉터리 경로
 - `SNAPSHOT_BLOCKBUCKET_PATH`: blockbucket snapshot store 단일 파일 경로
@@ -110,6 +110,7 @@ cargo run
 - `SNAPSHOT_YAKV_PATH`: yakv snapshot store 단일 파일 경로
 - `SNAPSHOT_SABERDB_PATH`: saberdb snapshot store JSON 파일 경로
 - `SNAPSHOT_SMOLLDB_PATH`: smolldb snapshot store compressed 단일 파일 경로
+- `SNAPSHOT_FEOXDB_PATH`: feoxdb snapshot store 단일 파일 경로
 - `SNAPSHOT_JSONDB_PATH`: jsondb snapshot store JSON 파일 경로
 - `SNAPSHOT_KOPPERDB_PATH`: kopperdb snapshot store 세그먼트 디렉터리 경로
 - `SNAPSHOT_ICEFALLDB_PATH`: icefalldb snapshot store 로그 디렉터리 경로
@@ -225,6 +226,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `yakv` | 단일 B-Tree 파일 | 낮음 | `snapshot:<doc_id>` key를 직접 저장하고 full scan으로 catalog를 복구한다. payload는 binary value이고 파일 전체 무결성에 의존하므로 수동 수정 대신 whole-file backup/restore와 회귀 테스트가 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `saberdb` | 단일 pretty JSON 파일 store | 중간 | atomic temp+rename은 단순하지만 catalog 전체를 pretty JSON으로 다시 쓰고 startup 시 전체 역직렬화에 의존하므로 파일 손상 시 startup 전체 복구 실패가 된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `smolldb` | 단일 compressed 파일 store | 낮음 | in-memory key-value map을 zlib-compatible compressed 파일로 temp+rename 저장한다. 전체 파일 load/rewrite 경계라 단일 노드 재시작 복구에 맞고, corruption 시 startup 전체 복구 실패가 될 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `feoxdb` | 단일 FeOxDB 파일 append event store | 중간 | mutable same-key update replay를 피하기 위해 `snapshot:<doc_id>:<timestamp>:<event_id>` immutable event key와 tombstone event만 쓴다. range scan으로 최신 event를 복구하며 기본 jemalloc feature는 끄고 `system-alloc`으로 연결한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `jsondb` | 단일 versioned pretty JSON 파일 store | 중간 | write guard drop마다 whole-file pretty JSON rewrite와 전체 역직렬화에 의존하므로 파일 손상 시 startup 전체 복구 실패가 전체 store에 번질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `koit` | 단일 structured JSON 파일 store | 중간 | 전체 catalog를 메모리에 로드한 뒤 save마다 whole-file rewrite와 `sync_all`을 수행하므로 파일 손상 시 startup 전체 복구 실패가 전체 store에 번질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lite_db` | 디렉터리 + append-only data files | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 sync write로 저장한다. file lock이 단일 writer를 전제하므로 shared multi-writer durability나 authoritative coordination plane으로는 쓰지 않는 것이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -448,6 +450,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 saberdb catalog에 `doc_id -> persisted snapshot JSON string` key-value로 저장되고, document catalog는 whole-file map load로 복구된다.
 - `SNAPSHOT_STORE=smolldb`는 `SNAPSHOT_SMOLLDB_PATH` 단일 compressed SmollDB 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 file load 뒤 catalog key로 복구된다.
+- `SNAPSHOT_STORE=feoxdb`는 `SNAPSHOT_FEOXDB_PATH` 단일 FeOxDB 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `snapshot:<doc_id>:<timestamp>:<event_id> -> persisted snapshot JSON` immutable event와 tombstone event로 저장되고, document catalog는 prefix range scan 뒤 최신 event 선택으로 복구된다.
 - `SNAPSHOT_STORE=jsondb`는 `SNAPSHOT_JSONDB_PATH` 단일 jsondb versioned pretty JSON 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 jsondb catalog의 `snapshots.<doc_id>` key-value로 저장되고, document catalog는 whole-file map load로 복구된다.
 - `SNAPSHOT_STORE=kv`는 `SNAPSHOT_KV_PATH` sled 디렉터리와 `snapshots` bucket을 통해 vendor-specific embedded database durability를 사용한다.

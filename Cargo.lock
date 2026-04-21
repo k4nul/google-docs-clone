@@ -490,6 +490,7 @@ dependencies = [
  "dotenvy",
  "eight",
  "epoch-db",
+ "feoxdb",
  "fjall",
  "flash-kv",
  "futures-util",
@@ -1987,6 +1988,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "feoxdb"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078af3615035addadc90739f669632643d646a4dd493a48da185fd54f0a892e7"
+dependencies = [
+ "ahash 0.8.12",
+ "bytes",
+ "crossbeam-channel",
+ "crossbeam-epoch",
+ "crossbeam-skiplist",
+ "crossbeam-utils",
+ "intrusive-collections",
+ "io-uring",
+ "json-patch",
+ "libc",
+ "nix 0.30.1",
+ "num_cpus",
+ "once_cell",
+ "parking_lot 0.12.5",
+ "rand 0.9.4",
+ "scc",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "figment"
 version = "0.10.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3011,12 +3038,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "intrusive-collections"
+version = "0.9.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "189d0897e4cbe8c75efedf3502c18c887b05046e59d28404d4d8e46cbc4d1e86"
+dependencies = [
+ "memoffset 0.9.1",
+]
+
+[[package]]
 name = "inventory"
 version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4f0c30c76f2f4ccee3fe55a2435f691ca00c0e4bd87abe4f4a851b1d4dac39b"
 dependencies = [
  "rustversion",
+]
+
+[[package]]
+name = "io-uring"
+version = "0.7.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d09b98f7eace8982db770e4408e7470b028ce513ac28fecdc6bf4c30fe92b62"
+dependencies = [
+ "bitflags 2.11.1",
+ "cfg-if",
+ "libc",
 ]
 
 [[package]]
@@ -3195,6 +3242,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-patch"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f300e415e2134745ef75f04562dd0145405c2f7fd92065db029ac4b16b57fe90"
+dependencies = [
+ "jsonptr",
+ "serde 1.0.228",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "json_store"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3216,6 +3275,16 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+]
+
+[[package]]
+name = "jsonptr"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5a3cc660ba5d72bce0b3bb295bf20847ccbb40fd423f3f05b61273672e561fe"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
 ]
 
 [[package]]
@@ -3612,6 +3681,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memoffset"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+dependencies = [
+ "autocfg 1.5.0",
+]
+
+[[package]]
 name = "metrics"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3867,7 +3945,7 @@ dependencies = [
  "lock_api 0.1.5",
  "log",
  "memmap",
- "memoffset",
+ "memoffset 0.6.5",
  "page_size 0.4.2",
  "parking_lot 0.7.1",
  "thiserror 1.0.69",
@@ -5481,6 +5559,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48a8500bcb79fe605b1433c30e8c5c078810b24dc4d04ffda35e88d712ff16f0"
 
 [[package]]
+name = "scc"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46e6f046b7fef48e2660c57ed794263155d713de679057f2d0c169bfc6e756cc"
+dependencies = [
+ "sdd",
+]
+
+[[package]]
 name = "scdb"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5513,6 +5600,12 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "sdd"
+version = "3.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490dcfcbfef26be6800d11870ff2df8774fa6e86d047e3e8c8a76b25655e41ca"
 
 [[package]]
 name = "secstr"
