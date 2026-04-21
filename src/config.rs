@@ -12,6 +12,7 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
+pub const DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH: &str = "./data/snapshots.blockbucket";
 pub const DEFAULT_SNAPSHOT_GREBEDB_PATH: &str = "./data/snapshots.grebedb";
 pub const DEFAULT_SNAPSHOT_HIGHLANDCOWS_ISAM_PATH: &str = "./data/snapshots.highlandcows_isam";
 pub const DEFAULT_SNAPSHOT_SIMPLE_DB_PATH: &str = "./data/snapshots.simple_db";
@@ -102,6 +103,7 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_flash_kv_path: String,
+    pub snapshot_blockbucket_path: String,
     pub snapshot_grebedb_path: String,
     pub snapshot_highlandcows_isam_path: String,
     pub snapshot_simple_db_path: String,
@@ -207,6 +209,10 @@ impl Config {
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_flash_kv_path =
             env_string("SNAPSHOT_FLASH_KV_PATH", DEFAULT_SNAPSHOT_FLASH_KV_PATH)?;
+        let snapshot_blockbucket_path = env_string(
+            "SNAPSHOT_BLOCKBUCKET_PATH",
+            DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH,
+        )?;
         let snapshot_grebedb_path =
             env_string("SNAPSHOT_GREBEDB_PATH", DEFAULT_SNAPSHOT_GREBEDB_PATH)?;
         let snapshot_highlandcows_isam_path = env_string(
@@ -384,6 +390,7 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_flash_kv_path,
+            snapshot_blockbucket_path,
             snapshot_grebedb_path,
             snapshot_highlandcows_isam_path,
             snapshot_simple_db_path,

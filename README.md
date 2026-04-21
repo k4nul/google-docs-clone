@@ -4,7 +4,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/flash_kv/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/flash_kv/blockbucket/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed snapshot 저장 추상화를 포함합니다.
 
 ## 해결하려는 문제
 
@@ -21,7 +21,7 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 - 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
-- `SnapshotStore` trait 및 memory/file/flash_kv/grebedb/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
+- `SnapshotStore` trait 및 memory/file/flash_kv/blockbucket/grebedb/highlandcows_isam/simple_db/docdb/eight/epoch_db/rumdb/shorterdb/sqlite/heed/hightower_kv/hmdb/bitask/candystore/cuendillar/jammdb/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/dblite/dbless/db_rs/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/jsondb/kv/koit/jfs/json_store/s3/managed adapter
 - `RoomLocator` 경계와 config-driven `local`/`static`/`file`/`sqlite`/`managed` ownership resolver
 - `RoomCoordinator` 경계와 config-driven `noop`/`logging`/`file`/`sqlite`/`managed` session lifecycle hook
 
@@ -99,9 +99,10 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `grebedb`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `jfs`, `json_store`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `flash_kv`, `blockbucket`, `grebedb`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `jfs`, `json_store`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `SNAPSHOT_FLASH_KV_PATH`: `SNAPSHOT_STORE=flash_kv`일 때 snapshot flash-kv 디렉터리 경로
+- `SNAPSHOT_BLOCKBUCKET_PATH`: `SNAPSHOT_STORE=blockbucket`일 때 snapshot blockbucket 단일 파일 경로
 - `SNAPSHOT_GREBEDB_PATH`: `SNAPSHOT_STORE=grebedb`일 때 snapshot grebedb 디렉터리 경로
 - `SNAPSHOT_HIGHLANDCOWS_ISAM_PATH`: `SNAPSHOT_STORE=highlandcows_isam`일 때 snapshot highlandcows-isam path prefix. 실제 저장 파일은 `<path>.idb`, `<path>.idx`
 - `SNAPSHOT_SIMPLE_DB_PATH`: `SNAPSHOT_STORE=simple_db`일 때 snapshot simple_db 단일 파일 경로
@@ -319,6 +320,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `koit`는 async whole-file structured JSON 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `jfs`는 single-file JSON object 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `json_store`는 append-only single-file JSON line 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
+- `blockbucket`은 single-file raw bytes bucket 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `epoch_db`는 sled-backed multi-tree 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `rumdb`는 append-only Bitcask-style 로그 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `rustcask`는 append-only Bitcask 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.

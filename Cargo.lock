@@ -448,6 +448,7 @@ dependencies = [
  "axum-test",
  "base64 0.22.1",
  "bitask",
+ "blockbucket",
  "btree-store",
  "candystore",
  "canopydb",
@@ -724,6 +725,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdd35008169921d80bc60d3d0ab416eecb028c4cd653352907921d95084790be"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "blockbucket"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03aeb877a3cd244b34849d8470274e4ec32cdd395fce8333053bd384061ff2d5"
+dependencies = [
+ "md5",
 ]
 
 [[package]]
