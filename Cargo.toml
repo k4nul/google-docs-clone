@@ -95,6 +95,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 simple_db = "0.1.2"
 sled = "0.34"
+joydb = { version = "0.1.0", features = ["json"] }
 smolldb = "0.4.2"
 structsy = { version = "0.5.2", features = ["derive"] }
 surrealkv = "0.21.0"

@@ -620,6 +620,7 @@ dependencies = [
  "janql",
  "jasondb",
  "jfs",
+ "joydb",
  "json_store",
  "jsondb",
  "kafi",
@@ -3778,6 +3779,29 @@ checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
 dependencies = [
  "getrandom 0.3.4",
  "libc",
+]
+
+[[package]]
+name = "joydb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a32fef7d1be0bdde33fc8a63844f384672fbc432a67d0b82964dc6692427b88"
+dependencies = [
+ "joydb_macros",
+ "serde 1.0.228",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "joydb_macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28d1d00053c2832bf50ba1e320ee39fbbe77808147aaf909d2bde62bf842cde6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]

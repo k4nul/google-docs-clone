@@ -113,6 +113,7 @@ pub const DEFAULT_SNAPSHOT_INFUSEDB_PATH: &str = "./data/snapshots.infusedb";
 pub const DEFAULT_SNAPSHOT_KAFI_PATH: &str = "./data/snapshots.kafi";
 pub const DEFAULT_SNAPSHOT_TINKV_PATH: &str = "./data/snapshots.tinkv";
 pub const DEFAULT_SNAPSHOT_LEDGER_KV_PATH: &str = "./data/snapshots.ledger_kv";
+pub const DEFAULT_SNAPSHOT_JOYDB_PATH: &str = "./data/snapshots.joydb.json";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
 pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
 pub const DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS: u64 = 5;
@@ -238,6 +239,7 @@ pub struct Config {
     pub snapshot_kafi_path: String,
     pub snapshot_tinkv_path: String,
     pub snapshot_ledger_kv_path: String,
+    pub snapshot_joydb_path: String,
     pub snapshot_s3_endpoint: Option<String>,
     pub snapshot_s3_region: String,
     pub snapshot_s3_bucket: Option<String>,
@@ -466,6 +468,7 @@ impl Config {
         let snapshot_tinkv_path = env_string("SNAPSHOT_TINKV_PATH", DEFAULT_SNAPSHOT_TINKV_PATH)?;
         let snapshot_ledger_kv_path =
             env_string("SNAPSHOT_LEDGER_KV_PATH", DEFAULT_SNAPSHOT_LEDGER_KV_PATH)?;
+        let snapshot_joydb_path = env_string("SNAPSHOT_JOYDB_PATH", DEFAULT_SNAPSHOT_JOYDB_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
         let snapshot_s3_region = env_string("SNAPSHOT_S3_REGION", DEFAULT_SNAPSHOT_S3_REGION)?;
         let snapshot_s3_bucket = env_optional_string("SNAPSHOT_S3_BUCKET")?;
@@ -623,6 +626,7 @@ impl Config {
             snapshot_kafi_path,
             snapshot_tinkv_path,
             snapshot_ledger_kv_path,
+            snapshot_joydb_path,
             snapshot_s3_endpoint,
             snapshot_s3_region,
             snapshot_s3_bucket,
