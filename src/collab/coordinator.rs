@@ -1856,6 +1856,7 @@ mod tests {
             snapshot_vsdb_path: "./data/test-snapshots.vsdb".to_owned(),
             snapshot_yakv_path: "./data/test-snapshots.yakv".to_owned(),
             snapshot_saberdb_path: "./data/test-snapshots.saberdb.json".to_owned(),
+            snapshot_smolldb_path: "./data/test-snapshots.smolldb".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

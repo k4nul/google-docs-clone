@@ -518,6 +518,7 @@ dependencies = [
  "simple_db",
  "skv",
  "sled",
+ "smolldb",
  "snaildb",
  "structsy",
  "surrealkv",
@@ -5806,6 +5807,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef784004ca8777809dcdad6ac37629f0a97caee4c685fcea805278d81dd8b857"
 
 [[package]]
+name = "smolldb"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "948b1cb822d9f4fed234e79451b59d0dad34065bbb18b569e31f407744aa5217"
+dependencies = [
+ "yazi",
+]
+
+[[package]]
 name = "snaildb"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7436,6 +7446,12 @@ name = "yansi"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+
+[[package]]
+name = "yazi"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c94451ac9513335b5e23d7a8a2b61a7102398b8cca5160829d313e84c9d98be1"
 
 [[package]]
 name = "yedb"
