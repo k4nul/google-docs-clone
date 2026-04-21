@@ -1871,6 +1871,7 @@ mod tests {
             snapshot_saberdb_path: "./data/test-snapshots.saberdb.json".to_owned(),
             snapshot_smolldb_path: "./data/test-snapshots.smolldb".to_owned(),
             snapshot_kstone_path: "./data/test-snapshots.kstone".to_owned(),
+            snapshot_roughdb_path: "./data/test-snapshots.roughdb".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,

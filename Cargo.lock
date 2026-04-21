@@ -533,6 +533,7 @@ dependencies = [
  "rcask",
  "readb",
  "redb 2.6.3",
+ "roughdb",
  "rskey",
  "rumdb",
  "rusqlite",
@@ -5309,6 +5310,20 @@ dependencies = [
  "bitflags 2.11.1",
  "serde 1.0.228",
  "serde_derive",
+]
+
+[[package]]
+name = "roughdb"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "784de4a8df8e2153fca2aca231045650f85a498517bc5d8355177be6569fc548"
+dependencies = [
+ "bumpalo",
+ "crc32c",
+ "libc",
+ "log",
+ "snap 1.1.1",
+ "zstd 0.13.3",
 ]
 
 [[package]]
