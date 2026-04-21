@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1"
 aeternusdb = "1.0.1"
 abyssiniandb = "0.1.4"
+agdb = "0.12.10"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"
 bitkv-rs = "0.2.1"

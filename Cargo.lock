@@ -78,6 +78,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "agdb"
+version = "0.12.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2b3b489591b29bdc0ec285ef905e0b4fdc9824e854c7f9b33d679dea6410c38"
+dependencies = [
+ "agdb_derive",
+]
+
+[[package]]
+name = "agdb_derive"
+version = "0.12.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c375a5d66f29dbf87c9d1dac18e03f13cba23570e4595cc8849d110831430c8d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -443,6 +463,7 @@ version = "0.1.0"
 dependencies = [
  "abyssiniandb",
  "aeternusdb",
+ "agdb",
  "anyhow",
  "axum",
  "axum-test",
