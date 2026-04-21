@@ -47,6 +47,7 @@ pub const DEFAULT_SNAPSHOT_KOIT_PATH: &str = "./data/snapshots.koit.json";
 pub const DEFAULT_SNAPSHOT_LITE_DB_PATH: &str = "./data/snapshots.lite_db";
 pub const DEFAULT_SNAPSHOT_LOG_KV_PATH: &str = "./data/snapshots.log_kv";
 pub const DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH: &str = "./data/snapshots.lsm_storage_engine";
+pub const DEFAULT_SNAPSHOT_LSMDB_PATH: &str = "./data/snapshots.lsmdb";
 pub const DEFAULT_SNAPSHOT_MINDB_PATH: &str = "./data/snapshots.mindb";
 pub const DEFAULT_SNAPSHOT_MMDB_PATH: &str = "./data/snapshots.mmdb";
 pub const DEFAULT_SNAPSHOT_NANODB_PATH: &str = "./data/snapshots.nanodb.json";
@@ -159,6 +160,7 @@ pub struct Config {
     pub snapshot_lite_db_path: String,
     pub snapshot_log_kv_path: String,
     pub snapshot_lsm_storage_engine_path: String,
+    pub snapshot_lsmdb_path: String,
     pub snapshot_mindb_path: String,
     pub snapshot_mmdb_path: String,
     pub snapshot_nanodb_path: String,
@@ -318,6 +320,7 @@ impl Config {
             "SNAPSHOT_LSM_STORAGE_ENGINE_PATH",
             DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH,
         )?;
+        let snapshot_lsmdb_path = env_string("SNAPSHOT_LSMDB_PATH", DEFAULT_SNAPSHOT_LSMDB_PATH)?;
         let snapshot_mindb_path = env_string("SNAPSHOT_MINDB_PATH", DEFAULT_SNAPSHOT_MINDB_PATH)?;
         let snapshot_mmdb_path = env_string("SNAPSHOT_MMDB_PATH", DEFAULT_SNAPSHOT_MMDB_PATH)?;
         let snapshot_nanodb_path =
@@ -505,6 +508,7 @@ impl Config {
             snapshot_lite_db_path,
             snapshot_log_kv_path,
             snapshot_lsm_storage_engine_path,
+            snapshot_lsmdb_path,
             snapshot_mindb_path,
             snapshot_mmdb_path,
             snapshot_nanodb_path,
