@@ -475,6 +475,7 @@ dependencies = [
  "hmdb",
  "icefalldb",
  "jammdb",
+ "janql",
  "jfs",
  "json_store",
  "jsondb",
@@ -2939,6 +2940,15 @@ dependencies = [
  "memmap2",
  "page_size 0.6.0",
  "sha3",
+]
+
+[[package]]
+name = "janql"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84c93f1cad4d566b47ae9a84e693b26037a1af80eded63f14c0a05f002033c90"
+dependencies = [
+ "serde 1.0.228",
 ]
 
 [[package]]

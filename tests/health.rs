@@ -25,11 +25,11 @@ use backend::{
         DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore, FileSnapshotStore,
         FjallSnapshotStore, FlashKvSnapshotStore, GrebedbSnapshotStore, HeedSnapshotStore,
         HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
-        IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JfsSnapshotStore,
-        JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
-        KvSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore,
-        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
-        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
+        JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore,
+        KopperdbSnapshotStore, KvSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
         PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
         RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
         RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
@@ -85,6 +85,7 @@ fn test_config() -> Config {
         snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
         snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
+        snapshot_janql_path: "./data/test-snapshots.janql".to_owned(),
         snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
         snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
         snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
@@ -352,6 +353,11 @@ fn configure_parity_db_snapshot_store(config: &mut Config, root: &std::path::Pat
 fn configure_jammdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jammdb".to_owned();
     config.snapshot_jammdb_path = root.join("snapshots.jammdb").to_string_lossy().into_owned();
+}
+
+fn configure_janql_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "janql".to_owned();
+    config.snapshot_janql_path = root.join("snapshots.janql").to_string_lossy().into_owned();
 }
 
 fn configure_heed_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -3343,6 +3349,52 @@ fn app_state_uses_jammdb_snapshot_store_from_config() {
 
     assert_eq!(restored_room.document().id, document.id);
     assert!(snapshot_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_janql_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("janql-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.janql");
+    configure_janql_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with janql store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to janql".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to janql on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted janql snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.join("wal.log").exists() || snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
@@ -7004,6 +7056,54 @@ fn jammdb_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn janql_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("janql-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.janql");
+    let store =
+        JanqlSnapshotStore::new(&snapshot_path).expect("janql snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("JanQL".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to janql");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from janql");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from janql")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened =
+        JanqlSnapshotStore::new(&snapshot_path).expect("janql snapshot store should reopen");
+    let reopened_documents = reopened
+        .list_documents()
+        .expect("document catalog should reload from janql");
+    let reopened_snapshot = reopened
+        .load_snapshot(&document.id)
+        .expect("snapshot should reload from janql")
+        .expect("snapshot should exist after reopen");
+
+    assert_eq!(reopened_documents, vec![document.clone()]);
+    assert_eq!(reopened_snapshot.document, document);
+    assert_eq!(reopened_snapshot.update, vec![1, 2, 3]);
+
+    drop(reopened);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
