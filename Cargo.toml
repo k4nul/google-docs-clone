@@ -8,6 +8,7 @@ anyhow = "1"
 aeternusdb = "1.0.1"
 abyssiniandb = "0.1.4"
 agdb = "0.12.10"
+amandine = "0.1.2"
 armdb = { version = "0.1.14", default-features = false, features = ["parking_lot", "postcard-codec", "var-collections"] }
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"

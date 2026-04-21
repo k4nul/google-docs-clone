@@ -162,6 +162,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "amandine"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e983b0e063c10506b685383cd1842a20bf6774728fb939ee87e50c2cb31df88c"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -561,6 +572,7 @@ dependencies = [
  "abyssiniandb",
  "aeternusdb",
  "agdb",
+ "amandine",
  "anyhow",
  "armdb",
  "axum",

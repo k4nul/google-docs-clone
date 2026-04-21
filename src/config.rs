@@ -12,6 +12,7 @@ pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_AGDB_PATH: &str = "./data/snapshots.agdb";
+pub const DEFAULT_SNAPSHOT_AMANDINE_PATH: &str = "./data/snapshots.amandine";
 pub const DEFAULT_SNAPSHOT_ARMDB_PATH: &str = "./data/snapshots.armdb";
 pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
 pub const DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH: &str = "./data/snapshots.blockbucket";
@@ -135,6 +136,7 @@ pub struct Config {
     pub snapshot_store: String,
     pub snapshot_dir: String,
     pub snapshot_agdb_path: String,
+    pub snapshot_amandine_path: String,
     pub snapshot_armdb_path: String,
     pub snapshot_flash_kv_path: String,
     pub snapshot_blockbucket_path: String,
@@ -272,6 +274,8 @@ impl Config {
         let snapshot_store = env_string("SNAPSHOT_STORE", DEFAULT_SNAPSHOT_STORE)?;
         let snapshot_dir = env_string("SNAPSHOT_DIR", DEFAULT_SNAPSHOT_DIR)?;
         let snapshot_agdb_path = env_string("SNAPSHOT_AGDB_PATH", DEFAULT_SNAPSHOT_AGDB_PATH)?;
+        let snapshot_amandine_path =
+            env_string("SNAPSHOT_AMANDINE_PATH", DEFAULT_SNAPSHOT_AMANDINE_PATH)?;
         let snapshot_armdb_path = env_string("SNAPSHOT_ARMDB_PATH", DEFAULT_SNAPSHOT_ARMDB_PATH)?;
         let snapshot_flash_kv_path =
             env_string("SNAPSHOT_FLASH_KV_PATH", DEFAULT_SNAPSHOT_FLASH_KV_PATH)?;
@@ -514,6 +518,7 @@ impl Config {
             snapshot_store,
             snapshot_dir,
             snapshot_agdb_path,
+            snapshot_amandine_path,
             snapshot_armdb_path,
             snapshot_flash_kv_path,
             snapshot_blockbucket_path,

@@ -18,11 +18,11 @@ use backend::{
     errors::AppError,
     state::AppState,
     storage::{
-        AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, AgdbSnapshotStore, ArmdbSnapshotStore,
-        BitaskSnapshotStore, BitcaskEngineSnapshotStore, BitkvRsSnapshotStore,
-        BlazeupSnapshotStore, BlockbucketSnapshotStore, BtreeStoreSnapshotStore,
-        CandystoreSnapshotStore, CanopydbSnapshotStore, CavesSnapshotStore,
-        CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
+        AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, AgdbSnapshotStore,
+        AmandineSnapshotStore, ArmdbSnapshotStore, BitaskSnapshotStore, BitcaskEngineSnapshotStore,
+        BitkvRsSnapshotStore, BlazeupSnapshotStore, BlockbucketSnapshotStore,
+        BtreeStoreSnapshotStore, CandystoreSnapshotStore, CanopydbSnapshotStore,
+        CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
         CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
         DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore,
         EpochDbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
@@ -76,6 +76,7 @@ fn test_config() -> Config {
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
         snapshot_agdb_path: "./data/test-snapshots.agdb".to_owned(),
+        snapshot_amandine_path: "./data/test-snapshots.amandine".to_owned(),
         snapshot_armdb_path: "./data/test-snapshots.armdb".to_owned(),
         snapshot_flash_kv_path: "./data/test-snapshots.flash_kv".to_owned(),
         snapshot_blockbucket_path: "./data/test-snapshots.blockbucket".to_owned(),
@@ -265,6 +266,14 @@ fn configure_redb_snapshot_store(config: &mut Config, root: &std::path::Path) {
 fn configure_agdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "agdb".to_owned();
     config.snapshot_agdb_path = root.join("snapshots.agdb").to_string_lossy().into_owned();
+}
+
+fn configure_amandine_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "amandine".to_owned();
+    config.snapshot_amandine_path = root
+        .join("snapshots.amandine")
+        .to_string_lossy()
+        .into_owned();
 }
 
 fn configure_flash_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -3923,6 +3932,53 @@ fn app_state_uses_agdb_snapshot_store_from_config() {
 
     assert_eq!(restored_room.document().id, document.id);
     assert!(snapshot_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_amandine_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("amandine-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.amandine");
+    configure_amandine_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with amandine store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to amandine".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to amandine on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted amandine snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.join("snapshots.json").exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
@@ -10967,6 +11023,64 @@ fn agdb_snapshot_store_round_trips_document_catalog() {
             .list_documents()
             .expect("document catalog should reload from agdb"),
         vec![document]
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn amandine_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("amandine-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.amandine");
+    let store = AmandineSnapshotStore::new(&snapshot_path)
+        .expect("amandine snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Amandine".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to amandine");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from amandine");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from amandine")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        AmandineSnapshotStore::new(&snapshot_path).expect("amandine snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from amandine"),
+        vec![document.clone()]
+    );
+    let loaded_snapshot = reopened_store
+        .load_snapshot(&document.id)
+        .expect("snapshot should reload from amandine")
+        .expect("snapshot should exist after reopen");
+    assert_eq!(loaded_snapshot.document, document);
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from amandine");
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should be empty after amandine delete")
+            .is_empty()
     );
 
     drop(reopened_store);
