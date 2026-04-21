@@ -63,6 +63,7 @@ pub const DEFAULT_SNAPSHOT_RUSTY_LEVELDB_PATH: &str = "./data/snapshots.rusty_le
 pub const DEFAULT_SNAPSHOT_CANOPYDB_PATH: &str = "./data/snapshots.canopydb";
 pub const DEFAULT_SNAPSHOT_CAVES_PATH: &str = "./data/snapshots.caves";
 pub const DEFAULT_SNAPSHOT_CKYDB_PATH: &str = "./data/snapshots.ckydb";
+pub const DEFAULT_SNAPSHOT_CREPEDB_PATH: &str = "./data/snapshots.crepedb";
 pub const DEFAULT_SNAPSHOT_SCDB_PATH: &str = "./data/snapshots.scdb";
 pub const DEFAULT_SNAPSHOT_SKV_PATH: &str = "./data/snapshots.skv";
 pub const DEFAULT_SNAPSHOT_SURREALKV_PATH: &str = "./data/snapshots.surrealkv";
@@ -163,6 +164,7 @@ pub struct Config {
     pub snapshot_canopydb_path: String,
     pub snapshot_caves_path: String,
     pub snapshot_ckydb_path: String,
+    pub snapshot_crepedb_path: String,
     pub snapshot_scdb_path: String,
     pub snapshot_skv_path: String,
     pub snapshot_surrealkv_path: String,
@@ -321,6 +323,8 @@ impl Config {
             env_string("SNAPSHOT_CANOPYDB_PATH", DEFAULT_SNAPSHOT_CANOPYDB_PATH)?;
         let snapshot_caves_path = env_string("SNAPSHOT_CAVES_PATH", DEFAULT_SNAPSHOT_CAVES_PATH)?;
         let snapshot_ckydb_path = env_string("SNAPSHOT_CKYDB_PATH", DEFAULT_SNAPSHOT_CKYDB_PATH)?;
+        let snapshot_crepedb_path =
+            env_string("SNAPSHOT_CREPEDB_PATH", DEFAULT_SNAPSHOT_CREPEDB_PATH)?;
         let snapshot_scdb_path = env_string("SNAPSHOT_SCDB_PATH", DEFAULT_SNAPSHOT_SCDB_PATH)?;
         let snapshot_skv_path = env_string("SNAPSHOT_SKV_PATH", DEFAULT_SNAPSHOT_SKV_PATH)?;
         let snapshot_surrealkv_path =
@@ -475,6 +479,7 @@ impl Config {
             snapshot_canopydb_path,
             snapshot_caves_path,
             snapshot_ckydb_path,
+            snapshot_crepedb_path,
             snapshot_scdb_path,
             snapshot_skv_path,
             snapshot_surrealkv_path,
