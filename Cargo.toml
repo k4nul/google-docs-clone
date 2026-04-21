@@ -44,6 +44,7 @@ json_store = "0.1.5"
 kopperdb = "0.1.0"
 kv = { version = "0.24.0", features = ["json-value"] }
 koit = "0.2.0"
+mace-kv = "0.0.28"
 native_db = "0.8.2"
 native_model = "=0.4.20"
 nebari = "0.5.5"

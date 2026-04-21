@@ -1802,6 +1802,7 @@ mod tests {
             snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
             snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
+            snapshot_mace_path: "./data/test-snapshots.mace".to_owned(),
             snapshot_janql_path: "./data/test-snapshots.janql".to_owned(),
             snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
             snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
