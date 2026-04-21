@@ -1824,6 +1824,7 @@ mod tests {
             snapshot_log_kv_path: "./data/test-snapshots.log_kv".to_owned(),
             snapshot_lsm_storage_engine_path: "./data/test-snapshots.lsm_storage_engine".to_owned(),
             snapshot_lsmdb_path: "./data/test-snapshots.lsmdb".to_owned(),
+            snapshot_lsm_tree_path: "./data/test-snapshots.lsm_tree".to_owned(),
             snapshot_mindb_path: "./data/test-snapshots.mindb".to_owned(),
             snapshot_mmdb_path: "./data/test-snapshots.mmdb".to_owned(),
             snapshot_nanodb_path: "./data/test-snapshots.nanodb.json".to_owned(),

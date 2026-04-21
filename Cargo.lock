@@ -617,6 +617,7 @@ dependencies = [
  "ledger-kv",
  "lite_db",
  "log_kv",
+ "lsm-tree",
  "lsm_storage_engine",
  "lsmdb",
  "mace-kv",
