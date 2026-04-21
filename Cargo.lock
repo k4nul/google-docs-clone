@@ -524,6 +524,7 @@ dependencies = [
  "tracing-subscriber",
  "ureq 2.12.1",
  "uuid",
+ "vsdb",
  "yakv",
  "yedb",
  "yrs",
@@ -3473,6 +3474,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "mmdb"
+version = "3.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df5f486d3dbd9b1dc3e39e9a0aafcd155a7a3cc7033d8db99e1b71e6821c1617"
+dependencies = [
+ "arc-swap",
+ "crc32fast",
+ "libc",
+ "lz4_flex 0.13.0",
+ "moka",
+ "parking_lot 0.12.5",
+ "ruc",
+ "thiserror 2.0.18",
+ "tracing",
+ "zstd",
+]
+
+[[package]]
+name = "moka"
+version = "0.12.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "957228ad12042ee839f93c8f257b62b4c0ab5eaae1d4fa60de53b27c9d7c5046"
+dependencies = [
+ "crossbeam-channel",
+ "crossbeam-epoch",
+ "crossbeam-utils",
+ "equivalent",
+ "parking_lot 0.12.5",
+ "portable-atomic",
+ "smallvec 1.15.1",
+ "tagptr",
+ "uuid",
+]
+
+[[package]]
 name = "multiversion"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3752,6 +3788,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91df4bbde75afed763b708b7eee1e8e7651e02d97f6d5dd763e89367e957b23b"
 dependencies = [
  "hermit-abi",
+ "libc",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
  "libc",
 ]
 
@@ -4772,6 +4817,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruc"
+version = "10.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d36c8dd9f38281836f75908da3128280abc77a0941dc65bf219fab593c723c8"
+dependencies = [
+ "time",
+]
+
+[[package]]
 name = "rumdb"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5788,6 +5842,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tagptr"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
+
+[[package]]
 name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5892,7 +5952,9 @@ checksum = "743bd48c283afc0388f9b8827b976905fb217ad9e647fae3a379a9283c4def2c"
 dependencies = [
  "deranged",
  "itoa",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde_core",
  "time-core",
@@ -6494,6 +6556,35 @@ name = "virtue"
 version = "0.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
+
+[[package]]
+name = "vsdb"
+version = "13.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91344ab47c6602e4e3630de0423c358436694fa8f2feaf1d4b3c55b1e04309f4"
+dependencies = [
+ "parking_lot 0.12.5",
+ "postcard",
+ "rand 0.10.1",
+ "ruc",
+ "serde 1.0.228",
+ "sha3",
+ "thiserror 2.0.18",
+ "vsdb_core",
+]
+
+[[package]]
+name = "vsdb_core"
+version = "13.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27d3a804d5264ba86c1d412a3f09242da6bfc0b8643b88b5ae18d2afce8de7da"
+dependencies = [
+ "mmdb",
+ "parking_lot 0.12.5",
+ "rand 0.10.1",
+ "ruc",
+ "serde 1.0.228",
+]
 
 [[package]]
 name = "vsimd"

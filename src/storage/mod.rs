@@ -64,6 +64,7 @@ mod thetadb_snapshot_store;
 mod thunderdb_snapshot_store;
 mod tinybase_snapshot_store;
 mod tinykv_snapshot_store;
+mod vsdb_snapshot_store;
 mod yakv_snapshot_store;
 mod yedb_snapshot_store;
 
@@ -148,6 +149,7 @@ pub use thetadb_snapshot_store::ThetadbSnapshotStore;
 pub use thunderdb_snapshot_store::ThunderdbSnapshotStore;
 pub use tinybase_snapshot_store::TinybaseSnapshotStore;
 pub use tinykv_snapshot_store::TinykvSnapshotStore;
+pub use vsdb_snapshot_store::VsdbSnapshotStore;
 pub use yakv_snapshot_store::YakvSnapshotStore;
 pub use yedb_snapshot_store::YedbSnapshotStore;
 
@@ -467,6 +469,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "tinykv" => Ok(Arc::new(TinykvSnapshotStore::new(
             &config.snapshot_tinykv_path,
         )?)),
+        "vsdb" => Ok(Arc::new(VsdbSnapshotStore::new(
+            &config.snapshot_vsdb_path,
+        )?)),
         "yakv" => Ok(Arc::new(YakvSnapshotStore::new(
             &config.snapshot_yakv_path,
         )?)),
@@ -514,7 +519,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kopperdb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `flash_kv`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `rumdb`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `candystore`, `cuendillar`, `jammdb`, `jfs`, `json_store`, `jsondb`, `kopperdb`, `kv`, `koit`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `dblite`, `dbless`, `db_rs`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `jsondb`, `koit`, `jfs`, `json_store`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }

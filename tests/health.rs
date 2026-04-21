@@ -36,7 +36,7 @@ use backend::{
         SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore,
         SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
         ThetadbSnapshotStore, ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore,
-        YakvSnapshotStore, YedbSnapshotStore,
+        VsdbSnapshotStore, YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -128,6 +128,7 @@ fn test_config() -> Config {
         snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
         snapshot_snaildb_path: "./data/test-snapshots.snaildb".to_owned(),
         snapshot_tinykv_path: "./data/test-snapshots.tinykv.json".to_owned(),
+        snapshot_vsdb_path: "./data/test-snapshots.vsdb".to_owned(),
         snapshot_yakv_path: "./data/test-snapshots.yakv".to_owned(),
         snapshot_saberdb_path: "./data/test-snapshots.saberdb.json".to_owned(),
         snapshot_s3_endpoint: None,
@@ -497,6 +498,11 @@ fn configure_tinybase_snapshot_store(config: &mut Config, root: &std::path::Path
         .join("snapshots.tinybase")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_vsdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "vsdb".to_owned();
+    config.snapshot_vsdb_path = root.join("snapshots.vsdb").to_string_lossy().into_owned();
 }
 
 fn configure_thetadb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -6160,6 +6166,52 @@ fn app_state_uses_thetadb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_vsdb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("vsdb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.vsdb");
+    configure_vsdb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with vsdb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to vsdb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to vsdb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted vsdb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_root.join("store.meta.json").exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_nikidb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nikidb-store-config");
@@ -7658,6 +7710,39 @@ fn thetadb_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn vsdb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("vsdb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.vsdb");
+    let store =
+        VsdbSnapshotStore::new(&snapshot_root).expect("vsdb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Vsdb".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to vsdb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from vsdb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from vsdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert!(snapshot_root.join("store.meta.json").exists());
 
     drop(store);
 
