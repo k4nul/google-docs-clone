@@ -1788,6 +1788,7 @@ mod tests {
             snapshot_flash_kv_path: "./data/test-snapshots.flash_kv".to_owned(),
             snapshot_blockbucket_path: "./data/test-snapshots.blockbucket".to_owned(),
             snapshot_grebedb_path: "./data/test-snapshots.grebedb".to_owned(),
+            snapshot_grumpydb_path: "./data/test-snapshots.grumpydb".to_owned(),
             snapshot_highlandcows_isam_path: "./data/test-snapshots.highlandcows_isam".to_owned(),
             snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
             snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),

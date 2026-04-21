@@ -494,6 +494,7 @@ dependencies = [
  "flash-kv",
  "futures-util",
  "grebedb",
+ "grumpydb",
  "heed",
  "highlandcows-isam",
  "hightower-kv",
@@ -2400,6 +2401,18 @@ dependencies = [
  "thiserror 1.0.69",
  "uuid 0.8.2",
  "vfs",
+]
+
+[[package]]
+name = "grumpydb"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48b5570876c4f409f7537bd095482989800303c3c453b023d8a4d71fb2d274b4"
+dependencies = [
+ "crc32fast",
+ "parking_lot 0.12.5",
+ "thiserror 2.0.18",
+ "uuid 1.23.1",
 ]
 
 [[package]]
