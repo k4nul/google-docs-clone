@@ -42,6 +42,7 @@ pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar"
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_MACE_PATH: &str = "./data/snapshots.mace";
 pub const DEFAULT_SNAPSHOT_JANQL_PATH: &str = "./data/snapshots.janql";
+pub const DEFAULT_SNAPSHOT_JASONDB_PATH: &str = "./data/snapshots.jasondb";
 pub const DEFAULT_SNAPSHOT_JFS_PATH: &str = "./data/snapshots.jfs.json";
 pub const DEFAULT_SNAPSHOT_JSON_STORE_PATH: &str = "./data/snapshots.json_store.jsonl";
 pub const DEFAULT_SNAPSHOT_FEOXDB_PATH: &str = "./data/snapshots.feoxdb";
@@ -166,6 +167,7 @@ pub struct Config {
     pub snapshot_jammdb_path: String,
     pub snapshot_mace_path: String,
     pub snapshot_janql_path: String,
+    pub snapshot_jasondb_path: String,
     pub snapshot_jfs_path: String,
     pub snapshot_json_store_path: String,
     pub snapshot_feoxdb_path: String,
@@ -336,6 +338,8 @@ impl Config {
             env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_mace_path = env_string("SNAPSHOT_MACE_PATH", DEFAULT_SNAPSHOT_MACE_PATH)?;
         let snapshot_janql_path = env_string("SNAPSHOT_JANQL_PATH", DEFAULT_SNAPSHOT_JANQL_PATH)?;
+        let snapshot_jasondb_path =
+            env_string("SNAPSHOT_JASONDB_PATH", DEFAULT_SNAPSHOT_JASONDB_PATH)?;
         let snapshot_jfs_path = env_string("SNAPSHOT_JFS_PATH", DEFAULT_SNAPSHOT_JFS_PATH)?;
         let snapshot_json_store_path =
             env_string("SNAPSHOT_JSON_STORE_PATH", DEFAULT_SNAPSHOT_JSON_STORE_PATH)?;
@@ -548,6 +552,7 @@ impl Config {
             snapshot_jammdb_path,
             snapshot_mace_path,
             snapshot_janql_path,
+            snapshot_jasondb_path,
             snapshot_jfs_path,
             snapshot_json_store_path,
             snapshot_feoxdb_path,
