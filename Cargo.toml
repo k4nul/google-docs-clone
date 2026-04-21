@@ -29,6 +29,7 @@ epoch-db = "0.2.9"
 flash-kv = "0.2.1"
 fjall = "3.1.4"
 futures-util = "0.3"
+grebedb = { version = "1.0.0", path = "vendor/grebedb", default-features = false, features = ["file_locking", "system"] }
 heed = "0.22"
 hightower-kv = "0.1.5"
 highlandcows-isam = "0.1.2"

@@ -23,20 +23,21 @@ use backend::{
         CavesSnapshotStore, CkydbSnapshotStore, CuendillarSnapshotStore, DbRsSnapshotStore,
         DblessSnapshotStore, DbliteSnapshotStore, DocDbSnapshotStore, DocumentSnapshot,
         EightSnapshotStore, EpochDbSnapshotStore, FileSnapshotStore, FjallSnapshotStore,
-        FlashKvSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
-        HightowerKvSnapshotStore, HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
-        JammdbSnapshotStore, JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore,
-        KoitSnapshotStore, KopperdbSnapshotStore, KvSnapshotStore, ManagedSnapshotStore,
-        MicroKvSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore,
-        NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
-        PersySnapshotStore, PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
-        RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
-        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
-        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
-        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore,
-        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
-        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore,
-        VsdbSnapshotStore, YakvSnapshotStore, YedbSnapshotStore,
+        FlashKvSnapshotStore, GrebedbSnapshotStore, HeedSnapshotStore,
+        HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
+        IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JfsSnapshotStore,
+        JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
+        KvSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore,
+        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
+        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
+        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
+        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
+        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
+        SkvSnapshotStore, SledSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
+        SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThetadbSnapshotStore,
+        ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
+        YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -66,6 +67,7 @@ fn test_config() -> Config {
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
         snapshot_flash_kv_path: "./data/test-snapshots.flash_kv".to_owned(),
+        snapshot_grebedb_path: "./data/test-snapshots.grebedb".to_owned(),
         snapshot_highlandcows_isam_path: "./data/test-snapshots.highlandcows_isam".to_owned(),
         snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
         snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),
@@ -222,6 +224,14 @@ fn configure_flash_kv_snapshot_store(config: &mut Config, root: &std::path::Path
     config.snapshot_store = "flash_kv".to_owned();
     config.snapshot_flash_kv_path = root
         .join("snapshots.flash_kv")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_grebedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "grebedb".to_owned();
+    config.snapshot_grebedb_path = root
+        .join("snapshots.grebedb")
         .to_string_lossy()
         .into_owned();
 }
@@ -6212,6 +6222,52 @@ fn app_state_uses_vsdb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_grebedb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("grebedb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.grebedb");
+    configure_grebedb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with grebedb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to grebedb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to grebedb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted grebedb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_nikidb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nikidb-store-config");
@@ -7930,6 +7986,38 @@ fn flash_kv_snapshot_store_round_trips_document_catalog() {
     let loaded_snapshot = store
         .load_snapshot(&document.id)
         .expect("snapshot should load from flash_kv")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn grebedb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("grebedb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.grebedb");
+    let store = GrebedbSnapshotStore::new(&snapshot_path)
+        .expect("grebedb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("GrebeDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to grebedb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from grebedb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from grebedb")
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);
