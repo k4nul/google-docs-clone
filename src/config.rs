@@ -82,6 +82,7 @@ pub const DEFAULT_SNAPSHOT_AETERNUSDB_PATH: &str = "./data/snapshots.aeternusdb"
 pub const DEFAULT_SNAPSHOT_THUNDERDB_PATH: &str = "./data/snapshots.thunderdb";
 pub const DEFAULT_SNAPSHOT_THETADB_PATH: &str = "./data/snapshots.thetadb";
 pub const DEFAULT_SNAPSHOT_TINYBASE_PATH: &str = "./data/snapshots.tinybase";
+pub const DEFAULT_SNAPSHOT_TINYDB_PATH: &str = "./data/snapshots.tinydb";
 pub const DEFAULT_SNAPSHOT_DBLITE_PATH: &str = "./data/snapshots.dblite";
 pub const DEFAULT_SNAPSHOT_DBLESS_PATH: &str = "./data/snapshots.dbless";
 pub const DEFAULT_SNAPSHOT_DB_RS_PATH: &str = "./data/snapshots.db_rs";
@@ -187,6 +188,7 @@ pub struct Config {
     pub snapshot_thunderdb_path: String,
     pub snapshot_thetadb_path: String,
     pub snapshot_tinybase_path: String,
+    pub snapshot_tinydb_path: String,
     pub snapshot_dblite_path: String,
     pub snapshot_dbless_path: String,
     pub snapshot_db_rs_path: String,
@@ -368,6 +370,8 @@ impl Config {
             env_string("SNAPSHOT_THETADB_PATH", DEFAULT_SNAPSHOT_THETADB_PATH)?;
         let snapshot_tinybase_path =
             env_string("SNAPSHOT_TINYBASE_PATH", DEFAULT_SNAPSHOT_TINYBASE_PATH)?;
+        let snapshot_tinydb_path =
+            env_string("SNAPSHOT_TINYDB_PATH", DEFAULT_SNAPSHOT_TINYDB_PATH)?;
         let snapshot_dblite_path =
             env_string("SNAPSHOT_DBLITE_PATH", DEFAULT_SNAPSHOT_DBLITE_PATH)?;
         let snapshot_dbless_path =
@@ -513,6 +517,7 @@ impl Config {
             snapshot_thunderdb_path,
             snapshot_thetadb_path,
             snapshot_tinybase_path,
+            snapshot_tinydb_path,
             snapshot_dblite_path,
             snapshot_dbless_path,
             snapshot_db_rs_path,

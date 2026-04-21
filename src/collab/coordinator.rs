@@ -1855,6 +1855,7 @@ mod tests {
             snapshot_thunderdb_path: "./data/test-snapshots.thunderdb".to_owned(),
             snapshot_thetadb_path: "./data/test-snapshots.thetadb".to_owned(),
             snapshot_tinybase_path: "./data/test-snapshots.tinybase".to_owned(),
+            snapshot_tinydb_path: "./data/test-snapshots.tinydb".to_owned(),
             snapshot_dblite_path: "./data/test-snapshots.dblite".to_owned(),
             snapshot_dbless_path: "./data/test-snapshots.dbless".to_owned(),
             snapshot_db_rs_path: "./data/test-snapshots.db_rs".to_owned(),

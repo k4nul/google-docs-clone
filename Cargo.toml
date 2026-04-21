@@ -94,6 +94,7 @@ thunderdb = "0.4.0"
 thetadb = "0.0.4"
 thiserror = "2"
 tinybase = "0.1.5"
+tinydb = "1.0.0"
 tinykv = "0.4.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "sync"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }

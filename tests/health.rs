@@ -40,8 +40,8 @@ use backend::{
         SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
         SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
         SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore,
-        TinybaseSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
-        YedbSnapshotStore,
+        TinybaseSnapshotStore, TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
+        YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -141,6 +141,7 @@ fn test_config() -> Config {
         snapshot_thunderdb_path: "./data/test-snapshots.thunderdb".to_owned(),
         snapshot_thetadb_path: "./data/test-snapshots.thetadb".to_owned(),
         snapshot_tinybase_path: "./data/test-snapshots.tinybase".to_owned(),
+        snapshot_tinydb_path: "./data/test-snapshots.tinydb".to_owned(),
         snapshot_dblite_path: "./data/test-snapshots.dblite".to_owned(),
         snapshot_dbless_path: "./data/test-snapshots.dbless".to_owned(),
         snapshot_db_rs_path: "./data/test-snapshots.db_rs".to_owned(),
@@ -566,6 +567,11 @@ fn configure_tinybase_snapshot_store(config: &mut Config, root: &std::path::Path
         .join("snapshots.tinybase")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_tinydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "tinydb".to_owned();
+    config.snapshot_tinydb_path = root.join("snapshots.tinydb").to_string_lossy().into_owned();
 }
 
 fn configure_vsdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -4763,6 +4769,52 @@ fn app_state_uses_tinybase_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_tinydb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("tinydb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.tinydb");
+    configure_tinydb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with tinydb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to tinydb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to tinydb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted tinydb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_dblite_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("dblite-store-config");
@@ -8787,6 +8839,39 @@ fn tinybase_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn tinydb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("tinydb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.tinydb");
+    let store =
+        TinydbSnapshotStore::new(&snapshot_path).expect("tinydb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Tinydb".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to tinydb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from tinydb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from tinydb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert!(snapshot_path.exists());
 
     drop(store);
 
