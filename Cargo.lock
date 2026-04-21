@@ -3,6 +3,15 @@
 version = 4
 
 [[package]]
+name = "InfuseDB"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5f69691894c52ef3acaf54adcae4429a243066fc3764affac0cf019fe6391b4"
+dependencies = [
+ "uuid 1.23.1",
+]
+
+[[package]]
 name = "abyssiniandb"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -461,6 +470,7 @@ dependencies = [
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "InfuseDB",
  "abyssiniandb",
  "aeternusdb",
  "agdb",

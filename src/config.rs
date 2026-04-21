@@ -102,6 +102,7 @@ pub const DEFAULT_SNAPSHOT_SMOLLDB_PATH: &str = "./data/snapshots.smolldb";
 pub const DEFAULT_SNAPSHOT_KSTONE_PATH: &str = "./data/snapshots.kstone";
 pub const DEFAULT_SNAPSHOT_ROUGHDB_PATH: &str = "./data/snapshots.roughdb";
 pub const DEFAULT_SNAPSHOT_RAINDB_PATH: &str = "./data/snapshots.raindb";
+pub const DEFAULT_SNAPSHOT_INFUSEDB_PATH: &str = "./data/snapshots.infusedb";
 pub const DEFAULT_SNAPSHOT_S3_REGION: &str = "us-east-1";
 pub const DEFAULT_SNAPSHOT_S3_PREFIX: &str = "snapshots/";
 pub const DEFAULT_SNAPSHOT_S3_TIMEOUT_SECS: u64 = 5;
@@ -216,6 +217,7 @@ pub struct Config {
     pub snapshot_kstone_path: String,
     pub snapshot_roughdb_path: String,
     pub snapshot_raindb_path: String,
+    pub snapshot_infusedb_path: String,
     pub snapshot_s3_endpoint: Option<String>,
     pub snapshot_s3_region: String,
     pub snapshot_s3_bucket: Option<String>,
@@ -421,6 +423,8 @@ impl Config {
             env_string("SNAPSHOT_ROUGHDB_PATH", DEFAULT_SNAPSHOT_ROUGHDB_PATH)?;
         let snapshot_raindb_path =
             env_string("SNAPSHOT_RAINDB_PATH", DEFAULT_SNAPSHOT_RAINDB_PATH)?;
+        let snapshot_infusedb_path =
+            env_string("SNAPSHOT_INFUSEDB_PATH", DEFAULT_SNAPSHOT_INFUSEDB_PATH)?;
         let snapshot_s3_endpoint = env_optional_http_base_url("SNAPSHOT_S3_ENDPOINT")?;
         let snapshot_s3_region = env_string("SNAPSHOT_S3_REGION", DEFAULT_SNAPSHOT_S3_REGION)?;
         let snapshot_s3_bucket = env_optional_string("SNAPSHOT_S3_BUCKET")?;
@@ -567,6 +571,7 @@ impl Config {
             snapshot_kstone_path,
             snapshot_roughdb_path,
             snapshot_raindb_path,
+            snapshot_infusedb_path,
             snapshot_s3_endpoint,
             snapshot_s3_region,
             snapshot_s3_bucket,
