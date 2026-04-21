@@ -31,14 +31,15 @@ use backend::{
         LiteDbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
         NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
         OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RskeySnapshotStore,
-        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
-        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
-        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
-        SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
-        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
-        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore,
-        VsdbSnapshotStore, YakvSnapshotStore, YedbSnapshotStore,
+        PickleDbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
+        RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
+        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
+        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
+        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore,
+        TinybaseSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
+        YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -106,6 +107,7 @@ fn test_config() -> Config {
         snapshot_okofdb_path: "./data/test-snapshots.okofdb".to_owned(),
         snapshot_parity_db_path: "./data/test-snapshots.parity_db".to_owned(),
         snapshot_pickledb_path: "./data/test-snapshots.pickledb".to_owned(),
+        snapshot_rcask_path: "./data/test-snapshots.rcask".to_owned(),
         snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),
         snapshot_redb_path: "./data/test-snapshots.redb".to_owned(),
         snapshot_rskey_path: "./data/test-snapshots.rskey".to_owned(),
@@ -639,6 +641,11 @@ fn configure_kopperdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .join("snapshots.kopperdb")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_rcask_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "rcask".to_owned();
+    config.snapshot_rcask_path = root.join("snapshots.rcask").to_string_lossy().into_owned();
 }
 
 fn configure_jfs_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -5535,6 +5542,52 @@ fn app_state_uses_kopperdb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_rcask_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("rcask-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.rcask");
+    configure_rcask_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with rcask store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to rcask".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to rcask on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted rcask snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_jfs_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jfs-store-config");
@@ -8910,6 +8963,54 @@ fn kopperdb_snapshot_store_round_trips_document_catalog() {
     let reopened_snapshot = reopened
         .load_snapshot(&document.id)
         .expect("snapshot should reload from kopperdb")
+        .expect("snapshot should exist after reopen");
+
+    assert_eq!(reopened_documents, vec![document.clone()]);
+    assert_eq!(reopened_snapshot.document, document);
+    assert_eq!(reopened_snapshot.update, vec![1, 2, 3]);
+
+    drop(reopened);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn rcask_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("rcask-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.rcask");
+    let store =
+        RcaskSnapshotStore::new(&snapshot_path).expect("rcask snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("RCask".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to rcask");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from rcask");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from rcask")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened =
+        RcaskSnapshotStore::new(&snapshot_path).expect("rcask snapshot store should reopen");
+    let reopened_documents = reopened
+        .list_documents()
+        .expect("document catalog should reload from rcask");
+    let reopened_snapshot = reopened
+        .load_snapshot(&document.id)
+        .expect("snapshot should reload from rcask")
         .expect("snapshot should exist after reopen");
 
     assert_eq!(reopened_documents, vec![document.clone()]);

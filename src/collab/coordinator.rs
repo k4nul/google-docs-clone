@@ -1835,6 +1835,7 @@ mod tests {
             snapshot_skv_path: "./data/test-snapshots.skv".to_owned(),
             snapshot_surrealkv_path: "./data/test-snapshots.surrealkv".to_owned(),
             snapshot_pickledb_path: "./data/test-snapshots.pickledb".to_owned(),
+            snapshot_rcask_path: "./data/test-snapshots.rcask".to_owned(),
             snapshot_microkv_path: "./data/test-snapshots_microkv".to_owned(),
             snapshot_sled_path: "./data/test-snapshots.sled".to_owned(),
             snapshot_rustbreak_path: "./data/test-snapshots.rustbreak".to_owned(),

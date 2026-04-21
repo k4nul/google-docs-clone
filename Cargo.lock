@@ -498,6 +498,7 @@ dependencies = [
  "persistent-kv",
  "persy",
  "pickledb",
+ "rcask",
  "readb",
  "redb 2.6.3",
  "rskey",
@@ -4712,6 +4713,12 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
+
+[[package]]
+name = "rcask"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9371a44c5424e994d46b6fa81fc9003ee447195c7f7572fde0f94b25ba7f083b"
 
 [[package]]
 name = "rdrand"

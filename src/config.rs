@@ -50,6 +50,7 @@ pub const DEFAULT_SNAPSHOT_NODB_PATH: &str = "./data/snapshots.nodb";
 pub const DEFAULT_SNAPSHOT_OKOFDB_PATH: &str = "./data/snapshots.okofdb";
 pub const DEFAULT_SNAPSHOT_PARITY_DB_PATH: &str = "./data/snapshots.parity_db";
 pub const DEFAULT_SNAPSHOT_PICKLEDB_PATH: &str = "./data/snapshots.pickledb";
+pub const DEFAULT_SNAPSHOT_RCASK_PATH: &str = "./data/snapshots.rcask";
 pub const DEFAULT_SNAPSHOT_MICROKV_PATH: &str = "./data/snapshots_microkv";
 pub const DEFAULT_SNAPSHOT_REDB_PATH: &str = "./data/snapshots.redb";
 pub const DEFAULT_SNAPSHOT_RSKEY_PATH: &str = "./data/snapshots.rskey";
@@ -147,6 +148,7 @@ pub struct Config {
     pub snapshot_okofdb_path: String,
     pub snapshot_parity_db_path: String,
     pub snapshot_pickledb_path: String,
+    pub snapshot_rcask_path: String,
     pub snapshot_microkv_path: String,
     pub snapshot_redb_path: String,
     pub snapshot_rskey_path: String,
@@ -292,6 +294,7 @@ impl Config {
             env_string("SNAPSHOT_PARITY_DB_PATH", DEFAULT_SNAPSHOT_PARITY_DB_PATH)?;
         let snapshot_pickledb_path =
             env_string("SNAPSHOT_PICKLEDB_PATH", DEFAULT_SNAPSHOT_PICKLEDB_PATH)?;
+        let snapshot_rcask_path = env_string("SNAPSHOT_RCASK_PATH", DEFAULT_SNAPSHOT_RCASK_PATH)?;
         let snapshot_microkv_path =
             env_string("SNAPSHOT_MICROKV_PATH", DEFAULT_SNAPSHOT_MICROKV_PATH)?;
         let snapshot_redb_path = env_string("SNAPSHOT_REDB_PATH", DEFAULT_SNAPSHOT_REDB_PATH)?;
@@ -450,6 +453,7 @@ impl Config {
             snapshot_okofdb_path,
             snapshot_parity_db_path,
             snapshot_pickledb_path,
+            snapshot_rcask_path,
             snapshot_microkv_path,
             snapshot_redb_path,
             snapshot_rskey_path,
