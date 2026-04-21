@@ -49,6 +49,7 @@ kopperdb = "0.1.0"
 kv = { version = "0.24.0", features = ["json-value"] }
 koit = "0.2.0"
 lite_db = "0.1.6"
+lsm_storage_engine = "0.1.0"
 mace-kv = "0.0.28"
 native_db = "0.8.2"
 native_model = "=0.4.20"

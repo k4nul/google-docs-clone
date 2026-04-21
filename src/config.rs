@@ -41,6 +41,7 @@ pub const DEFAULT_SNAPSHOT_KOPPERDB_PATH: &str = "./data/snapshots.kopperdb";
 pub const DEFAULT_SNAPSHOT_KV_PATH: &str = "./data/snapshots.kv";
 pub const DEFAULT_SNAPSHOT_KOIT_PATH: &str = "./data/snapshots.koit.json";
 pub const DEFAULT_SNAPSHOT_LITE_DB_PATH: &str = "./data/snapshots.lite_db";
+pub const DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH: &str = "./data/snapshots.lsm_storage_engine";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
 pub const DEFAULT_SNAPSHOT_PERSISTENT_KV_PATH: &str = "./data/snapshots.persistent_kv";
@@ -140,6 +141,7 @@ pub struct Config {
     pub snapshot_kv_path: String,
     pub snapshot_koit_path: String,
     pub snapshot_lite_db_path: String,
+    pub snapshot_lsm_storage_engine_path: String,
     pub snapshot_fjall_path: String,
     pub snapshot_persy_path: String,
     pub snapshot_persistent_kv_path: String,
@@ -278,6 +280,10 @@ impl Config {
         let snapshot_koit_path = env_string("SNAPSHOT_KOIT_PATH", DEFAULT_SNAPSHOT_KOIT_PATH)?;
         let snapshot_lite_db_path =
             env_string("SNAPSHOT_LITE_DB_PATH", DEFAULT_SNAPSHOT_LITE_DB_PATH)?;
+        let snapshot_lsm_storage_engine_path = env_string(
+            "SNAPSHOT_LSM_STORAGE_ENGINE_PATH",
+            DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH,
+        )?;
         let snapshot_fjall_path = env_string("SNAPSHOT_FJALL_PATH", DEFAULT_SNAPSHOT_FJALL_PATH)?;
         let snapshot_persy_path = env_string("SNAPSHOT_PERSY_PATH", DEFAULT_SNAPSHOT_PERSY_PATH)?;
         let snapshot_persistent_kv_path = env_string(
@@ -447,6 +453,7 @@ impl Config {
             snapshot_kv_path,
             snapshot_koit_path,
             snapshot_lite_db_path,
+            snapshot_lsm_storage_engine_path,
             snapshot_fjall_path,
             snapshot_persy_path,
             snapshot_persistent_kv_path,

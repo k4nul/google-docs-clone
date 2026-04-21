@@ -507,6 +507,7 @@ dependencies = [
  "kopperdb",
  "kv",
  "lite_db",
+ "lsm_storage_engine",
  "mace-kv",
  "microkv",
  "native_db",
@@ -3417,6 +3418,12 @@ dependencies = [
  "varint-rs",
  "xxhash-rust",
 ]
+
+[[package]]
+name = "lsm_storage_engine"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33be16c46818047e548f483c73405747bf1e86c2b9a09cab1bf09c63b6d36584"
 
 [[package]]
 name = "lz4"
