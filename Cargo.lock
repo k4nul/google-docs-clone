@@ -8,7 +8,7 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "408b08fd869c3aee03971d51914b2c76af834fcac316f458f7befab93aac54f5"
 dependencies = [
- "itertools",
+ "itertools 0.13.0",
  "rabuf",
  "vu64",
 ]
@@ -448,8 +448,10 @@ dependencies = [
  "axum-test",
  "base64 0.22.1",
  "bitask",
+ "bitkv-rs",
  "blockbucket",
  "btree-store",
+ "bytes",
  "candystore",
  "canopydb",
  "caves",
@@ -689,6 +691,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "bitkv-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d958b79410adab679eb4ca5bc709b14063b63a3f20bbfa84245ba0b16976a49"
+dependencies = [
+ "bytes",
+ "crc32fast",
+ "crossbeam-skiplist",
+ "env_logger",
+ "fs2",
+ "fs_extra",
+ "jammdb",
+ "log",
+ "memmap2",
+ "parking_lot 0.12.5",
+ "prost 0.12.6",
+ "rand 0.8.6",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1953,7 +1976,7 @@ dependencies = [
  "log",
  "memmap2",
  "parking_lot 0.12.5",
- "prost",
+ "prost 0.13.5",
  "rand 0.9.4",
  "thiserror 2.0.18",
  "time",
@@ -2931,6 +2954,15 @@ name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
+
+[[package]]
+name = "itertools"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "itertools"
@@ -4089,7 +4121,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd849ab9582d6bff5cf1629a6375940204b06de034f17a0768aed1d27594cd3"
 dependencies = [
  "fs2",
- "prost",
+ "prost 0.13.5",
  "regex",
 ]
 
@@ -4305,12 +4337,35 @@ dependencies = [
 
 [[package]]
 name = "prost"
+version = "0.12.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
+dependencies = [
+ "bytes",
+ "prost-derive 0.12.6",
+]
+
+[[package]]
+name = "prost"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.13.5",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.12.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
+dependencies = [
+ "anyhow",
+ "itertools 0.12.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -4320,7 +4375,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.117",

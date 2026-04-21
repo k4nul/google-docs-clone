@@ -1800,6 +1800,7 @@ mod tests {
             snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
             snapshot_icefalldb_path: "./data/test-snapshots.icefalldb".to_owned(),
             snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
+            snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),
             snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
             snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),

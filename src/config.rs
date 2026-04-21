@@ -27,6 +27,7 @@ pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower
 pub const DEFAULT_SNAPSHOT_HMDB_PATH: &str = "./data/snapshots.hmdb";
 pub const DEFAULT_SNAPSHOT_ICEFALLDB_PATH: &str = "./data/snapshots.icefalldb";
 pub const DEFAULT_SNAPSHOT_BITASK_PATH: &str = "./data/snapshots.bitask";
+pub const DEFAULT_SNAPSHOT_BITKV_RS_PATH: &str = "./data/snapshots.bitkv_rs";
 pub const DEFAULT_SNAPSHOT_CANDYSTORE_PATH: &str = "./data/snapshots.candystore";
 pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
@@ -121,6 +122,7 @@ pub struct Config {
     pub snapshot_hmdb_path: String,
     pub snapshot_icefalldb_path: String,
     pub snapshot_bitask_path: String,
+    pub snapshot_bitkv_rs_path: String,
     pub snapshot_candystore_path: String,
     pub snapshot_cuendillar_path: String,
     pub snapshot_jammdb_path: String,
@@ -246,6 +248,8 @@ impl Config {
             env_string("SNAPSHOT_ICEFALLDB_PATH", DEFAULT_SNAPSHOT_ICEFALLDB_PATH)?;
         let snapshot_bitask_path =
             env_string("SNAPSHOT_BITASK_PATH", DEFAULT_SNAPSHOT_BITASK_PATH)?;
+        let snapshot_bitkv_rs_path =
+            env_string("SNAPSHOT_BITKV_RS_PATH", DEFAULT_SNAPSHOT_BITKV_RS_PATH)?;
         let snapshot_candystore_path =
             env_string("SNAPSHOT_CANDYSTORE_PATH", DEFAULT_SNAPSHOT_CANDYSTORE_PATH)?;
         let snapshot_cuendillar_path =
@@ -415,6 +419,7 @@ impl Config {
             snapshot_hmdb_path,
             snapshot_icefalldb_path,
             snapshot_bitask_path,
+            snapshot_bitkv_rs_path,
             snapshot_candystore_path,
             snapshot_cuendillar_path,
             snapshot_jammdb_path,
