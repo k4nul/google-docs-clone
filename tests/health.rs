@@ -19,32 +19,33 @@ use backend::{
     state::AppState,
     storage::{
         AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, AgdbSnapshotStore, BitaskSnapshotStore,
-        BitcaskEngineSnapshotStore, BitkvRsSnapshotStore, BlockbucketSnapshotStore,
-        BtreeStoreSnapshotStore, CandystoreSnapshotStore, CanopydbSnapshotStore,
-        CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
-        CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
-        DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore,
-        EpochDbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
-        FjallSnapshotStore, FlashKvSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore,
-        GrumpydbSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
-        HightowerKvSnapshotStore, HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
-        InfusedbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore, JfsSnapshotStore,
-        JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore, KoitSnapshotStore,
-        KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore,
-        LiteDbSnapshotStore, LogKvSnapshotStore, LsmStorageEngineSnapshotStore, LsmdbSnapshotStore,
-        MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore,
-        MmdbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore,
-        NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore,
-        PersistentKvSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore,
-        RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore,
-        RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
-        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
-        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
-        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
-        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
-        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore,
-        TinybaseSnapshotStore, TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
-        YakvSnapshotStore, YedbSnapshotStore,
+        BitcaskEngineSnapshotStore, BitkvRsSnapshotStore, BlazeupSnapshotStore,
+        BlockbucketSnapshotStore, BtreeStoreSnapshotStore, CandystoreSnapshotStore,
+        CanopydbSnapshotStore, CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore,
+        CrepeDbSnapshotStore, CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
+        DbliteSnapshotStore, DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot,
+        EightSnapshotStore, EpochDbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
+        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, GrausDbSnapshotStore,
+        GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
+        HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
+        IcefalldbSnapshotStore, InMemorySnapshotStore, InfusedbSnapshotStore, JammdbSnapshotStore,
+        JanqlSnapshotStore, JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore,
+        KafiSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore,
+        KvSnapshotStore, LedgerKvSnapshotStore, LiteDbSnapshotStore, LogKvSnapshotStore,
+        LsmStorageEngineSnapshotStore, LsmdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore,
+        MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
+        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RumDbSnapshotStore,
+        RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
+        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
+        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
+        SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
+        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
+        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore,
+        TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
+        YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -94,6 +95,7 @@ fn test_config() -> Config {
         snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
         snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),
         snapshot_bitcask_engine_path: "./data/test-snapshots.bitcask_engine".to_owned(),
+        snapshot_blazeup_path: "./data/test-snapshots.blazeup".to_owned(),
         snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
         snapshot_celerix_store_path: "./data/test-snapshots.celerix_store".to_owned(),
         snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
@@ -727,6 +729,14 @@ fn configure_bitcask_engine_snapshot_store(config: &mut Config, root: &std::path
     config.snapshot_store = "bitcask_engine".to_owned();
     config.snapshot_bitcask_engine_path = root
         .join("snapshots.bitcask_engine")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_blazeup_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "blazeup".to_owned();
+    config.snapshot_blazeup_path = root
+        .join("snapshots.blazeup")
         .to_string_lossy()
         .into_owned();
 }
@@ -6029,6 +6039,52 @@ fn app_state_uses_bitcask_engine_snapshot_store_from_config() {
 
     let reloaded_state = AppState::from_config(&config)
         .expect("state should reload persisted bitcask-engine snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_blazeup_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("blazeup-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.blazeup");
+    configure_blazeup_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with blazeup store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to blazeup".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to blazeup on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted blazeup snapshot");
     let restored_room = reloaded_state
         .rooms()
         .get(&document.id)
@@ -11867,6 +11923,71 @@ fn blockbucket_snapshot_store_round_trips_document_catalog() {
     assert_eq!(reopened_snapshot.update, vec![1, 2, 3]);
 
     drop(reopened);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn blazeup_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("blazeup-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.blazeup");
+    let store = BlazeupSnapshotStore::new(&snapshot_path)
+        .expect("blazeup snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Blazeup".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to blazeup");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from blazeup");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from blazeup")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        BlazeupSnapshotStore::new(&snapshot_path).expect("blazeup snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from blazeup"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from blazeup")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from blazeup");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect blazeup deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
