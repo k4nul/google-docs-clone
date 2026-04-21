@@ -120,6 +120,7 @@ log_kv = "0.1.0"
 kstone-core = "0.1.0"
 roughdb = "0.9.0"
 InfuseDB = "0.2.1"
+kafi = "0.1.2"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

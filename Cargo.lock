@@ -520,6 +520,7 @@ dependencies = [
  "jfs",
  "json_store",
  "jsondb",
+ "kafi",
  "koit",
  "kopperdb",
  "kstone-core",
@@ -638,6 +639,16 @@ dependencies = [
  "num-traits 0.1.43",
  "rustc-serialize",
  "serde 0.8.23",
+]
+
+[[package]]
+name = "bincode"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a6301db0b49fb63551bc15b5ae348147101cdf323242b93ec7546d5002ff1af"
+dependencies = [
+ "byteorder",
+ "serde 1.0.228",
 ]
 
 [[package]]
@@ -3494,6 +3505,17 @@ dependencies = [
  "serde 1.0.228",
  "serde_json",
  "uuid-simd",
+]
+
+[[package]]
+name = "kafi"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36ce39c050b536c8b3b4d85351a68e7df38f4cb3e9065795eafbaf87b1aa4497"
+dependencies = [
+ "bincode 0.9.2",
+ "serde 1.0.228",
+ "serde_derive",
 ]
 
 [[package]]
