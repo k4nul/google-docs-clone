@@ -513,6 +513,7 @@ dependencies = [
  "snaildb",
  "structsy",
  "surrealkv",
+ "thetadb",
  "thiserror 2.0.18",
  "thunderdb",
  "tinybase",
@@ -5809,6 +5810,17 @@ dependencies = [
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "thetadb"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5992eb56e58c5341016c10e6d5431ebb69d41107679a9c0b8989da9d0fd2d49"
+dependencies = [
+ "crc32fast",
+ "libc",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

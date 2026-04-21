@@ -74,6 +74,7 @@ sled = "0.34"
 structsy = { version = "0.5.2", features = ["derive"] }
 surrealkv = "0.21.0"
 thunderdb = "0.4.0"
+thetadb = "0.0.4"
 thiserror = "2"
 tinybase = "0.1.5"
 tinykv = "0.4.0"
