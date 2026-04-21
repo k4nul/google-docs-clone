@@ -513,6 +513,7 @@ dependencies = [
  "mace-kv",
  "microkv",
  "mmdb",
+ "nanodb",
  "native_db",
  "native_model",
  "nebari",
@@ -3747,6 +3748,19 @@ name = "murmur3"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9252111cf132ba0929b6f8e030cac2a24b507f3a4d6db6fb2896f27b354c714b"
+
+[[package]]
+name = "nanodb"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d01529f007f57affea74efcd9ed62aef7adf35e7c5d4de4967eb88fdff18a40"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+]
 
 [[package]]
 name = "nanorand"
