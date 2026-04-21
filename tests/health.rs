@@ -29,9 +29,9 @@ use backend::{
         IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
         JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore,
         KopperdbSnapshotStore, KvSnapshotStore, LiteDbSnapshotStore, LsmStorageEngineSnapshotStore,
-        MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, NativeDbSnapshotStore,
-        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
-        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, MmdbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
         PickleDbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
         RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
         RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
@@ -101,6 +101,7 @@ fn test_config() -> Config {
         snapshot_koit_path: "./data/test-snapshots.koit.json".to_owned(),
         snapshot_lite_db_path: "./data/test-snapshots.lite_db".to_owned(),
         snapshot_lsm_storage_engine_path: "./data/test-snapshots.lsm_storage_engine".to_owned(),
+        snapshot_mmdb_path: "./data/test-snapshots.mmdb".to_owned(),
         snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
         snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
         snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
@@ -704,6 +705,11 @@ fn configure_lsm_storage_engine_snapshot_store(config: &mut Config, root: &std::
         .join("snapshots.lsm_storage_engine")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_mmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "mmdb".to_owned();
+    config.snapshot_mmdb_path = root.join("snapshots.mmdb").to_string_lossy().into_owned();
 }
 
 fn configure_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -5943,6 +5949,52 @@ fn app_state_uses_lsm_storage_engine_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_mmdb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("mmdb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.mmdb");
+    configure_mmdb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with mmdb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to mmdb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to mmdb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted mmdb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kv-store-config");
@@ -9543,6 +9595,59 @@ fn lsm_storage_engine_snapshot_store_round_trips_document_catalog() {
             .list_documents()
             .expect("document catalog should reload from lsm_storage_engine"),
         vec![document]
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn mmdb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("mmdb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.mmdb");
+    let store =
+        MmdbSnapshotStore::new(&snapshot_path).expect("mmdb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("MMDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to mmdb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from mmdb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from mmdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        MmdbSnapshotStore::new(&snapshot_path).expect("mmdb snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from mmdb"),
+        vec![document.clone()]
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from mmdb");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should be empty after mmdb delete"),
+        Vec::new()
     );
 
     drop(reopened_store);
