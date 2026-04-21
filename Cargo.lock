@@ -514,6 +514,7 @@ dependencies = [
  "lsm_storage_engine",
  "mace-kv",
  "microkv",
+ "mindb",
  "mmdb",
  "nanodb",
  "native_db",
@@ -3757,6 +3758,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
+name = "mindb"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c2bab0da605537248fc18a294badc84c5e0be288407211c34421a03cb5bef50"
+dependencies = [
+ "ahash 0.8.12",
+ "crossbeam-skiplist",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "libc",
+ "parking_lot 0.12.5",
+ "serde 1.0.228",
+ "serde_json",
+ "sha2 0.10.9",
+ "smallvec 1.15.1",
+ "thiserror 1.0.69",
+ "uuid 1.23.1",
+ "xxhash-rust",
+ "zstd 0.12.4",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3792,7 +3815,7 @@ dependencies = [
  "ruc",
  "thiserror 2.0.18",
  "tracing",
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -5111,7 +5134,7 @@ dependencies = [
  "ureq 3.3.0",
  "url",
  "webpki-roots 1.0.7",
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -7886,7 +7909,7 @@ dependencies = [
  "time",
  "zeroize",
  "zopfli",
- "zstd",
+ "zstd 0.13.3",
 ]
 
 [[package]]
@@ -7915,11 +7938,30 @@ dependencies = [
 
 [[package]]
 name = "zstd"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a27595e173641171fc74a1232b7b1c7a7cb6e18222c11e9dfb9888fa424c53c"
+dependencies = [
+ "zstd-safe 6.0.6",
+]
+
+[[package]]
+name = "zstd"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 7.2.4",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "6.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee98ffd0b48ee95e6c5168188e44a54550b1564d9d530ee21d5f0eaed1069581"
+dependencies = [
+ "libc",
+ "zstd-sys",
 ]
 
 [[package]]
