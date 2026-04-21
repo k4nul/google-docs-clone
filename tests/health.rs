@@ -24,23 +24,24 @@ use backend::{
         CrepeDbSnapshotStore, CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
         DbliteSnapshotStore, DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot,
         EightSnapshotStore, EpochDbSnapshotStore, FileSnapshotStore, FjallSnapshotStore,
-        FlashKvSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
-        HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
-        IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
-        JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore,
-        KopperdbSnapshotStore, KvSnapshotStore, LiteDbSnapshotStore, LsmStorageEngineSnapshotStore,
-        MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore, MmdbSnapshotStore,
-        NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore,
-        NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
-        PersySnapshotStore, PickleDbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
-        RedbSnapshotStore, RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore,
-        RustcaskSnapshotStore, RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore,
-        SaberdbSnapshotStore, SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore,
-        SiamesedbSnapshotStore, SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore,
-        SmolldbSnapshotStore, SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore,
-        StructsySnapshotStore, SurrealkvSnapshotStore, ThetadbSnapshotStore,
-        ThunderdbSnapshotStore, TinybaseSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
-        YakvSnapshotStore, YedbSnapshotStore,
+        FlashKvSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore,
+        HeedSnapshotStore, HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore,
+        HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore, JammdbSnapshotStore,
+        JanqlSnapshotStore, JfsSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore,
+        KoitSnapshotStore, KopperdbSnapshotStore, KvSnapshotStore, LiteDbSnapshotStore,
+        LsmStorageEngineSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore,
+        MicroKvSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore,
+        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
+        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
+        RskeySnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
+        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
+        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
+        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore,
+        TinybaseSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
+        YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -103,6 +104,7 @@ fn test_config() -> Config {
         snapshot_lsm_storage_engine_path: "./data/test-snapshots.lsm_storage_engine".to_owned(),
         snapshot_mmdb_path: "./data/test-snapshots.mmdb".to_owned(),
         snapshot_nanodb_path: "./data/test-snapshots.nanodb.json".to_owned(),
+        snapshot_graus_db_path: "./data/test-snapshots.graus_db".to_owned(),
         snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
         snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
         snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),
@@ -717,6 +719,14 @@ fn configure_nanodb_snapshot_store(config: &mut Config, root: &std::path::Path) 
     config.snapshot_store = "nanodb".to_owned();
     config.snapshot_nanodb_path = root
         .join("snapshots.nanodb.json")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_graus_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "graus_db".to_owned();
+    config.snapshot_graus_db_path = root
+        .join("snapshots.graus_db")
         .to_string_lossy()
         .into_owned();
 }
@@ -6050,6 +6060,53 @@ fn app_state_uses_nanodb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_graus_db_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("graus_db-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.graus_db");
+    configure_graus_db_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with graus_db store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to graus_db".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to graus_db on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted graus_db snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kv-store-config");
@@ -9755,6 +9812,59 @@ fn nanodb_snapshot_store_round_trips_document_catalog() {
         reopened_store
             .list_documents()
             .expect("document catalog should be empty after nanodb delete"),
+        Vec::new()
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn graus_db_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("graus_db-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.graus_db");
+    let store = GrausDbSnapshotStore::new(&snapshot_path)
+        .expect("graus_db snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("GrausDb".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to graus_db");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from graus_db");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from graus_db")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        GrausDbSnapshotStore::new(&snapshot_path).expect("graus_db snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from graus_db"),
+        vec![document.clone()]
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from graus_db");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should be empty after graus_db delete"),
         Vec::new()
     );
 

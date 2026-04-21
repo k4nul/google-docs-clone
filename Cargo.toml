@@ -37,6 +37,7 @@ fjall = "3.1.4"
 futures-util = "0.3"
 grebedb = { version = "1.0.0", path = "vendor/grebedb", default-features = false, features = ["file_locking", "system"] }
 grumpydb = "0.2.0"
+graus-db = "0.2.2"
 heed = "0.22"
 hightower-kv = "0.1.5"
 highlandcows-isam = "0.1.2"

@@ -493,6 +493,7 @@ dependencies = [
  "fjall",
  "flash-kv",
  "futures-util",
+ "graus-db",
  "grebedb",
  "grumpydb",
  "heed",
@@ -2377,6 +2378,17 @@ name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
+
+[[package]]
+name = "graus-db"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a29d1fa511952994a02f6c5e5e8479892e1c6c3389a602928705c7d66693d12"
+dependencies = [
+ "crossbeam-skiplist",
+ "log",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "graviola"
