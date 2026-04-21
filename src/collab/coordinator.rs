@@ -1878,6 +1878,7 @@ mod tests {
             snapshot_raindb_path: "./data/test-snapshots.raindb".to_owned(),
             snapshot_infusedb_path: "./data/test-snapshots.infusedb".to_owned(),
             snapshot_kafi_path: "./data/test-snapshots.kafi".to_owned(),
+            snapshot_tinkv_path: "./data/test-snapshots.tinkv".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,
