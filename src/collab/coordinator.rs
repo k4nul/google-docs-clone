@@ -1812,6 +1812,7 @@ mod tests {
             snapshot_kopperdb_path: "./data/test-snapshots.kopperdb".to_owned(),
             snapshot_kv_path: "./data/test-snapshots.kv".to_owned(),
             snapshot_koit_path: "./data/test-snapshots.koit.json".to_owned(),
+            snapshot_lite_db_path: "./data/test-snapshots.lite_db".to_owned(),
             snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
             snapshot_persy_path: "./data/test-snapshots.persy".to_owned(),
             snapshot_persistent_kv_path: "./data/test-snapshots.persistent_kv".to_owned(),

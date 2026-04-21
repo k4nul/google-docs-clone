@@ -485,6 +485,7 @@ dependencies = [
  "koit",
  "kopperdb",
  "kv",
+ "lite_db",
  "mace-kv",
  "microkv",
  "native_db",
@@ -3304,6 +3305,22 @@ name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+
+[[package]]
+name = "lite_db"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a47868f15b93561300a7f2a1b885273472f1f522480ac8ae2d6b3c12899f716e"
+dependencies = [
+ "bytes",
+ "crc32fast",
+ "fs2",
+ "jammdb",
+ "log",
+ "memmap2",
+ "parking_lot 0.12.5",
+ "prost 0.13.5",
+]
 
 [[package]]
 name = "litemap"

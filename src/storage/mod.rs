@@ -33,6 +33,7 @@ mod jsondb_snapshot_store;
 mod koit_snapshot_store;
 mod kopperdb_snapshot_store;
 mod kv_snapshot_store;
+mod lite_db_snapshot_store;
 mod mace_snapshot_store;
 mod managed_snapshot_store;
 mod microkv_snapshot_store;
@@ -124,6 +125,7 @@ pub use jsondb_snapshot_store::JsondbSnapshotStore;
 pub use koit_snapshot_store::KoitSnapshotStore;
 pub use kopperdb_snapshot_store::KopperdbSnapshotStore;
 pub use kv_snapshot_store::KvSnapshotStore;
+pub use lite_db_snapshot_store::LiteDbSnapshotStore;
 pub use mace_snapshot_store::MaceSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
 pub use microkv_snapshot_store::MicroKvSnapshotStore;
@@ -377,6 +379,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         "kv" => Ok(Arc::new(KvSnapshotStore::new(&config.snapshot_kv_path)?)),
         "koit" => Ok(Arc::new(KoitSnapshotStore::new(
             &config.snapshot_koit_path,
+        )?)),
+        "lite_db" => Ok(Arc::new(LiteDbSnapshotStore::new(
+            &config.snapshot_lite_db_path,
         )?)),
         "fjall" => Ok(Arc::new(FjallSnapshotStore::new(
             &config.snapshot_fjall_path,
