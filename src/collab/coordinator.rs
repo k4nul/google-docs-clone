@@ -1806,6 +1806,7 @@ mod tests {
             snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),
             snapshot_bitcask_engine_path: "./data/test-snapshots.bitcask_engine".to_owned(),
             snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
+            snapshot_celerix_store_path: "./data/test-snapshots.celerix_store".to_owned(),
             snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_mace_path: "./data/test-snapshots.mace".to_owned(),

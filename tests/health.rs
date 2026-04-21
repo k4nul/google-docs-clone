@@ -21,20 +21,20 @@ use backend::{
         AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, AgdbSnapshotStore, BitaskSnapshotStore,
         BitcaskEngineSnapshotStore, BitkvRsSnapshotStore, BlockbucketSnapshotStore,
         BtreeStoreSnapshotStore, CandystoreSnapshotStore, CanopydbSnapshotStore,
-        CavesSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore, CuendillarSnapshotStore,
-        DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore, DharmadbSnapshotStore,
-        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore,
-        FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore, FjallSnapshotStore,
-        FlashKvSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore,
-        HeedSnapshotStore, HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore,
-        HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore, InfusedbSnapshotStore,
-        JammdbSnapshotStore, JanqlSnapshotStore, JfsSnapshotStore, JsonStoreSnapshotStore,
-        JsondbSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore,
-        KvSnapshotStore, LiteDbSnapshotStore, LogKvSnapshotStore, LsmStorageEngineSnapshotStore,
-        LsmdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
-        MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore,
-        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
-        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
+        CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
+        DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore,
+        EpochDbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
+        FjallSnapshotStore, FlashKvSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore,
+        GrumpydbSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
+        HightowerKvSnapshotStore, HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
+        InfusedbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore, JfsSnapshotStore,
+        JsonStoreSnapshotStore, JsondbSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
+        KstoneSnapshotStore, KvSnapshotStore, LiteDbSnapshotStore, LogKvSnapshotStore,
+        LsmStorageEngineSnapshotStore, LsmdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore,
+        MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
         PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
         RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RumDbSnapshotStore,
         RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
@@ -94,6 +94,7 @@ fn test_config() -> Config {
         snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),
         snapshot_bitcask_engine_path: "./data/test-snapshots.bitcask_engine".to_owned(),
         snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
+        snapshot_celerix_store_path: "./data/test-snapshots.celerix_store".to_owned(),
         snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
         snapshot_mace_path: "./data/test-snapshots.mace".to_owned(),
@@ -378,6 +379,14 @@ fn configure_nodb_snapshot_store(config: &mut Config, root: &std::path::Path) {
 fn configure_okofdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "okofdb".to_owned();
     config.snapshot_okofdb_path = root.join("snapshots.okofdb").to_string_lossy().into_owned();
+}
+
+fn configure_celerix_store_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "celerix_store".to_owned();
+    config.snapshot_celerix_store_path = root
+        .join("snapshots.celerix_store")
+        .to_string_lossy()
+        .into_owned();
 }
 
 fn configure_nikidb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -7442,6 +7451,53 @@ fn app_state_uses_okofdb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_celerix_store_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("celerix-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.celerix_store");
+    configure_celerix_store_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with celerix_store store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to celerix_store".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to celerix_store on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state = AppState::from_config(&config)
+        .expect("state should reload persisted celerix_store snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.join("snapshots.json").exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_thetadb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("thetadb-store-config");
@@ -11742,6 +11798,48 @@ fn okofdb_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn celerix_store_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("celerix-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.celerix_store");
+    let store = CelerixStoreSnapshotStore::new(&snapshot_path)
+        .expect("celerix_store snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Celerix".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to celerix_store");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from celerix_store");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from celerix_store")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    store
+        .delete_snapshot(&loaded_snapshot.document.id)
+        .expect("snapshot should delete from celerix_store");
+    assert!(
+        store
+            .load_snapshot(&loaded_snapshot.document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
 
     drop(store);
 

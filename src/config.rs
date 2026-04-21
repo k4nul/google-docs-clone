@@ -34,6 +34,7 @@ pub const DEFAULT_SNAPSHOT_BITASK_PATH: &str = "./data/snapshots.bitask";
 pub const DEFAULT_SNAPSHOT_BITKV_RS_PATH: &str = "./data/snapshots.bitkv_rs";
 pub const DEFAULT_SNAPSHOT_BITCASK_ENGINE_PATH: &str = "./data/snapshots.bitcask_engine";
 pub const DEFAULT_SNAPSHOT_CANDYSTORE_PATH: &str = "./data/snapshots.candystore";
+pub const DEFAULT_SNAPSHOT_CELERIX_STORE_PATH: &str = "./data/snapshots.celerix_store";
 pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_MACE_PATH: &str = "./data/snapshots.mace";
@@ -150,6 +151,7 @@ pub struct Config {
     pub snapshot_bitkv_rs_path: String,
     pub snapshot_bitcask_engine_path: String,
     pub snapshot_candystore_path: String,
+    pub snapshot_celerix_store_path: String,
     pub snapshot_cuendillar_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_mace_path: String,
@@ -305,6 +307,10 @@ impl Config {
         )?;
         let snapshot_candystore_path =
             env_string("SNAPSHOT_CANDYSTORE_PATH", DEFAULT_SNAPSHOT_CANDYSTORE_PATH)?;
+        let snapshot_celerix_store_path = env_string(
+            "SNAPSHOT_CELERIX_STORE_PATH",
+            DEFAULT_SNAPSHOT_CELERIX_STORE_PATH,
+        )?;
         let snapshot_cuendillar_path =
             env_string("SNAPSHOT_CUENDILLAR_PATH", DEFAULT_SNAPSHOT_CUENDILLAR_PATH)?;
         let snapshot_jammdb_path =
@@ -509,6 +515,7 @@ impl Config {
             snapshot_bitkv_rs_path,
             snapshot_bitcask_engine_path,
             snapshot_candystore_path,
+            snapshot_celerix_store_path,
             snapshot_cuendillar_path,
             snapshot_jammdb_path,
             snapshot_mace_path,
