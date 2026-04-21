@@ -1879,6 +1879,7 @@ mod tests {
             snapshot_infusedb_path: "./data/test-snapshots.infusedb".to_owned(),
             snapshot_kafi_path: "./data/test-snapshots.kafi".to_owned(),
             snapshot_tinkv_path: "./data/test-snapshots.tinkv".to_owned(),
+            snapshot_ledger_kv_path: "./data/test-snapshots.ledger_kv".to_owned(),
             snapshot_s3_endpoint: None,
             snapshot_s3_region: "us-east-1".to_owned(),
             snapshot_s3_bucket: None,
