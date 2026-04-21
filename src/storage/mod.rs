@@ -59,6 +59,7 @@ mod parity_db_snapshot_store;
 mod persistent_kv_snapshot_store;
 mod persy_snapshot_store;
 mod pickledb_snapshot_store;
+mod raindb_snapshot_store;
 mod rcask_snapshot_store;
 mod readb_snapshot_store;
 mod redb_snapshot_store;
@@ -168,6 +169,7 @@ pub use parity_db_snapshot_store::ParityDbSnapshotStore;
 pub use persistent_kv_snapshot_store::PersistentKvSnapshotStore;
 pub use persy_snapshot_store::PersySnapshotStore;
 pub use pickledb_snapshot_store::PickleDbSnapshotStore;
+pub use raindb_snapshot_store::RaindbSnapshotStore;
 pub use rcask_snapshot_store::RcaskSnapshotStore;
 pub use readb_snapshot_store::ReadbSnapshotStore;
 pub use redb_snapshot_store::RedbSnapshotStore;
@@ -597,6 +599,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "roughdb" => Ok(Arc::new(RoughdbSnapshotStore::new(
             &config.snapshot_roughdb_path,
+        )?)),
+        "raindb" => Ok(Arc::new(RaindbSnapshotStore::new(
+            &config.snapshot_raindb_path,
         )?)),
         "s3" => Ok(Arc::new(S3SnapshotStore::new(
             config.snapshot_s3_endpoint.clone().ok_or_else(|| {

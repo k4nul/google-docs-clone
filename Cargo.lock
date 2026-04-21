@@ -531,6 +531,7 @@ dependencies = [
  "persistent-kv",
  "persy",
  "pickledb",
+ "raindb",
  "rcask",
  "readb",
  "redb 2.6.3",
@@ -4117,6 +4118,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nerdondon-hopscotch"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8f6345724c1b2e69b89c8af1fcd82e33b49048848a0157a30e0a643808a6bd4"
+dependencies = [
+ "rand 0.8.6",
+ "rand_distr",
+]
+
+[[package]]
 name = "nibble_vec"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4870,6 +4881,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "raindb"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4785c72af3fd134c88a001de08ae8ff277ad722d4008e3b28ef045b6e19d54a0"
+dependencies = [
+ "arc-swap",
+ "crc 3.4.0",
+ "fs2",
+ "integer-encoding 3.0.4",
+ "log",
+ "nerdondon-hopscotch",
+ "parking_lot 0.12.5",
+ "rand 0.8.6",
+ "snap 1.1.1",
+ "tempfile",
+]
+
+[[package]]
 name = "rand"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5001,6 +5030,16 @@ name = "rand_core"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
+
+[[package]]
+name = "rand_distr"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
+dependencies = [
+ "num-traits 0.2.19",
+ "rand 0.8.6",
+]
 
 [[package]]
 name = "rand_hc"
