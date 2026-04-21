@@ -479,6 +479,7 @@ dependencies = [
  "axum-test",
  "base64 0.22.1",
  "bitask",
+ "bitcask-engine-rs",
  "bitkv-rs",
  "blockbucket",
  "btree-store",
@@ -701,6 +702,21 @@ dependencies = [
  "fs2",
  "log",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bitcask-engine-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03aed2c29905e774d218d0ff9540ce60f078a0c24bf7083bc2718c78d615973e"
+dependencies = [
+ "anyhow",
+ "crc 3.4.0",
+ "rand 0.8.6",
+ "thiserror 1.0.69",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]

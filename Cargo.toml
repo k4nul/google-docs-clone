@@ -11,6 +11,7 @@ agdb = "0.12.10"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"
 bitkv-rs = "0.2.1"
+bitcask-engine-rs = "0.1.0"
 blockbucket = "0.2.8"
 bitask = "0.1.1"
 btree-store = "0.1.4"
