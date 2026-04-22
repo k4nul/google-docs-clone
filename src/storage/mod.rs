@@ -122,6 +122,7 @@ mod tinkv_snapshot_store;
 mod tinybase_snapshot_store;
 mod tinydb_snapshot_store;
 mod tinykv_snapshot_store;
+mod toiletdb_snapshot_store;
 mod vsdb_snapshot_store;
 mod yakv_snapshot_store;
 mod yakvdb_snapshot_store;
@@ -266,6 +267,7 @@ pub use tinkv_snapshot_store::TinkvSnapshotStore;
 pub use tinybase_snapshot_store::TinybaseSnapshotStore;
 pub use tinydb_snapshot_store::TinydbSnapshotStore;
 pub use tinykv_snapshot_store::TinykvSnapshotStore;
+pub use toiletdb_snapshot_store::ToiletdbSnapshotStore;
 pub use vsdb_snapshot_store::VsdbSnapshotStore;
 pub use yakv_snapshot_store::YakvSnapshotStore;
 pub use yakvdb_snapshot_store::YakvdbSnapshotStore;
@@ -534,6 +536,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "json_mutex_db" => Ok(Arc::new(JsonMutexDbSnapshotStore::new(
             &config.snapshot_json_mutex_db_path,
+        )?)),
+        "toiletdb" => Ok(Arc::new(ToiletdbSnapshotStore::new(
+            &config.snapshot_toiletdb_path,
         )?)),
         "feoxdb" => Ok(Arc::new(FeoxdbSnapshotStore::new(
             &config.snapshot_feoxdb_path,

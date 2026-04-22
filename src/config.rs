@@ -56,6 +56,7 @@ pub const DEFAULT_SNAPSHOT_JASONISNTHAPPY_PATH: &str = "./data/snapshots.jasonis
 pub const DEFAULT_SNAPSHOT_JFS_PATH: &str = "./data/snapshots.jfs.json";
 pub const DEFAULT_SNAPSHOT_JSON_STORE_PATH: &str = "./data/snapshots.json_store.jsonl";
 pub const DEFAULT_SNAPSHOT_JSON_MUTEX_DB_PATH: &str = "./data/snapshots.json_mutex_db.json";
+pub const DEFAULT_SNAPSHOT_TOILETDB_PATH: &str = "./data/snapshots.toiletdb.json";
 pub const DEFAULT_SNAPSHOT_FEOXDB_PATH: &str = "./data/snapshots.feoxdb";
 pub const DEFAULT_SNAPSHOT_JSONDB_PATH: &str = "./data/snapshots.jsondb.json";
 pub const DEFAULT_SNAPSHOT_KOPPERDB_PATH: &str = "./data/snapshots.kopperdb";
@@ -205,6 +206,7 @@ pub struct Config {
     pub snapshot_jfs_path: String,
     pub snapshot_json_store_path: String,
     pub snapshot_json_mutex_db_path: String,
+    pub snapshot_toiletdb_path: String,
     pub snapshot_feoxdb_path: String,
     pub snapshot_jsondb_path: String,
     pub snapshot_kopperdb_path: String,
@@ -418,6 +420,8 @@ impl Config {
             "SNAPSHOT_JSON_MUTEX_DB_PATH",
             DEFAULT_SNAPSHOT_JSON_MUTEX_DB_PATH,
         )?;
+        let snapshot_toiletdb_path =
+            env_string("SNAPSHOT_TOILETDB_PATH", DEFAULT_SNAPSHOT_TOILETDB_PATH)?;
         let snapshot_feoxdb_path =
             env_string("SNAPSHOT_FEOXDB_PATH", DEFAULT_SNAPSHOT_FEOXDB_PATH)?;
         let snapshot_jsondb_path =
@@ -662,6 +666,7 @@ impl Config {
             snapshot_jfs_path,
             snapshot_json_store_path,
             snapshot_json_mutex_db_path,
+            snapshot_toiletdb_path,
             snapshot_feoxdb_path,
             snapshot_jsondb_path,
             snapshot_kopperdb_path,

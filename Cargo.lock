@@ -988,6 +988,7 @@ dependencies = [
  "tinybase",
  "tinydb",
  "tinykv",
+ "toiletdb",
  "tokio",
  "tower-http",
  "tracing",
@@ -8955,6 +8956,17 @@ checksum = "c8323304221c2a851516f22236c5722a72eaa19749016521d6dff0824447d96d"
 dependencies = [
  "displaydoc",
  "zerovec",
+]
+
+[[package]]
+name = "toiletdb"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8895c0f68ecb3d0c4a0fe81fe1a70d2fe097d8c9323c70c67eb8faa787618b4"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
