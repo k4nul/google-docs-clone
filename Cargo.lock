@@ -863,6 +863,7 @@ dependencies = [
  "celerix-store",
  "chrono",
  "ckydb",
+ "colon_db",
  "crepedb",
  "crystal",
  "cuendillar",
@@ -1802,6 +1803,17 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fa961b519f0b462e3a3b4a34b64d119eeaca1d59af726fe450bbba07a9fc0a1"
 dependencies = [
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "colon_db"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6209b6e811945d0fd529ad9c8ebea3d3640e876b6c810d583ca172cbbaeccf10"
+dependencies = [
+ "anyhow",
+ "indexmap 1.9.3",
  "thiserror 2.0.18",
 ]
 
