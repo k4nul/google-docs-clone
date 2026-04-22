@@ -23,7 +23,7 @@ use backend::{
         BitaskSnapshotStore, BitcaskEngineSnapshotStore, BitkvRsSnapshotStore,
         BlazeupSnapshotStore, BlockbucketSnapshotStore, BtreeStoreSnapshotStore,
         CandystoreSnapshotStore, CanopydbSnapshotStore, CavesSnapshotStore,
-        CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
+        CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore,
         CuendillarSnapshotStore, DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
         DbliteSnapshotStore, DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot,
         EightSnapshotStore, EpochDbSnapshotStore, EtchdbSnapshotStore, FeoxdbSnapshotStore,
@@ -159,6 +159,7 @@ fn test_config() -> Config {
         snapshot_caves_path: "./data/test-snapshots.caves".to_owned(),
         snapshot_ckydb_path: "./data/test-snapshots.ckydb".to_owned(),
         snapshot_crepedb_path: "./data/test-snapshots.crepedb".to_owned(),
+        snapshot_crystal_path: "./data/test-snapshots.crystal".to_owned(),
         snapshot_scdb_path: "./data/test-snapshots.scdb".to_owned(),
         snapshot_skv_path: "./data/test-snapshots.skv".to_owned(),
         snapshot_surrealkv_path: "./data/test-snapshots.surrealkv".to_owned(),
@@ -468,6 +469,14 @@ fn configure_datastack_snapshot_store(config: &mut Config, root: &std::path::Pat
     config.snapshot_store = "datastack".to_owned();
     config.snapshot_datastack_path = root
         .join("snapshots.datastack")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_crystal_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "crystal".to_owned();
+    config.snapshot_crystal_path = root
+        .join("snapshots.crystal")
         .to_string_lossy()
         .into_owned();
 }
@@ -3900,6 +3909,52 @@ fn app_state_uses_datastack_snapshot_store_from_config() {
 
     let reloaded_state =
         AppState::from_config(&config).expect("state should reload persisted datastack snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_crystal_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("crystal-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.crystal");
+    configure_crystal_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with crystal store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to crystal".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to crystal on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted crystal snapshot");
     let restored_room = reloaded_state
         .rooms()
         .get(&document.id)
@@ -10526,6 +10581,70 @@ fn crepedb_snapshot_store_round_trips_document_catalog() {
             .list_documents()
             .expect("document catalog should reload from crepedb"),
         vec![loaded_snapshot.document.clone()]
+    );
+
+    drop(reopened);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn crystal_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("crystal-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let store =
+        CrystalSnapshotStore::new(&snapshot_dir).expect("crystal snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Crystal".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to crystal");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from crystal");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from crystal")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened =
+        CrystalSnapshotStore::new(&snapshot_dir).expect("crystal snapshot store should reopen");
+    assert_eq!(
+        reopened
+            .list_documents()
+            .expect("document catalog should reload from crystal"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from crystal")
+            .is_some()
+    );
+
+    reopened
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from crystal");
+    assert!(
+        reopened
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened
+            .list_documents()
+            .expect("document catalog should reflect crystal deletion")
+            .is_empty()
     );
 
     drop(reopened);

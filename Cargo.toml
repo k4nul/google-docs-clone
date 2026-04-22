@@ -27,6 +27,7 @@ celerix-store = "0.1.2"
 chrono = { version = "0.4", features = ["serde"] }
 ckydb = "0.0.5"
 crepedb = { version = "0.1.6", default-features = true }
+crystal = "0.0.1-alpha1"
 cuendillar = "0.1.0"
 dashmap = "6"
 datastack = "0.4.0"

@@ -857,6 +857,7 @@ dependencies = [
  "chrono",
  "ckydb",
  "crepedb",
+ "crystal",
  "cuendillar",
  "dashmap 6.1.0",
  "datastack",
@@ -2174,6 +2175,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77727bb15fa921304124b128af125e7e3b968275d1b108b379190264f4423710"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "crystal"
+version = "0.0.1-alpha1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a754eb8ee201d15499566df6d24dc288ff5e01862f7e2bd7fd02c09d88f9af7"
+dependencies = [
+ "bincode 1.3.3",
+ "serde 1.0.228",
 ]
 
 [[package]]

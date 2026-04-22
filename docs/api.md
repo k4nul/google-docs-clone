@@ -64,7 +64,7 @@ Response:
 ```
 
 active room과 snapshot store에 남아 있는 persisted document catalog를 합쳐 문서 목록을 반환한다.
-- snapshot store는 현재 `file`, `agdb`, `amandine`, `apex_store`, `armdb`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, `managed` durability backend를 지원한다. `apex_store` 모드에서는 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine에서 explicit `__catalog__` key를 읽어 catalog를 복구하고, `mace` 모드에서는 `SNAPSHOT_MACE_PATH` 디렉터리의 Mace `snapshots` bucket과 explicit `__catalog__` key에서 catalog를 복구하며, `janql` 모드에서는 `SNAPSHOT_JANQL_PATH` 디렉터리의 janql WAL/SSTable keyspace에서 `doc_id` key와 explicit `__catalog__` key를 읽어 catalog를 복구한다.
+- snapshot store는 현재 `file`, `agdb`, `amandine`, `apex_store`, `armdb`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, `managed` durability backend를 지원한다. `apex_store` 모드에서는 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine에서 explicit `__catalog__` key를 읽어 catalog를 복구하고, `mace` 모드에서는 `SNAPSHOT_MACE_PATH` 디렉터리의 Mace `snapshots` bucket과 explicit `__catalog__` key에서 catalog를 복구하며, `janql` 모드에서는 `SNAPSHOT_JANQL_PATH` 디렉터리의 janql WAL/SSTable keyspace에서 `doc_id` key와 explicit `__catalog__` key를 읽어 catalog를 복구한다.
 - `append_kv` durability backend도 지원하며 `SNAPSHOT_APPEND_KV_PATH` 단일 append-only 파일의 explicit `__catalog__` key를 통해 catalog를 복구한다.
 - `cuendillar` 모드에서는 `SNAPSHOT_CUENDILLAR_PATH` 루트 아래 `wal/`과 `sstable/` 디렉터리를 사용하는 LSM engine keyspace 전체 scan으로 catalog를 복구하고, restart recovery를 위해 WAL payload 상한과 sync policy를 보수적으로 높여 둔다.
 - `celerix_store` 모드에서는 `SNAPSHOT_CELERIX_STORE_PATH/snapshots.json` Celerix Store persona 파일의 `documents` app map에 `doc_id -> persisted snapshot JSON` value를 저장하고, catalog는 같은 app map key를 순회해 복구한다.
@@ -208,6 +208,7 @@ Response: `204 No Content`
 - `SNAPSHOT_STORE=rusty_leveldb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=canopydb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=crepedb`도 vendor-specific embedded database durability backend다.
+- `SNAPSHOT_STORE=crystal`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=scdb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=skv`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=surrealkv`도 vendor-specific embedded database durability backend다.
@@ -269,6 +270,8 @@ Response: `204 No Content`
 - ckydb key-value store는 `doc_id -> base64(persisted snapshot JSON)` 문자열 엔트리를 저장하고, `GET /api/documents` catalog는 별도 `__catalog__` key를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_CREPEDB_PATH`다.
 - CrepeDB basic table은 `snapshot:<doc_id> -> persisted snapshot JSON` binary 엔트리를 저장하고, `GET /api/documents` catalog는 같은 table의 별도 `__catalog__` key를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
+- 필수 env는 `SNAPSHOT_CRYSTAL_PATH`다.
+- crystal catalog는 `SNAPSHOT_CRYSTAL_PATH` 디렉터리의 `<doc_id>.bin` bincode string file에 persisted snapshot JSON을 저장하고, `GET /api/documents` catalog는 디렉터리 스캔 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_SCDB_PATH`다.
 - scdb key-value store는 `doc_id -> persisted snapshot JSON` binary 엔트리를 저장하고, `GET /api/documents` catalog는 별도 `__catalog__` key를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_SKV_PATH`다.
@@ -383,6 +386,11 @@ Response: `204 No Content`
 
 - 필수 env는 `SNAPSHOT_DATASTACK_PATH`다.
 - datastack catalog는 DataStack redb 파일의 `snapshots` collection에 `doc_id -> persisted snapshot JSON` document를 저장한다. `GET /api/documents` catalog는 collection scan 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
+
+### `SNAPSHOT_STORE=crystal`
+
+- 필수 env는 `SNAPSHOT_CRYSTAL_PATH`다.
+- crystal catalog는 `SNAPSHOT_CRYSTAL_PATH` 디렉터리의 `<doc_id>.bin` bincode string file에 persisted snapshot JSON을 저장한다. `GET /api/documents` catalog는 디렉터리 스캔 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
 
 ### `SNAPSHOT_STORE=mhdb`
 
