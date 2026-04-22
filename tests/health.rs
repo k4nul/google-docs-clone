@@ -39,19 +39,19 @@ use backend::{
         LogKvSnapshotStore, LoroKvSnapshotStore, LsmEngineSnapshotStore,
         LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore, LsmdbSnapshotStore,
         LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MhdbSnapshotStore,
-        MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore,
-        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
-        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
-        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RubinSnapshotStore,
-        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
-        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
-        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
-        SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
-        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
-        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore,
-        TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
-        YakvdbSnapshotStore, YedbSnapshotStore,
+        MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore, MuDbSnapshotStore,
+        NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore,
+        NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
+        PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore,
+        ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore,
+        RubinSnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
+        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
+        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
+        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore,
+        TinybaseSnapshotStore, TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
+        YakvSnapshotStore, YakvdbSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -142,6 +142,7 @@ fn test_config() -> Config {
         snapshot_lsm_tree_path: "./data/test-snapshots.lsm_tree".to_owned(),
         snapshot_mindb_path: "./data/test-snapshots.mindb".to_owned(),
         snapshot_mmdb_path: "./data/test-snapshots.mmdb".to_owned(),
+        snapshot_mu_db_path: "./data/test-snapshots.mu_db".to_owned(),
         snapshot_nanodb_path: "./data/test-snapshots.nanodb.json".to_owned(),
         snapshot_graus_db_path: "./data/test-snapshots.graus_db".to_owned(),
         snapshot_fjall_path: "./data/test-snapshots.fjall".to_owned(),
@@ -1033,6 +1034,11 @@ fn configure_mindb_snapshot_store(config: &mut Config, root: &std::path::Path) {
 fn configure_mmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mmdb".to_owned();
     config.snapshot_mmdb_path = root.join("snapshots.mmdb").to_string_lossy().into_owned();
+}
+
+fn configure_mu_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "mu_db".to_owned();
+    config.snapshot_mu_db_path = root.join("snapshots.mu_db").to_string_lossy().into_owned();
 }
 
 fn configure_nanodb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -8054,6 +8060,54 @@ fn app_state_uses_mmdb_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_mu_db_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("mu-db-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.mu_db");
+    let index_path = snapshot_dir.join("index_snapshots.mu_db");
+    configure_mu_db_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with mu_db store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to mu_db".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to mu_db on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted mu_db snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+    assert!(index_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_nanodb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nanodb-store-config");
@@ -14027,6 +14081,71 @@ fn mmdb_snapshot_store_round_trips_document_catalog() {
             .list_documents()
             .expect("document catalog should be empty after mmdb delete"),
         Vec::new()
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn mu_db_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("mu-db-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.mu_db");
+    let store =
+        MuDbSnapshotStore::new(&snapshot_path).expect("mu_db snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("muDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to mu_db");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from mu_db");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from mu_db")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        MuDbSnapshotStore::new(&snapshot_path).expect("mu_db snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from mu_db"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from mu_db")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from mu_db");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect mu_db deletion")
+            .is_empty()
     );
 
     drop(reopened_store);

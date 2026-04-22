@@ -938,6 +938,7 @@ dependencies = [
  "microkv",
  "mindb",
  "mmdb",
+ "mu_db",
  "nanodb",
  "native_db",
  "native_model",
@@ -5573,6 +5574,12 @@ dependencies = [
  "tagptr",
  "uuid 1.23.1",
 ]
+
+[[package]]
+name = "mu_db"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0edffe4d6e98edf843453f59366376387d3b1993029dc9a442e398eec62414e"
 
 [[package]]
 name = "multiversion"

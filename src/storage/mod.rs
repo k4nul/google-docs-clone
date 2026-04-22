@@ -76,6 +76,7 @@ mod mhdb_snapshot_store;
 mod microkv_snapshot_store;
 mod mindb_snapshot_store;
 mod mmdb_snapshot_store;
+mod mu_db_snapshot_store;
 mod nanodb_snapshot_store;
 mod native_db_snapshot_store;
 mod nebari_snapshot_store;
@@ -216,6 +217,7 @@ pub use mhdb_snapshot_store::MhdbSnapshotStore;
 pub use microkv_snapshot_store::MicroKvSnapshotStore;
 pub use mindb_snapshot_store::MindbSnapshotStore;
 pub use mmdb_snapshot_store::MmdbSnapshotStore;
+pub use mu_db_snapshot_store::MuDbSnapshotStore;
 pub use nanodb_snapshot_store::NanodbSnapshotStore;
 pub use native_db_snapshot_store::NativeDbSnapshotStore;
 pub use nebari_snapshot_store::NebariSnapshotStore;
@@ -578,6 +580,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "mmdb" => Ok(Arc::new(MmdbSnapshotStore::new(
             &config.snapshot_mmdb_path,
+        )?)),
+        "mu_db" => Ok(Arc::new(MuDbSnapshotStore::new(
+            &config.snapshot_mu_db_path,
         )?)),
         "nanodb" => Ok(Arc::new(NanodbSnapshotStore::new(
             &config.snapshot_nanodb_path,

@@ -74,6 +74,7 @@ pub const DEFAULT_SNAPSHOT_LSMDB_PATH: &str = "./data/snapshots.lsmdb";
 pub const DEFAULT_SNAPSHOT_LSM_TREE_PATH: &str = "./data/snapshots.lsm_tree";
 pub const DEFAULT_SNAPSHOT_MINDB_PATH: &str = "./data/snapshots.mindb";
 pub const DEFAULT_SNAPSHOT_MMDB_PATH: &str = "./data/snapshots.mmdb";
+pub const DEFAULT_SNAPSHOT_MU_DB_PATH: &str = "./data/snapshots.mu_db";
 pub const DEFAULT_SNAPSHOT_NANODB_PATH: &str = "./data/snapshots.nanodb.json";
 pub const DEFAULT_SNAPSHOT_FJALL_PATH: &str = "./data/snapshots.fjall";
 pub const DEFAULT_SNAPSHOT_PERSY_PATH: &str = "./data/snapshots.persy";
@@ -219,6 +220,7 @@ pub struct Config {
     pub snapshot_lsm_tree_path: String,
     pub snapshot_mindb_path: String,
     pub snapshot_mmdb_path: String,
+    pub snapshot_mu_db_path: String,
     pub snapshot_nanodb_path: String,
     pub snapshot_fjall_path: String,
     pub snapshot_persy_path: String,
@@ -438,6 +440,7 @@ impl Config {
             env_string("SNAPSHOT_LSM_TREE_PATH", DEFAULT_SNAPSHOT_LSM_TREE_PATH)?;
         let snapshot_mindb_path = env_string("SNAPSHOT_MINDB_PATH", DEFAULT_SNAPSHOT_MINDB_PATH)?;
         let snapshot_mmdb_path = env_string("SNAPSHOT_MMDB_PATH", DEFAULT_SNAPSHOT_MMDB_PATH)?;
+        let snapshot_mu_db_path = env_string("SNAPSHOT_MU_DB_PATH", DEFAULT_SNAPSHOT_MU_DB_PATH)?;
         let snapshot_nanodb_path =
             env_string("SNAPSHOT_NANODB_PATH", DEFAULT_SNAPSHOT_NANODB_PATH)?;
         let snapshot_fjall_path = env_string("SNAPSHOT_FJALL_PATH", DEFAULT_SNAPSHOT_FJALL_PATH)?;
@@ -663,6 +666,7 @@ impl Config {
             snapshot_lsm_tree_path,
             snapshot_mindb_path,
             snapshot_mmdb_path,
+            snapshot_mu_db_path,
             snapshot_nanodb_path,
             snapshot_fjall_path,
             snapshot_persy_path,
