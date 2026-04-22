@@ -39,7 +39,7 @@ cargo run
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
-- `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `armdb`, `flash_kv`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `ferrumdb`, `rumdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `joydb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `luckdb`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `armdb`, `flash_kv`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `ferrumdb`, `rumdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `joydb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, 또는 `managed`
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_AGDB_PATH`: agdb snapshot store 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: Amandine snapshot store 디렉터리 경로
@@ -135,6 +135,7 @@ cargo run
 - `SNAPSHOT_LITE_DB_PATH`: lite_db snapshot store LiteDb 디렉터리 경로
 - `SNAPSHOT_LOG_KV_PATH`: log_kv snapshot store append-only 단일 파일 경로
 - `SNAPSHOT_LUCKDB_PATH`: luckdb snapshot store JSON document 파일 경로
+- `SNAPSHOT_LSM_ENGINE_PATH`: lsm_engine snapshot store WAL 파일 경로
 - `SNAPSHOT_LSM_STORAGE_ENGINE_PATH`: lsm_storage_engine snapshot store WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_LSMDB_PATH`: lsmdb snapshot store WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_FERRUMDB_PATH`: ferrumdb snapshot store append-only log 파일 경로
@@ -266,6 +267,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `koit` | 단일 structured JSON 파일 store | 중간 | 전체 catalog를 메모리에 로드한 뒤 save마다 whole-file rewrite와 `sync_all`을 수행하므로 파일 손상 시 startup 전체 복구 실패가 전체 store에 번질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lite_db` | 디렉터리 + append-only data files | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 sync write로 저장한다. file lock이 단일 writer를 전제하므로 shared multi-writer durability나 authoritative coordination plane으로는 쓰지 않는 것이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `luckdb` | 단일 JSON document DB 파일 | 중간 | LuckDB `backend.snapshots` collection에 `doc_id`와 persisted snapshot JSON payload를 함께 저장한다. collection 전체 query로 catalog를 복구하므로 단일 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `lsm_engine` | 단일 WAL 파일 + in-memory LSM rebuild | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 lsm_engine WAL에 JSON string으로 저장하고 reopen 때 WAL replay로 memtable을 재구성한다. 단일 WAL 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선, vendored serde import patch |
 | `lsm_storage_engine` | 디렉터리 + WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 WAL-first engine에 저장하고 save/delete 뒤 flush로 복구 경계를 고정한다. 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lsmdb` | 디렉터리 + WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 WAL-first engine에 저장하고 WAL sync-on-write 경계로 복구를 고정한다. 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lsm_tree` | 디렉터리 + flush-only LSM-tree primitive | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 저장하고 save/delete 뒤 active memtable을 flush해 복구 경계를 고정한다. WAL을 제공하지 않는 primitive라 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -299,6 +301,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `roughdb`는 LevelDB-compatible WAL/SSTable 디렉터리 저장소를 sync write batch와 flush 경계로 연결한 embedded durability 기준선이다.
 - `jsondb`는 schema-versioned pretty JSON embedded durability 기준선이다.
 - `lite_db`는 LiteDb append-only 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
+- `lsm_engine`은 WAL replay 기반 LSM 저장소를 쓰면서 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다. upstream `serde::export` import는 현재 serde와 맞지 않아 path-vendoring으로 `std::convert::TryFrom`만 패치했다.
 - `lsm_storage_engine`은 zero-dependency WAL/SSTable LSM 디렉터리 저장소를 쓰면서 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `lsmdb`는 WAL/SSTable LSM 디렉터리 저장소를 쓰면서 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `mindb`는 WAL/SSTable LSM 디렉터리 저장소를 `CompressionCodec::None`, explicit `sync()` 경계, reopen WAL replay fallback으로 연결한 추가 기준선이다.
@@ -527,6 +530,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key로 저장되고, delete는 tombstone string으로 가린다.
 - `SNAPSHOT_STORE=luckdb`는 `SNAPSHOT_LUCKDB_PATH` 단일 LuckDB JSON document 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 LuckDB `backend.snapshots` collection의 JSON document에 저장되고, `doc_id` field query로 load/delete 및 catalog 복구를 수행한다.
+- `SNAPSHOT_STORE=lsm_engine`는 `SNAPSHOT_LSM_ENGINE_PATH` WAL 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key로 저장되고, reopen 때 WAL replay로 document catalog를 복구한다.
 - `SNAPSHOT_STORE=lsm_storage_engine`는 `SNAPSHOT_LSM_STORAGE_ENGINE_PATH` WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key로 저장되고, save/delete 뒤 flush해 document catalog를 복구한다.
 - `SNAPSHOT_STORE=lsmdb`는 `SNAPSHOT_LSMDB_PATH` WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
