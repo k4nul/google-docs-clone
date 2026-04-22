@@ -1785,6 +1785,7 @@ mod tests {
             snapshot_dir: "./data/test-snapshots".to_owned(),
             snapshot_agdb_path: "./data/test-snapshots.agdb".to_owned(),
             snapshot_amandine_path: "./data/test-snapshots.amandine".to_owned(),
+            snapshot_apex_store_path: "./data/test-snapshots.apex_store".to_owned(),
             snapshot_armdb_path: "./data/test-snapshots.armdb".to_owned(),
             snapshot_dharmadb_path: "./data/test-snapshots.dharmadb".to_owned(),
             snapshot_flash_kv_path: "./data/test-snapshots.flash_kv".to_owned(),
