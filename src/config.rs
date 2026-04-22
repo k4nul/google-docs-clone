@@ -29,6 +29,7 @@ pub const DEFAULT_SNAPSHOT_DOCDB_PATH: &str = "./data/snapshots.docdb.json";
 pub const DEFAULT_SNAPSHOT_EIGHT_PATH: &str = "./data/snapshots.eight";
 pub const DEFAULT_SNAPSHOT_EPOCH_DB_PATH: &str = "./data/snapshots.epoch_db";
 pub const DEFAULT_SNAPSHOT_ETCHDB_PATH: &str = "./data/snapshots.etchdb";
+pub const DEFAULT_SNAPSHOT_FASTKV_PATH: &str = "./data/snapshots.fastkv";
 pub const DEFAULT_SNAPSHOT_FERRUMDB_PATH: &str = "./data/snapshots.ferrumdb";
 pub const DEFAULT_SNAPSHOT_RUMDB_PATH: &str = "./data/snapshots.rumdb";
 pub const DEFAULT_SNAPSHOT_RUBIN_PATH: &str = "./data/snapshots.rubin.json";
@@ -179,6 +180,7 @@ pub struct Config {
     pub snapshot_eight_path: String,
     pub snapshot_epoch_db_path: String,
     pub snapshot_etchdb_path: String,
+    pub snapshot_fastkv_path: String,
     pub snapshot_ferrumdb_path: String,
     pub snapshot_rumdb_path: String,
     pub snapshot_rubin_path: String,
@@ -361,6 +363,8 @@ impl Config {
             env_string("SNAPSHOT_EPOCH_DB_PATH", DEFAULT_SNAPSHOT_EPOCH_DB_PATH)?;
         let snapshot_etchdb_path =
             env_string("SNAPSHOT_ETCHDB_PATH", DEFAULT_SNAPSHOT_ETCHDB_PATH)?;
+        let snapshot_fastkv_path =
+            env_string("SNAPSHOT_FASTKV_PATH", DEFAULT_SNAPSHOT_FASTKV_PATH)?;
         let snapshot_ferrumdb_path =
             env_string("SNAPSHOT_FERRUMDB_PATH", DEFAULT_SNAPSHOT_FERRUMDB_PATH)?;
         let snapshot_rumdb_path = env_string("SNAPSHOT_RUMDB_PATH", DEFAULT_SNAPSHOT_RUMDB_PATH)?;
@@ -639,6 +643,7 @@ impl Config {
             snapshot_eight_path,
             snapshot_epoch_db_path,
             snapshot_etchdb_path,
+            snapshot_fastkv_path,
             snapshot_ferrumdb_path,
             snapshot_rumdb_path,
             snapshot_rubin_path,

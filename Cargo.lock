@@ -897,6 +897,7 @@ dependencies = [
  "eight",
  "epoch-db",
  "etchdb",
+ "fastkv",
  "feoxdb",
  "ferrumdb",
  "fjall",
@@ -3215,6 +3216,18 @@ dependencies = [
  "bit-set",
  "regex-automata",
  "regex-syntax",
+]
+
+[[package]]
+name = "fastkv"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37ff41e557744e956fd95d3dd9ed69f88d6e3e6b1b5580034c2d7e825a53af2d"
+dependencies = [
+ "ahash 0.8.12",
+ "hashbrown 0.14.5",
+ "lz4_flex 0.11.6",
+ "threadpool",
 ]
 
 [[package]]
@@ -8845,6 +8858,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f60246a4944f24f6e018aa17cdeffb7818b76356965d03b07d6a9886e8962185"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "threadpool"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
+dependencies = [
+ "num_cpus",
 ]
 
 [[package]]
