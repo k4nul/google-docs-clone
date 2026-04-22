@@ -1783,6 +1783,7 @@ mod tests {
             api_token: "test-admin-token".to_owned(),
             snapshot_store: "memory".to_owned(),
             snapshot_dir: "./data/test-snapshots".to_owned(),
+            snapshot_deeb_path: "./data/test-snapshots.deeb.json".to_owned(),
             snapshot_agdb_path: "./data/test-snapshots.agdb".to_owned(),
             snapshot_amandine_path: "./data/test-snapshots.amandine".to_owned(),
             snapshot_apex_store_path: "./data/test-snapshots.apex_store".to_owned(),

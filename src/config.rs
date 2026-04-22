@@ -67,6 +67,7 @@ pub const DEFAULT_SNAPSHOT_MHDB_PATH: &str = "./data/snapshots.mhdb";
 pub const DEFAULT_SNAPSHOT_LORO_KV_PATH: &str = "./data/snapshots.loro_kv";
 pub const DEFAULT_SNAPSHOT_LUCKDB_PATH: &str = "./data/snapshots.luckdb.json";
 pub const DEFAULT_SNAPSHOT_IPJDB_PATH: &str = "./data/snapshots.ipjdb";
+pub const DEFAULT_SNAPSHOT_DEEB_PATH: &str = "./data/snapshots.deeb.json";
 pub const DEFAULT_SNAPSHOT_LSM_ENGINE_PATH: &str = "./data/snapshots.lsm_engine";
 pub const DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH: &str = "./data/snapshots.lsm_storage_engine";
 pub const DEFAULT_SNAPSHOT_LSMDB_PATH: &str = "./data/snapshots.lsmdb";
@@ -211,6 +212,7 @@ pub struct Config {
     pub snapshot_loro_kv_path: String,
     pub snapshot_luckdb_path: String,
     pub snapshot_ipjdb_path: String,
+    pub snapshot_deeb_path: String,
     pub snapshot_lsm_engine_path: String,
     pub snapshot_lsm_storage_engine_path: String,
     pub snapshot_lsmdb_path: String,
@@ -424,6 +426,7 @@ impl Config {
         let snapshot_luckdb_path =
             env_string("SNAPSHOT_LUCKDB_PATH", DEFAULT_SNAPSHOT_LUCKDB_PATH)?;
         let snapshot_ipjdb_path = env_string("SNAPSHOT_IPJDB_PATH", DEFAULT_SNAPSHOT_IPJDB_PATH)?;
+        let snapshot_deeb_path = env_string("SNAPSHOT_DEEB_PATH", DEFAULT_SNAPSHOT_DEEB_PATH)?;
         let snapshot_lsm_engine_path =
             env_string("SNAPSHOT_LSM_ENGINE_PATH", DEFAULT_SNAPSHOT_LSM_ENGINE_PATH)?;
         let snapshot_lsm_storage_engine_path = env_string(
@@ -653,6 +656,7 @@ impl Config {
             snapshot_loro_kv_path,
             snapshot_luckdb_path,
             snapshot_ipjdb_path,
+            snapshot_deeb_path,
             snapshot_lsm_engine_path,
             snapshot_lsm_storage_engine_path,
             snapshot_lsmdb_path,

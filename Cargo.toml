@@ -36,6 +36,7 @@ dashmap = "6"
 datastack = "0.4.0"
 db-rs = "0.3.6"
 db-rs-derive = "0.3.6"
+deeb_core = "0.0.6"
 dharmadb = "0.1.1"
 dblite = { version = "0.1.2", default-features = false }
 dbless = "0.2.0"
