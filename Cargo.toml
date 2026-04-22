@@ -124,6 +124,7 @@ okofdb = "0.1.3"
 feoxdb = { version = "0.5.0", default-features = false, features = ["system-alloc"] }
 mindb = "0.1.2"
 log_kv = "0.1.0"
+loro-kv-store = "1.11.1"
 lsm-tree = "3.1.4"
 kstone-core = "0.1.0"
 roughdb = "0.9.0"

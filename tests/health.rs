@@ -33,14 +33,15 @@ use backend::{
         JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore, JsonStoreSnapshotStore,
         JsondbSnapshotStore, KafiSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
         KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore, LiteDbSnapshotStore,
-        LogKvSnapshotStore, LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore,
-        LsmTreeSnapshotStore, LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore,
-        ManagedSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore,
-        NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore,
-        NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
-        PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore,
-        ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore,
-        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
+        LogKvSnapshotStore, LoroKvSnapshotStore, LsmEngineSnapshotStore,
+        LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore, LsmdbSnapshotStore,
+        LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MicroKvSnapshotStore,
+        MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore,
+        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
+        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
+        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RumDbSnapshotStore,
+        RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
         RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
         ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
         SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
@@ -117,6 +118,7 @@ fn test_config() -> Config {
         snapshot_koit_path: "./data/test-snapshots.koit.json".to_owned(),
         snapshot_lite_db_path: "./data/test-snapshots.lite_db".to_owned(),
         snapshot_log_kv_path: "./data/test-snapshots.log_kv".to_owned(),
+        snapshot_loro_kv_path: "./data/test-snapshots.loro_kv".to_owned(),
         snapshot_luckdb_path: "./data/test-snapshots.luckdb.json".to_owned(),
         snapshot_lsm_engine_path: "./data/test-snapshots.lsm_engine".to_owned(),
         snapshot_lsm_storage_engine_path: "./data/test-snapshots.lsm_storage_engine".to_owned(),
@@ -849,6 +851,14 @@ fn configure_lite_db_snapshot_store(config: &mut Config, root: &std::path::Path)
 fn configure_log_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "log_kv".to_owned();
     config.snapshot_log_kv_path = root.join("snapshots.log_kv").to_string_lossy().into_owned();
+}
+
+fn configure_loro_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "loro_kv".to_owned();
+    config.snapshot_loro_kv_path = root
+        .join("snapshots.loro_kv")
+        .to_string_lossy()
+        .into_owned();
 }
 
 fn configure_luckdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -6903,6 +6913,52 @@ fn app_state_uses_log_kv_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_loro_kv_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("loro-kv-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.loro_kv");
+    configure_loro_kv_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with loro_kv store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to loro_kv".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to loro_kv on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted loro_kv snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_luckdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("luckdb-store-config");
@@ -12005,6 +12061,71 @@ fn log_kv_snapshot_store_round_trips_document_catalog() {
         reopened_store
             .list_documents()
             .expect("document catalog should reflect log_kv deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn loro_kv_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("loro-kv-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.loro_kv");
+    let store =
+        LoroKvSnapshotStore::new(&snapshot_path).expect("loro_kv snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("LoroKV".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to loro_kv");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from loro_kv");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from loro_kv")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        LoroKvSnapshotStore::new(&snapshot_path).expect("loro_kv snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from loro_kv"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from loro_kv")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from loro_kv");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect loro_kv deletion")
             .is_empty()
     );
 
