@@ -43,6 +43,7 @@ pub const DEFAULT_SNAPSHOT_BLAZEUP_PATH: &str = "./data/snapshots.blazeup";
 pub const DEFAULT_SNAPSHOT_CANDYSTORE_PATH: &str = "./data/snapshots.candystore";
 pub const DEFAULT_SNAPSHOT_CELERIX_STORE_PATH: &str = "./data/snapshots.celerix_store";
 pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
+pub const DEFAULT_SNAPSHOT_DATASTACK_PATH: &str = "./data/snapshots.datastack";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_MACE_PATH: &str = "./data/snapshots.mace";
 pub const DEFAULT_SNAPSHOT_JANQL_PATH: &str = "./data/snapshots.janql";
@@ -180,6 +181,7 @@ pub struct Config {
     pub snapshot_candystore_path: String,
     pub snapshot_celerix_store_path: String,
     pub snapshot_cuendillar_path: String,
+    pub snapshot_datastack_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_mace_path: String,
     pub snapshot_janql_path: String,
@@ -365,6 +367,8 @@ impl Config {
         )?;
         let snapshot_cuendillar_path =
             env_string("SNAPSHOT_CUENDILLAR_PATH", DEFAULT_SNAPSHOT_CUENDILLAR_PATH)?;
+        let snapshot_datastack_path =
+            env_string("SNAPSHOT_DATASTACK_PATH", DEFAULT_SNAPSHOT_DATASTACK_PATH)?;
         let snapshot_jammdb_path =
             env_string("SNAPSHOT_JAMMDB_PATH", DEFAULT_SNAPSHOT_JAMMDB_PATH)?;
         let snapshot_mace_path = env_string("SNAPSHOT_MACE_PATH", DEFAULT_SNAPSHOT_MACE_PATH)?;
@@ -600,6 +604,7 @@ impl Config {
             snapshot_candystore_path,
             snapshot_celerix_store_path,
             snapshot_cuendillar_path,
+            snapshot_datastack_path,
             snapshot_jammdb_path,
             snapshot_mace_path,
             snapshot_janql_path,

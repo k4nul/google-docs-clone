@@ -218,6 +218,7 @@ Response: `204 No Content`
 - `SNAPSHOT_STORE=yedb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=btree_store`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=agdb`, `SNAPSHOT_STORE=armdb`, `SNAPSHOT_STORE=flash_kv`, `SNAPSHOT_STORE=blockbucket`, `SNAPSHOT_STORE=grebedb`, `SNAPSHOT_STORE=grumpydb`, `SNAPSHOT_STORE=graus_db`, `SNAPSHOT_STORE=simple_db`, `SNAPSHOT_STORE=docdb`, `SNAPSHOT_STORE=eight`, `SNAPSHOT_STORE=epoch_db`, `SNAPSHOT_STORE=etchdb`, `SNAPSHOT_STORE=ferrumdb`, `SNAPSHOT_STORE=rumdb`, `SNAPSHOT_STORE=shorterdb`, `SNAPSHOT_STORE=siamesedb`, `SNAPSHOT_STORE=structsy`, `SNAPSHOT_STORE=abyssiniandb`, `SNAPSHOT_STORE=aeternusdb`, `SNAPSHOT_STORE=thunderdb`, `SNAPSHOT_STORE=thetadb`, `SNAPSHOT_STORE=tinybase`, `SNAPSHOT_STORE=tinydb`, `SNAPSHOT_STORE=dblite`, `SNAPSHOT_STORE=dbless`, `SNAPSHOT_STORE=db_rs`, `SNAPSHOT_STORE=dharmadb`, `SNAPSHOT_STORE=sanakirja`, `SNAPSHOT_STORE=snaildb`, `SNAPSHOT_STORE=tinykv`, `SNAPSHOT_STORE=saberdb`, `SNAPSHOT_STORE=smolldb`, `SNAPSHOT_STORE=kstone`, `SNAPSHOT_STORE=roughdb`, `SNAPSHOT_STORE=raindb`, `SNAPSHOT_STORE=infusedb`, `SNAPSHOT_STORE=kafi`, `SNAPSHOT_STORE=tinkv`, `SNAPSHOT_STORE=ledger_kv`, `SNAPSHOT_STORE=jsondb`, `SNAPSHOT_STORE=joydb`, `SNAPSHOT_STORE=kopperdb`, `SNAPSHOT_STORE=icefalldb`, `SNAPSHOT_STORE=bitkv_rs`, `SNAPSHOT_STORE=bitcask_engine`, `SNAPSHOT_STORE=blazeup`, `SNAPSHOT_STORE=kv`, `SNAPSHOT_STORE=koit`, `SNAPSHOT_STORE=lite_db`, `SNAPSHOT_STORE=log_kv`, `SNAPSHOT_STORE=mhdb`, `SNAPSHOT_STORE=loro_kv`, `SNAPSHOT_STORE=luckdb`, `SNAPSHOT_STORE=lsm_engine`, `SNAPSHOT_STORE=lsm_storage_engine`, `SNAPSHOT_STORE=lsmdb`, `SNAPSHOT_STORE=lsm_tree`, `SNAPSHOT_STORE=mindb`, `SNAPSHOT_STORE=mmdb`, `SNAPSHOT_STORE=nanodb`, `SNAPSHOT_STORE=jfs`, `SNAPSHOT_STORE=json_store`, `SNAPSHOT_STORE=persistent_kv`, `SNAPSHOT_STORE=nebari`, `SNAPSHOT_STORE=nikidb`, `SNAPSHOT_STORE=nodb`, `SNAPSHOT_STORE=okofdb`, `SNAPSHOT_STORE=caves`, `SNAPSHOT_STORE=ckydb`, `SNAPSHOT_STORE=crepedb`, `SNAPSHOT_STORE=hightower_kv`, `SNAPSHOT_STORE=rustcask`, `SNAPSHOT_STORE=skv`도 vendor-specific embedded database durability backend다.
+- `SNAPSHOT_STORE=datastack`도 vendor-specific embedded database durability backend다.
 - 필수 env는 `SNAPSHOT_AGDB_PATH`다.
 - agdb catalog는 단일 graph DB 파일의 `snapshot:<doc_id>` alias node payload key에 persisted snapshot JSON string을 저장하고, `GET /api/documents` catalog는 all-alias scan 뒤 matching alias node를 다시 읽어 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_ARMDB_PATH`다.
@@ -240,6 +241,8 @@ Response: `204 No Content`
 - JasonDB append-only 파일은 `doc_id -> persisted snapshot JSON string` entry를 저장하고, `GET /api/documents` catalog는 startup index replay 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_JASONISNTHAPPY_PATH`다.
 - jasonisnthappy `snapshots` collection은 `_id=<doc_id>` document에 persisted snapshot JSON payload를 저장하고, `GET /api/documents` catalog는 collection scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- 필수 env는 `SNAPSHOT_DATASTACK_PATH`다.
+- DataStack `snapshots` collection은 `doc_id -> persisted snapshot JSON` document를 redb 파일에 저장하고, `GET /api/documents` catalog는 collection scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_FJALL_PATH`다.
 - fjall `snapshots` keyspace는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_PERSY_PATH`다.
@@ -375,6 +378,11 @@ Response: `204 No Content`
 
 - 필수 env는 `SNAPSHOT_APPEND_KV_PATH`다.
 - append_kv catalog는 append-only 단일 파일의 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key를 저장하고, delete는 append_kv tombstone record로 가린다. `GET /api/documents` catalog는 catalog key 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
+
+### `SNAPSHOT_STORE=datastack`
+
+- 필수 env는 `SNAPSHOT_DATASTACK_PATH`다.
+- datastack catalog는 DataStack redb 파일의 `snapshots` collection에 `doc_id -> persisted snapshot JSON` document를 저장한다. `GET /api/documents` catalog는 collection scan 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
 
 ### `SNAPSHOT_STORE=mhdb`
 

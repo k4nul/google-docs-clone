@@ -125,6 +125,7 @@
 - `JanqlSnapshotStore`는 `SNAPSHOT_JANQL_PATH` 디렉터리의 janql WAL/SSTable keyspace에 `doc_id -> persisted snapshot JSON` 엔트리와 explicit `__catalog__` key를 함께 저장하고, startup hydrate/list 경로는 같은 catalog key를 그대로 사용한다.
 - `JasondbSnapshotStore`는 `SNAPSHOT_JASONDB_PATH` 단일 JasonDB append-only 파일에 `doc_id -> persisted snapshot JSON string` entry를 저장하고, startup hydrate/list 경로는 JasonDB index replay 결과를 사용한다.
 - `JasonisnthappySnapshotStore`는 `SNAPSHOT_JASONISNTHAPPY_PATH` 단일 jasonisnthappy DB 파일의 `snapshots` collection에 `_id=<doc_id>` document로 persisted snapshot JSON payload를 저장하고, startup hydrate/list 경로는 collection scan 결과를 사용한다.
+- `DatastackSnapshotStore`는 `SNAPSHOT_DATASTACK_PATH` DataStack redb 파일의 `snapshots` collection에 `doc_id -> persisted snapshot JSON` document를 저장하고, startup hydrate/list 경로는 collection scan 결과를 사용한다.
 - `JoydbSnapshotStore`는 `SNAPSHOT_JOYDB_PATH` 단일 Joydb JSON state 파일에 `JoydbSnapshotRecord`로 문서 metadata와 Yrs full-state update를 함께 저장하고, save/delete 뒤 `flush()`를 호출해 startup hydrate/list 경로를 같은 JSON state load에 고정한다.
 - `ReadbSnapshotStore`는 `SNAPSHOT_READB_PATH` 디렉터리의 append-only data/index와 explicit `__catalog__` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 보조 catalog를 그대로 사용한다.
 - `RustliteSnapshotStore`는 `SNAPSHOT_RUSTLITE_PATH` 디렉터리의 WAL/SSTable engine과 explicit `__catalog__` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 보조 catalog를 그대로 사용한다.

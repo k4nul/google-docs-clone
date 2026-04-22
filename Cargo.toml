@@ -29,6 +29,7 @@ ckydb = "0.0.5"
 crepedb = { version = "0.1.6", default-features = true }
 cuendillar = "0.1.0"
 dashmap = "6"
+datastack = "0.4.0"
 db-rs = "0.3.6"
 db-rs-derive = "0.3.6"
 dharmadb = "0.1.1"

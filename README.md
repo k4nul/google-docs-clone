@@ -138,6 +138,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_CANDYSTORE_PATH`: `SNAPSHOT_STORE=candystore`일 때 snapshot candystore 디렉터리 경로
 - `SNAPSHOT_CELERIX_STORE_PATH`: `SNAPSHOT_STORE=celerix_store`일 때 snapshot Celerix Store JSON persistence 디렉터리 경로
 - `SNAPSHOT_CUENDILLAR_PATH`: `SNAPSHOT_STORE=cuendillar`일 때 snapshot cuendillar 루트 디렉터리 경로. 내부에 `wal/`, `sstable/` 디렉터리가 함께 생성된다
+- `SNAPSHOT_DATASTACK_PATH`: `SNAPSHOT_STORE=datastack`일 때 snapshot DataStack redb 파일 경로
 - `SNAPSHOT_JAMMDB_PATH`: `SNAPSHOT_STORE=jammdb`일 때 snapshot jammdb 파일 경로
 - `SNAPSHOT_MACE_PATH`: `SNAPSHOT_STORE=mace`일 때 snapshot Mace 디렉터리 경로
 - `SNAPSHOT_JANQL_PATH`: `SNAPSHOT_STORE=janql`일 때 snapshot janql WAL/SSTable 디렉터리 경로
@@ -415,6 +416,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `lsmdb`는 WAL/SSTable LSM 디렉터리 저장소를 쓰면서 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `mindb`는 WAL/SSTable LSM 디렉터리 저장소를 쓰며 현재 빌드 그래프에서 no-bindgen/no-new-native-conflict 조건을 유지한 추가 기준선이다. 다만 upstream이 `zstd`를 의존하므로 pure-Rust baseline에는 포함하지 않는다.
 - `koit`는 async whole-file structured JSON 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
+- `datastack`은 redb-backed JSON document collection 저장소를 쓰면서도 현재 저장소 제약(no-bindgen/no-new-native-conflict)을 유지한 추가 기준선이다.
 - `jfs`는 single-file JSON object 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `json_store`는 append-only single-file JSON line 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
 - `grumpydb`는 page/B+Tree 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
@@ -544,6 +546,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=ferrumdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_FERRUMDB_PATH` FerrumDB append-only log 파일의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 JSON value로 저장된다. save/delete 뒤 `FsyncPolicy::Always` 경계로 sync하고, 기본 local ownership 모드에서는 앱 시작 시 같은 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=rumdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_RUMDB_PATH` 디렉터리의 append-only rumdb 로그 세트에 `doc_id` key와 explicit `__catalog__` key로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 같은 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=koit`이면 snapshot과 문서 토큰이 `SNAPSHOT_KOIT_PATH` koit structured JSON 파일의 `snapshots.<doc_id>` catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 whole-file catalog load로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=datastack`이면 snapshot과 문서 토큰이 `SNAPSHOT_DATASTACK_PATH` DataStack redb 파일의 `snapshots` collection에 `doc_id -> persisted snapshot JSON` document로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 collection scan으로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=lite_db`이면 snapshot과 문서 토큰이 `SNAPSHOT_LITE_DB_PATH` LiteDb 디렉터리의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=log_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_LOG_KV_PATH` log_kv append-only 단일 파일의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 JSON string으로 저장된다. delete는 tombstone string으로 가리고, 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=append_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_APPEND_KV_PATH` append_kv append-only 단일 파일의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 JSON string으로 저장된다. delete는 append_kv tombstone record로 가리고, 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate한다.

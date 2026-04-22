@@ -70,6 +70,7 @@ cargo run
 - `SNAPSHOT_CANDYSTORE_PATH`: candystore snapshot store 디렉터리 경로
 - `SNAPSHOT_CELERIX_STORE_PATH`: celerix_store snapshot store 디렉터리 경로
 - `SNAPSHOT_CUENDILLAR_PATH`: cuendillar snapshot store 루트 디렉터리 경로. 내부에 `wal/`, `sstable/` 디렉터리가 함께 생성된다
+- `SNAPSHOT_DATASTACK_PATH`: DataStack snapshot store redb 파일 경로
 - `SNAPSHOT_JAMMDB_PATH`: jammdb snapshot store DB 파일 경로
 - `SNAPSHOT_MACE_PATH`: Mace snapshot store 디렉터리 경로
 - `SNAPSHOT_JANQL_PATH`: janql snapshot store WAL/SSTable 디렉터리 경로

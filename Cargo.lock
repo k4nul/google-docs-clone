@@ -859,6 +859,7 @@ dependencies = [
  "crepedb",
  "cuendillar",
  "dashmap 6.1.0",
+ "datastack",
  "db-rs",
  "db-rs-derive",
  "dbless",
@@ -2366,6 +2367,20 @@ checksum = "7ab67060fc6b8ef687992d439ca0fa36e7ed17e9a0b16b25b601e8757df720de"
 dependencies = [
  "data-encoding",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "datastack"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03e890f4e00a6244ceb50f6c1881b42957b7955284493c215195a906c657edb2"
+dependencies = [
+ "bincode 1.3.3",
+ "redb 2.6.3",
+ "serde 1.0.228",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
