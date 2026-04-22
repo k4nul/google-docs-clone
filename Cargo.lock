@@ -287,6 +287,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aes-kw"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69fa2b352dcefb5f7f3a5fb840e02665d311d878955380515e4fd50095dd3d8c"
+dependencies = [
+ "aes",
+]
+
+[[package]]
 name = "aeternusdb"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -620,6 +629,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
 
 [[package]]
+name = "arrayref"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -862,6 +877,7 @@ dependencies = [
  "caves",
  "celerix-store",
  "chrono",
+ "citadeldb",
  "ckydb",
  "colon_db",
  "crepedb",
@@ -1209,6 +1225,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
 dependencies = [
  "digest 0.10.7",
+]
+
+[[package]]
+name = "blake3"
+version = "1.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d2d5991425dfd0785aed03aedcf0b321d61975c9b5b3689c774a2610ae0b51e"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq 0.4.2",
+ "cpufeatures 0.3.0",
 ]
 
 [[package]]
@@ -1657,6 +1687,17 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chacha20"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3613f74bd2eac03dad61bd53dbe620703d4371614fe0bc3b9f04dd36fe4e818"
+dependencies = [
+ "cfg-if",
+ "cipher",
+ "cpufeatures 0.2.17",
+]
+
+[[package]]
+name = "chacha20"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f8d983286843e49675a4b7a2d174efe136dc93a18d69130dd18198a6c167601"
@@ -1664,6 +1705,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
  "rand_core 0.10.1",
+]
+
+[[package]]
+name = "chacha20poly1305"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10cd79432192d1c0f4e1a0fef9527696cc039165d729fb41b3f4f4f354c2dc35"
+dependencies = [
+ "aead",
+ "chacha20 0.9.1",
+ "cipher",
+ "poly1305",
+ "zeroize",
 ]
 
 [[package]]
@@ -1688,6 +1742,124 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common 0.1.7",
  "inout",
+ "zeroize",
+]
+
+[[package]]
+name = "citadeldb"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31baf52cc71b7485bbdb0c0e6eff6d13b1613de8bf36f296a23d8927d33c6e49"
+dependencies = [
+ "citadeldb-buffer",
+ "citadeldb-core",
+ "citadeldb-crypto",
+ "citadeldb-io",
+ "citadeldb-page",
+ "citadeldb-sync",
+ "citadeldb-txn",
+ "rand 0.8.6",
+]
+
+[[package]]
+name = "citadeldb-buffer"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8e480b5e5e40f54eac71c5d3e9de5bb31af770c9b93ab155ff833a8177021cf"
+dependencies = [
+ "citadeldb-core",
+ "citadeldb-crypto",
+ "citadeldb-io",
+ "citadeldb-page",
+ "parking_lot 0.12.5",
+ "rustc-hash",
+]
+
+[[package]]
+name = "citadeldb-core"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75029d8fd4a09742d6d46cd34321b810a7742a70b618ebf2407baa4bd8ec4a99"
+dependencies = [
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "citadeldb-crypto"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c5d9200ebfd7d83a70e5f82fdc2a7b4626862d072613c936780d100c53c9bcb"
+dependencies = [
+ "aes",
+ "aes-kw",
+ "argon2",
+ "cipher",
+ "citadeldb-core",
+ "ctr",
+ "hkdf",
+ "hmac",
+ "pbkdf2",
+ "rand 0.8.6",
+ "sha2 0.10.9",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "citadeldb-io"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d768df43e6846bd2bc5a03e7397e9c7b4a0cea45faf0753969b22a9b970543a8"
+dependencies = [
+ "citadeldb-core",
+ "libc",
+ "memmap2",
+ "parking_lot 0.12.5",
+ "windows-sys 0.59.0",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "citadeldb-page"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a62b608001be2681277e2a03263330668bd28d5328bf8f6f7cbac66aaaafdf1"
+dependencies = [
+ "citadeldb-core",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "citadeldb-sync"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a58f376b78b1ff90bfb34f26faaf57e449eb6bb3e928792f0d1ebc7a5a88a064"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "citadeldb-core",
+ "citadeldb-page",
+ "citadeldb-txn",
+ "rand 0.8.6",
+ "snow",
+ "thiserror 2.0.18",
+ "zeroize",
+]
+
+[[package]]
+name = "citadeldb-txn"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af1ef36a097e9ed3593683563ee9c8b923ef57bde6419779cdb92ec57898958a"
+dependencies = [
+ "blake3",
+ "citadeldb-buffer",
+ "citadeldb-core",
+ "citadeldb-crypto",
+ "citadeldb-io",
+ "citadeldb-page",
+ "parking_lot 0.12.5",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -1900,6 +2072,12 @@ name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+
+[[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "contracts"
@@ -2239,6 +2417,31 @@ dependencies = [
  "serde 1.0.228",
  "tracing",
  "uuid 1.23.1",
+]
+
+[[package]]
+name = "curve25519-dalek"
+version = "4.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "curve25519-dalek-derive",
+ "fiat-crypto",
+ "rustc_version 0.4.1",
+ "subtle",
+]
+
+[[package]]
+name = "curve25519-dalek-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -3035,6 +3238,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fiat-crypto"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
+
+[[package]]
 name = "figment"
 version = "0.10.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3781,6 +3990,15 @@ dependencies = [
  "serde 1.0.228",
  "serde_cbor",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "hkdf"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
+dependencies = [
+ "hmac",
 ]
 
 [[package]]
@@ -6014,6 +6232,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
 
 [[package]]
+name = "poly1305"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8159bd90725d2df49889a078b54f4f79e87f1f8a8444194cdca81d38f5393abf"
+dependencies = [
+ "cpufeatures 0.2.17",
+ "opaque-debug",
+ "universal-hash",
+]
+
+[[package]]
 name = "polyval"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6399,7 +6628,7 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
 dependencies = [
- "chacha20",
+ "chacha20 0.10.0",
  "getrandom 0.4.2",
  "rand_core 0.10.1",
 ]
@@ -8063,6 +8292,22 @@ name = "snap"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
+
+[[package]]
+name = "snow"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "599b506ccc4aff8cf7844bc42cf783009a434c1e26c964432560fb6d6ad02d82"
+dependencies = [
+ "aes-gcm",
+ "blake2",
+ "chacha20poly1305",
+ "curve25519-dalek",
+ "getrandom 0.3.4",
+ "rustc_version 0.4.1",
+ "sha2 0.10.9",
+ "subtle",
+]
 
 [[package]]
 name = "socket2"
@@ -10125,7 +10370,7 @@ dependencies = [
  "arbitrary",
  "bzip2",
  "chrono",
- "constant_time_eq",
+ "constant_time_eq 0.3.1",
  "crc32fast",
  "deflate64",
  "flate2",

@@ -44,6 +44,8 @@ pub const DEFAULT_SNAPSHOT_BITCASK_ENGINE_PATH: &str = "./data/snapshots.bitcask
 pub const DEFAULT_SNAPSHOT_BLAZEUP_PATH: &str = "./data/snapshots.blazeup";
 pub const DEFAULT_SNAPSHOT_CANDYSTORE_PATH: &str = "./data/snapshots.candystore";
 pub const DEFAULT_SNAPSHOT_CELERIX_STORE_PATH: &str = "./data/snapshots.celerix_store";
+pub const DEFAULT_SNAPSHOT_CITADELDB_PATH: &str = "./data/snapshots.citadeldb";
+pub const DEFAULT_SNAPSHOT_CITADELDB_PASSPHRASE: &str = "dev-citadel-snapshot-passphrase";
 pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
 pub const DEFAULT_SNAPSHOT_DATASTACK_PATH: &str = "./data/snapshots.datastack";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
@@ -185,6 +187,8 @@ pub struct Config {
     pub snapshot_blazeup_path: String,
     pub snapshot_candystore_path: String,
     pub snapshot_celerix_store_path: String,
+    pub snapshot_citadeldb_path: String,
+    pub snapshot_citadeldb_passphrase: String,
     pub snapshot_cuendillar_path: String,
     pub snapshot_datastack_path: String,
     pub snapshot_jammdb_path: String,
@@ -374,6 +378,12 @@ impl Config {
         let snapshot_celerix_store_path = env_string(
             "SNAPSHOT_CELERIX_STORE_PATH",
             DEFAULT_SNAPSHOT_CELERIX_STORE_PATH,
+        )?;
+        let snapshot_citadeldb_path =
+            env_string("SNAPSHOT_CITADELDB_PATH", DEFAULT_SNAPSHOT_CITADELDB_PATH)?;
+        let snapshot_citadeldb_passphrase = env_string(
+            "SNAPSHOT_CITADELDB_PASSPHRASE",
+            DEFAULT_SNAPSHOT_CITADELDB_PASSPHRASE,
         )?;
         let snapshot_cuendillar_path =
             env_string("SNAPSHOT_CUENDILLAR_PATH", DEFAULT_SNAPSHOT_CUENDILLAR_PATH)?;
@@ -617,6 +627,8 @@ impl Config {
             snapshot_blazeup_path,
             snapshot_candystore_path,
             snapshot_celerix_store_path,
+            snapshot_citadeldb_path,
+            snapshot_citadeldb_passphrase,
             snapshot_cuendillar_path,
             snapshot_datastack_path,
             snapshot_jammdb_path,

@@ -23,8 +23,8 @@ use backend::{
         AssystemSnapshotStore, BitaskSnapshotStore, BitcaskEngineSnapshotStore,
         BitkvRsSnapshotStore, BlazeupSnapshotStore, BlockbucketSnapshotStore,
         BtreeStoreSnapshotStore, CandystoreSnapshotStore, CanopydbSnapshotStore,
-        CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore, ColonDbSnapshotStore,
-        CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
+        CavesSnapshotStore, CelerixStoreSnapshotStore, CitadeldbSnapshotStore, CkydbSnapshotStore,
+        ColonDbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
         DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
         DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore,
         EpochDbSnapshotStore, EtchdbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
@@ -111,6 +111,8 @@ fn test_config() -> Config {
         snapshot_blazeup_path: "./data/test-snapshots.blazeup".to_owned(),
         snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
         snapshot_celerix_store_path: "./data/test-snapshots.celerix_store".to_owned(),
+        snapshot_citadeldb_path: "./data/test-snapshots.citadeldb".to_owned(),
+        snapshot_citadeldb_passphrase: "test-citadel-snapshot-passphrase".to_owned(),
         snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
         snapshot_datastack_path: "./data/test-snapshots.datastack".to_owned(),
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
@@ -426,6 +428,15 @@ fn configure_celerix_store_snapshot_store(config: &mut Config, root: &std::path:
         .join("snapshots.celerix_store")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_citadeldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "citadeldb".to_owned();
+    config.snapshot_citadeldb_path = root
+        .join("snapshots.citadeldb")
+        .to_string_lossy()
+        .into_owned();
+    config.snapshot_citadeldb_passphrase = "test-citadel-snapshot-passphrase".to_owned();
 }
 
 fn configure_nikidb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -8821,6 +8832,58 @@ fn app_state_uses_celerix_store_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_citadeldb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("citadeldb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.citadeldb");
+    configure_citadeldb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with citadeldb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to citadeldb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to citadeldb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted citadeldb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+    assert!(
+        snapshot_dir
+            .join("snapshots.citadeldb.citadel-keys")
+            .exists()
+    );
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_thetadb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("thetadb-store-config");
@@ -14697,6 +14760,77 @@ fn celerix_store_snapshot_store_round_trips_document_catalog() {
     );
 
     drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn citadeldb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("citadeldb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.citadeldb");
+    let store = CitadeldbSnapshotStore::new(
+        &snapshot_path,
+        b"test-citadel-snapshot-passphrase".as_slice(),
+    )
+    .expect("citadeldb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("CitadelDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to citadeldb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from citadeldb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from citadeldb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store = CitadeldbSnapshotStore::new(
+        &snapshot_path,
+        b"test-citadel-snapshot-passphrase".as_slice(),
+    )
+    .expect("citadeldb snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from citadeldb"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from citadeldb")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from citadeldb");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect citadeldb deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

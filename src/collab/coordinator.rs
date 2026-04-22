@@ -1816,6 +1816,8 @@ mod tests {
             snapshot_blazeup_path: "./data/test-snapshots.blazeup".to_owned(),
             snapshot_candystore_path: "./data/test-snapshots.candystore".to_owned(),
             snapshot_celerix_store_path: "./data/test-snapshots.celerix_store".to_owned(),
+            snapshot_citadeldb_path: "./data/test-snapshots.citadeldb".to_owned(),
+            snapshot_citadeldb_passphrase: "test-citadel-snapshot-passphrase".to_owned(),
             snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
             snapshot_datastack_path: "./data/test-snapshots.datastack".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
