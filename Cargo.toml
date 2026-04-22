@@ -54,7 +54,7 @@ graus-db = "0.2.2"
 ghaladb = { version = "0.1.4", path = "vendor/ghaladb" }
 heed = "0.22"
 hightower-kv = "0.1.5"
-highlandcows-isam = "0.1.2"
+highlandcows-isam = "0.2.0"
 hmdb = "0.2.2"
 icefalldb = { version = "0.1.0", path = "vendor/icefalldb" }
 jammdb = "0.11"
