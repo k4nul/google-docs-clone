@@ -145,6 +145,7 @@ kafi = "0.1.2"
 ledger-kv = "0.1.0"
 blazeup = "0.1.3"
 luckdb = "0.1.4"
+ipjdb = "0.16.1"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

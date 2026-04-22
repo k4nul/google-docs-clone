@@ -73,6 +73,7 @@ active room과 snapshot store에 남아 있는 persisted document catalog를 합
 - `citadeldb` 모드에서는 `SNAPSHOT_CITADELDB_PATH` encrypted DB 파일의 `snapshots` table에 `doc_id -> persisted snapshot JSON bytes`와 explicit `__catalog__` key를 저장한다. 같은 경로의 `.citadel-keys` key file과 `SNAPSHOT_CITADELDB_PASSPHRASE`가 함께 필요하다.
 - `kopperdb` 모드에서는 `SNAPSHOT_KOPPERDB_PATH` 디렉터리 아래 append-only segment log를 사용해 `doc_id` key와 explicit `__catalog__` key를 유지한다. delete API가 없어 tombstone string을 덮어써 삭제를 가린다.
 - `rcask` 모드에서는 `SNAPSHOT_RCASK_PATH` 디렉터리 아래 append-only segment log를 사용해 `doc_id` key와 explicit `__catalog__` key를 JSON string으로 유지한다. 공개 delete API가 없어 tombstone string을 덮어써 삭제를 가린다.
+- `ipjdb` 모드에서는 `SNAPSHOT_IPJDB_PATH/snapshots/<item_id>` JSON item 파일에 `doc_id`와 persisted snapshot JSON payload를 함께 저장하고, collection full scan으로 catalog를 복구한다.
 - `icefalldb` 모드에서는 `SNAPSHOT_ICEFALLDB_PATH` 디렉터리 아래 append-only `rsdb.log`를 사용해 `doc_id` key와 explicit `__catalog__` key를 유지한다. 공개 delete API가 없어 tombstone value를 덮어써 삭제를 가린다.
 - `etchdb` 모드에서는 `SNAPSHOT_ETCHDB_PATH` 디렉터리의 WAL-backed store를 사용해 `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 유지하고, save/delete마다 `write_durable`로 restart recovery 경계를 고정한다.
 
@@ -409,6 +410,11 @@ Response: `204 No Content`
 
 - 필수 env는 `SNAPSHOT_LUCKDB_PATH`다.
 - luckdb catalog는 LuckDB `backend.snapshots` collection의 JSON document에 `doc_id`와 persisted snapshot JSON을 함께 저장하고, `GET /api/documents` catalog는 collection full query 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+
+### `SNAPSHOT_STORE=ipjdb`
+
+- 필수 env는 `SNAPSHOT_IPJDB_PATH`다.
+- ipjdb catalog는 `snapshots` collection item 파일에 `doc_id`와 persisted snapshot JSON을 함께 저장하고, `GET /api/documents` catalog는 collection full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 
 ### `SNAPSHOT_STORE=rubin`
 

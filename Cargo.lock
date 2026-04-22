@@ -909,6 +909,7 @@ dependencies = [
  "hightower-kv",
  "hmdb",
  "icefalldb",
+ "ipjdb",
  "jammdb",
  "janql",
  "jasondb",
@@ -4464,6 +4465,19 @@ dependencies = [
  "bitflags 2.11.1",
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "ipjdb"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65aa0900973535d89fafbaeac2de7e59c1902efa14e73dd53bb9bbd4eb2fb711"
+dependencies = [
+ "fs2",
+ "rand 0.8.6",
+ "serde 1.0.228",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

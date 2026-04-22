@@ -1838,6 +1838,7 @@ mod tests {
             snapshot_mhdb_path: "./data/test-snapshots.mhdb".to_owned(),
             snapshot_loro_kv_path: "./data/test-snapshots.loro_kv".to_owned(),
             snapshot_luckdb_path: "./data/test-snapshots.luckdb.json".to_owned(),
+            snapshot_ipjdb_path: "./data/test-snapshots.ipjdb".to_owned(),
             snapshot_lsm_engine_path: "./data/test-snapshots.lsm_engine".to_owned(),
             snapshot_lsm_storage_engine_path: "./data/test-snapshots.lsm_storage_engine".to_owned(),
             snapshot_lsmdb_path: "./data/test-snapshots.lsmdb".to_owned(),

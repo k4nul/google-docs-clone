@@ -149,6 +149,7 @@ cargo run
 - `SNAPSHOT_MHDB_PATH`: mhdb snapshot store DB path prefix. 실제 저장 파일은 `<path>.pag`, `<path>.dir`
 - `SNAPSHOT_LORO_KV_PATH`: loro-kv-store snapshot store binary SSTable 파일 경로
 - `SNAPSHOT_LUCKDB_PATH`: luckdb snapshot store JSON document 파일 경로
+- `SNAPSHOT_IPJDB_PATH`: ipjdb snapshot store collection 디렉터리 경로
 - `SNAPSHOT_RUBIN_PATH`: rubin snapshot store JSON 파일 경로
 - `SNAPSHOT_LSM_ENGINE_PATH`: lsm_engine snapshot store WAL 파일 경로
 - `SNAPSHOT_LSM_STORAGE_ENGINE_PATH`: lsm_storage_engine snapshot store WAL/SSTable 디렉터리 경로
@@ -286,6 +287,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `append_kv` | 단일 append-only log 파일 | 중간 | vendored lib target이 노출한 `KvStore`에 `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 JSON string으로 저장한다. save/delete마다 file sync를 수행하지만 compaction이 없어 파일은 계속 커질 수 있으므로 file-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선, vendored lib target patch |
 | `mhdb` | DBM path prefix + `.pag`/`.dir` 파일 쌍 | 낮음 | upstream pair size 제한이 506B라 persisted snapshot JSON bytes와 catalog를 chunked blob key로 나눠 저장한다. `<path>.pag`/`<path>.dir` 파일 쌍 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `luckdb` | 단일 JSON document DB 파일 | 중간 | LuckDB `backend.snapshots` collection에 `doc_id`와 persisted snapshot JSON payload를 함께 저장한다. collection 전체 query로 catalog를 복구하므로 단일 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `ipjdb` | 디렉터리 + collection별 JSON item 파일 | 중간 | ipjdb `snapshots` collection에 `doc_id`와 persisted snapshot JSON payload를 함께 저장한다. collection full scan으로 catalog를 복구하므로 directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선, upstream maintenance 주의 |
 | `rubin` | 단일 JSON key-value 파일 | 중간 | Rubin `MemStore` string map에 `doc_id -> persisted snapshot JSON` payload를 저장한다. save/delete마다 whole-file JSON rewrite를 수행하므로 단일 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `etchdb` | 디렉터리 + WAL-backed path store | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 EtchDB WAL-backed store에 저장하고 `write_durable`로 save/delete를 fsync한다. 엔진 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lsm_engine` | 단일 WAL 파일 + in-memory LSM rebuild | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 lsm_engine WAL에 JSON string으로 저장하고 reopen 때 WAL replay로 memtable을 재구성한다. 단일 WAL 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선, vendored serde import patch |
@@ -562,6 +564,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload와 catalog는 MHdb pair size 제한을 피하도록 chunked blob key로 나눠 저장된다.
 - `SNAPSHOT_STORE=luckdb`는 `SNAPSHOT_LUCKDB_PATH` 단일 LuckDB JSON document 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 LuckDB `backend.snapshots` collection의 JSON document에 저장되고, `doc_id` field query로 load/delete 및 catalog 복구를 수행한다.
+- `SNAPSHOT_STORE=ipjdb`는 `SNAPSHOT_IPJDB_PATH` 디렉터리 아래 ipjdb `snapshots` collection item 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `doc_id` field와 persisted snapshot JSON을 함께 가진 item으로 저장되고, collection full scan으로 load/delete 및 catalog 복구를 수행한다.
 - `SNAPSHOT_STORE=rubin`은 `SNAPSHOT_RUBIN_PATH` 단일 Rubin JSON 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 Rubin `MemStore` string map의 `doc_id -> persisted snapshot JSON` entry로 저장되고, document catalog는 string map scan 뒤 각 payload를 다시 읽어 복구된다.
 - `SNAPSHOT_STORE=lsm_engine`는 `SNAPSHOT_LSM_ENGINE_PATH` WAL 파일을 통해 vendor-specific embedded database durability를 사용한다.
