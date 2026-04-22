@@ -25,30 +25,30 @@ use backend::{
         CavesSnapshotStore, CelerixStoreSnapshotStore, CkydbSnapshotStore, CrepeDbSnapshotStore,
         CuendillarSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
         DharmadbSnapshotStore, DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore,
-        EpochDbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
-        FjallSnapshotStore, FlashKvSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore,
-        GrumpydbSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
-        HightowerKvSnapshotStore, HmdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
-        InfusedbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore, JasondbSnapshotStore,
-        JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore, JsonStoreSnapshotStore,
-        JsondbSnapshotStore, KafiSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
-        KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore, LiteDbSnapshotStore,
-        LogKvSnapshotStore, LoroKvSnapshotStore, LsmEngineSnapshotStore,
-        LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore, LsmdbSnapshotStore,
-        LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MhdbSnapshotStore,
-        MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore, NanodbSnapshotStore,
-        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
-        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
-        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RubinSnapshotStore,
-        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
-        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
-        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
-        SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
-        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
-        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore,
-        TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
-        YedbSnapshotStore,
+        EpochDbSnapshotStore, EtchdbSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
+        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, GrausDbSnapshotStore,
+        GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
+        HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
+        IcefalldbSnapshotStore, InMemorySnapshotStore, InfusedbSnapshotStore, JammdbSnapshotStore,
+        JanqlSnapshotStore, JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore,
+        JoydbSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore,
+        KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore,
+        LedgerKvSnapshotStore, LiteDbSnapshotStore, LogKvSnapshotStore, LoroKvSnapshotStore,
+        LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore,
+        LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore,
+        MhdbSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore,
+        NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore,
+        NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore,
+        PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore,
+        ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore,
+        RubinSnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
+        RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore,
+        SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
+        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
+        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
+        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore,
+        TinybaseSnapshotStore, TinydbSnapshotStore, TinykvSnapshotStore, VsdbSnapshotStore,
+        YakvSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -89,6 +89,7 @@ fn test_config() -> Config {
         snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),
         snapshot_eight_path: "./data/test-snapshots.eight".to_owned(),
         snapshot_epoch_db_path: "./data/test-snapshots.epoch_db".to_owned(),
+        snapshot_etchdb_path: "./data/test-snapshots.etchdb".to_owned(),
         snapshot_ferrumdb_path: "./data/test-snapshots.ferrumdb".to_owned(),
         snapshot_rumdb_path: "./data/test-snapshots.rumdb".to_owned(),
         snapshot_rubin_path: "./data/test-snapshots.rubin.json".to_owned(),
@@ -890,6 +891,11 @@ fn configure_lsm_engine_snapshot_store(config: &mut Config, root: &std::path::Pa
         .join("snapshots.lsm_engine")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_etchdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "etchdb".to_owned();
+    config.snapshot_etchdb_path = root.join("snapshots.etchdb").to_string_lossy().into_owned();
 }
 
 fn configure_lsm_storage_engine_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -7160,6 +7166,52 @@ fn app_state_uses_lsm_storage_engine_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_etchdb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("etchdb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.etchdb");
+    configure_etchdb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with etchdb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to etchdb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to etchdb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted etchdb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_lsm_engine_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lsm-engine-store-config");
@@ -12539,6 +12591,71 @@ fn lsm_engine_snapshot_store_round_trips_document_catalog() {
         reopened_store
             .list_documents()
             .expect("document catalog should reflect lsm_engine deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn etchdb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("etchdb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.etchdb");
+    let store =
+        EtchdbSnapshotStore::new(&snapshot_path).expect("etchdb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("EtchDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to etchdb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from etchdb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from etchdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        EtchdbSnapshotStore::new(&snapshot_path).expect("etchdb snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from etchdb"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from etchdb")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from etchdb");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect etchdb deletion")
             .is_empty()
     );
 

@@ -609,6 +609,7 @@ dependencies = [
  "dotenvy",
  "eight",
  "epoch-db",
+ "etchdb",
  "feoxdb",
  "ferrumdb",
  "fjall",
@@ -2465,6 +2466,31 @@ name = "error-code"
 version = "3.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea2df4cf52843e0452895c455a1a2cfbb842a1e7329671acf418fdc53ed4c59"
+
+[[package]]
+name = "etchdb"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e8be2dca34c4d42ec3460bfdfe0c93939a5d6dc7ba9a6e10c294d1c765789f7"
+dependencies = [
+ "etchdb-derive",
+ "parking_lot 0.12.5",
+ "postcard",
+ "serde 1.0.228",
+ "thiserror 2.0.18",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "etchdb-derive"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70099d174be3d14d30c3c68eb72df52a69cbcee4a835f7b622f0622d6b77742a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "expect-json"

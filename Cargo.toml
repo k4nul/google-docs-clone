@@ -36,6 +36,7 @@ docdb = "0.1.0"
 dotenvy = "0.15"
 eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"] }
 epoch-db = "0.2.9"
+etchdb = "0.3.3"
 ferrumdb = "0.1.2"
 flash-kv = "0.2.1"
 fjall = "3.1.4"
