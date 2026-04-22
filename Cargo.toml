@@ -121,6 +121,7 @@ ureq = { version = "2", features = ["json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 vsdb = "13.4.5"
 yakv = "0.2.7"
+yakvdb = "0.6.2"
 yedb = "0.5.1"
 yrs = "=0.18.2"
 yrs-axum = "0.8.2"

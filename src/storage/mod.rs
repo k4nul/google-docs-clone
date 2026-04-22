@@ -112,6 +112,7 @@ mod tinydb_snapshot_store;
 mod tinykv_snapshot_store;
 mod vsdb_snapshot_store;
 mod yakv_snapshot_store;
+mod yakvdb_snapshot_store;
 mod yedb_snapshot_store;
 
 use std::{
@@ -243,6 +244,7 @@ pub use tinydb_snapshot_store::TinydbSnapshotStore;
 pub use tinykv_snapshot_store::TinykvSnapshotStore;
 pub use vsdb_snapshot_store::VsdbSnapshotStore;
 pub use yakv_snapshot_store::YakvSnapshotStore;
+pub use yakvdb_snapshot_store::YakvdbSnapshotStore;
 pub use yedb_snapshot_store::YedbSnapshotStore;
 
 #[derive(Debug, Clone)]
@@ -677,6 +679,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "yakv" => Ok(Arc::new(YakvSnapshotStore::new(
             &config.snapshot_yakv_path,
+        )?)),
+        "yakvdb" => Ok(Arc::new(YakvdbSnapshotStore::new(
+            &config.snapshot_yakvdb_path,
         )?)),
         "saberdb" => Ok(Arc::new(SaberdbSnapshotStore::new(
             &config.snapshot_saberdb_path,
