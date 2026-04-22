@@ -891,6 +891,7 @@ dependencies = [
  "dblite",
  "deeb_core",
  "dharmadb",
+ "dir-cache",
  "docdb",
  "dotenvy",
  "eight",
@@ -2769,6 +2770,12 @@ dependencies = [
  "const-oid",
  "crypto-common 0.2.1",
 ]
+
+[[package]]
+name = "dir-cache"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0a5d24d6bf77c06dde65db293f988403a18480d8c3633565bb37a4bf3c5b3fa"
 
 [[package]]
 name = "dirs"
