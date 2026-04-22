@@ -52,6 +52,7 @@ pub const DEFAULT_SNAPSHOT_KV_PATH: &str = "./data/snapshots.kv";
 pub const DEFAULT_SNAPSHOT_KOIT_PATH: &str = "./data/snapshots.koit.json";
 pub const DEFAULT_SNAPSHOT_LITE_DB_PATH: &str = "./data/snapshots.lite_db";
 pub const DEFAULT_SNAPSHOT_LOG_KV_PATH: &str = "./data/snapshots.log_kv";
+pub const DEFAULT_SNAPSHOT_LUCKDB_PATH: &str = "./data/snapshots.luckdb.json";
 pub const DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH: &str = "./data/snapshots.lsm_storage_engine";
 pub const DEFAULT_SNAPSHOT_LSMDB_PATH: &str = "./data/snapshots.lsmdb";
 pub const DEFAULT_SNAPSHOT_LSM_TREE_PATH: &str = "./data/snapshots.lsm_tree";
@@ -178,6 +179,7 @@ pub struct Config {
     pub snapshot_koit_path: String,
     pub snapshot_lite_db_path: String,
     pub snapshot_log_kv_path: String,
+    pub snapshot_luckdb_path: String,
     pub snapshot_lsm_storage_engine_path: String,
     pub snapshot_lsmdb_path: String,
     pub snapshot_lsm_tree_path: String,
@@ -357,6 +359,8 @@ impl Config {
             env_string("SNAPSHOT_LITE_DB_PATH", DEFAULT_SNAPSHOT_LITE_DB_PATH)?;
         let snapshot_log_kv_path =
             env_string("SNAPSHOT_LOG_KV_PATH", DEFAULT_SNAPSHOT_LOG_KV_PATH)?;
+        let snapshot_luckdb_path =
+            env_string("SNAPSHOT_LUCKDB_PATH", DEFAULT_SNAPSHOT_LUCKDB_PATH)?;
         let snapshot_lsm_storage_engine_path = env_string(
             "SNAPSHOT_LSM_STORAGE_ENGINE_PATH",
             DEFAULT_SNAPSHOT_LSM_STORAGE_ENGINE_PATH,
@@ -565,6 +569,7 @@ impl Config {
             snapshot_koit_path,
             snapshot_lite_db_path,
             snapshot_log_kv_path,
+            snapshot_luckdb_path,
             snapshot_lsm_storage_engine_path,
             snapshot_lsmdb_path,
             snapshot_lsm_tree_path,
