@@ -629,6 +629,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "assystem"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b878b3317e63cdd7cd139e5a72b2b99f3df329401fa99c24321ecf8505e245f4"
+
+[[package]]
 name = "async-trait"
 version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -840,6 +846,7 @@ dependencies = [
  "apex-store-rs",
  "append_kv",
  "armdb",
+ "assystem",
  "axum",
  "axum-test",
  "base64 0.22.1",

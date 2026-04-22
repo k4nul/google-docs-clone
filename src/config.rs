@@ -15,6 +15,7 @@ pub const DEFAULT_SNAPSHOT_AGDB_PATH: &str = "./data/snapshots.agdb";
 pub const DEFAULT_SNAPSHOT_AMANDINE_PATH: &str = "./data/snapshots.amandine";
 pub const DEFAULT_SNAPSHOT_APEX_STORE_PATH: &str = "./data/snapshots.apex_store";
 pub const DEFAULT_SNAPSHOT_ARMDB_PATH: &str = "./data/snapshots.armdb";
+pub const DEFAULT_SNAPSHOT_ASSYSTEM_PATH: &str = "./data/snapshots.assystem";
 pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
 pub const DEFAULT_SNAPSHOT_GHALADB_PATH: &str = "./data/snapshots.ghaladb";
 pub const DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH: &str = "./data/snapshots.blockbucket";
@@ -154,6 +155,7 @@ pub struct Config {
     pub snapshot_amandine_path: String,
     pub snapshot_apex_store_path: String,
     pub snapshot_armdb_path: String,
+    pub snapshot_assystem_path: String,
     pub snapshot_flash_kv_path: String,
     pub snapshot_ghaladb_path: String,
     pub snapshot_blockbucket_path: String,
@@ -309,6 +311,8 @@ impl Config {
         let snapshot_apex_store_path =
             env_string("SNAPSHOT_APEX_STORE_PATH", DEFAULT_SNAPSHOT_APEX_STORE_PATH)?;
         let snapshot_armdb_path = env_string("SNAPSHOT_ARMDB_PATH", DEFAULT_SNAPSHOT_ARMDB_PATH)?;
+        let snapshot_assystem_path =
+            env_string("SNAPSHOT_ASSYSTEM_PATH", DEFAULT_SNAPSHOT_ASSYSTEM_PATH)?;
         let snapshot_flash_kv_path =
             env_string("SNAPSHOT_FLASH_KV_PATH", DEFAULT_SNAPSHOT_FLASH_KV_PATH)?;
         let snapshot_ghaladb_path =
@@ -580,6 +584,7 @@ impl Config {
             snapshot_amandine_path,
             snapshot_apex_store_path,
             snapshot_armdb_path,
+            snapshot_assystem_path,
             snapshot_flash_kv_path,
             snapshot_ghaladb_path,
             snapshot_blockbucket_path,
