@@ -619,6 +619,7 @@ dependencies = [
  "jammdb",
  "janql",
  "jasondb",
+ "jasonisnthappy",
  "jfs",
  "joydb",
  "json_store",
@@ -3739,6 +3740,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01a658311d01948b8cdd71db364791c84a1268342382061404e3ae74b9642c85"
 dependencies = [
  "humphrey_json",
+]
+
+[[package]]
+name = "jasonisnthappy"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aeb2a36a90b799c447113309dd967fb342d06f570200285e6475a8e0c58b625d"
+dependencies = [
+ "fs2",
+ "once_cell",
+ "serde 1.0.228",
+ "serde_json",
+ "thiserror 1.0.69",
+ "unicode-segmentation",
 ]
 
 [[package]]
