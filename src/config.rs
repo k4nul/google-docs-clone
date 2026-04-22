@@ -15,6 +15,7 @@ pub const DEFAULT_SNAPSHOT_AGDB_PATH: &str = "./data/snapshots.agdb";
 pub const DEFAULT_SNAPSHOT_AMANDINE_PATH: &str = "./data/snapshots.amandine";
 pub const DEFAULT_SNAPSHOT_ARMDB_PATH: &str = "./data/snapshots.armdb";
 pub const DEFAULT_SNAPSHOT_FLASH_KV_PATH: &str = "./data/snapshots.flash_kv";
+pub const DEFAULT_SNAPSHOT_GHALADB_PATH: &str = "./data/snapshots.ghaladb";
 pub const DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH: &str = "./data/snapshots.blockbucket";
 pub const DEFAULT_SNAPSHOT_GREBEDB_PATH: &str = "./data/snapshots.grebedb";
 pub const DEFAULT_SNAPSHOT_GRUMPYDB_PATH: &str = "./data/snapshots.grumpydb";
@@ -148,6 +149,7 @@ pub struct Config {
     pub snapshot_amandine_path: String,
     pub snapshot_armdb_path: String,
     pub snapshot_flash_kv_path: String,
+    pub snapshot_ghaladb_path: String,
     pub snapshot_blockbucket_path: String,
     pub snapshot_grebedb_path: String,
     pub snapshot_grumpydb_path: String,
@@ -297,6 +299,8 @@ impl Config {
         let snapshot_armdb_path = env_string("SNAPSHOT_ARMDB_PATH", DEFAULT_SNAPSHOT_ARMDB_PATH)?;
         let snapshot_flash_kv_path =
             env_string("SNAPSHOT_FLASH_KV_PATH", DEFAULT_SNAPSHOT_FLASH_KV_PATH)?;
+        let snapshot_ghaladb_path =
+            env_string("SNAPSHOT_GHALADB_PATH", DEFAULT_SNAPSHOT_GHALADB_PATH)?;
         let snapshot_blockbucket_path = env_string(
             "SNAPSHOT_BLOCKBUCKET_PATH",
             DEFAULT_SNAPSHOT_BLOCKBUCKET_PATH,
@@ -556,6 +560,7 @@ impl Config {
             snapshot_amandine_path,
             snapshot_armdb_path,
             snapshot_flash_kv_path,
+            snapshot_ghaladb_path,
             snapshot_blockbucket_path,
             snapshot_grebedb_path,
             snapshot_grumpydb_path,

@@ -615,6 +615,7 @@ dependencies = [
  "fjall",
  "flash-kv",
  "futures-util",
+ "ghaladb",
  "graus-db",
  "grebedb",
  "grumpydb",
@@ -1574,6 +1575,17 @@ name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+
+[[package]]
+name = "contracts"
+version = "0.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "008eb94d541da40512913ef5e0707c3fb0e7280ba1af13f062461e46dd96ef7e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "convert_case"
@@ -3006,6 +3018,18 @@ dependencies = [
  "rand_core 0.10.1",
  "wasip2",
  "wasip3",
+]
+
+[[package]]
+name = "ghaladb"
+version = "0.1.4"
+dependencies = [
+ "bincode 2.0.1",
+ "contracts",
+ "log",
+ "snap 1.1.1",
+ "thiserror 1.0.69",
+ "typed-builder",
 ]
 
 [[package]]
@@ -8273,6 +8297,17 @@ name = "twox-hash"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea3136b675547379c4bd395ca6b938e5ad3c3d20fad76e7fe85f9e0d011419c"
+
+[[package]]
+name = "typed-builder"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a46ee5bd706ff79131be9c94e7edcb82b703c487766a114434e5790361cf08c5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "typeid"

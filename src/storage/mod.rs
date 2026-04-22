@@ -29,6 +29,7 @@ mod ferrumdb_snapshot_store;
 mod file_snapshot_store;
 mod fjall_snapshot_store;
 mod flash_kv_snapshot_store;
+mod ghaladb_snapshot_store;
 mod graus_db_snapshot_store;
 mod grebedb_snapshot_store;
 mod grumpydb_snapshot_store;
@@ -158,6 +159,7 @@ pub use ferrumdb_snapshot_store::FerrumdbSnapshotStore;
 pub use file_snapshot_store::FileSnapshotStore;
 pub use fjall_snapshot_store::FjallSnapshotStore;
 pub use flash_kv_snapshot_store::FlashKvSnapshotStore;
+pub use ghaladb_snapshot_store::GhaladbSnapshotStore;
 pub use graus_db_snapshot_store::GrausDbSnapshotStore;
 pub use grebedb_snapshot_store::GrebedbSnapshotStore;
 pub use grumpydb_snapshot_store::GrumpydbSnapshotStore;
@@ -385,6 +387,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "flash_kv" => Ok(Arc::new(FlashKvSnapshotStore::new(
             &config.snapshot_flash_kv_path,
+        )?)),
+        "ghaladb" => Ok(Arc::new(GhaladbSnapshotStore::new(
+            &config.snapshot_ghaladb_path,
         )?)),
         "blockbucket" => Ok(Arc::new(BlockbucketSnapshotStore::new(
             &config.snapshot_blockbucket_path,
@@ -739,7 +744,7 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
         other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `agdb`, `amandine`, `armdb`, `flash_kv`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `feoxdb`, `jsondb`, `joydb`, `kopperdb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `s3`, or `managed`, received `{other}`"
+            "SNAPSHOT_STORE must be `memory`, `file`, `agdb`, `amandine`, `armdb`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `feoxdb`, `jsondb`, `joydb`, `kopperdb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `s3`, or `managed`, received `{other}`"
         ))),
     }
 }
