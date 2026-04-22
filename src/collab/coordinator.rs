@@ -1839,6 +1839,7 @@ mod tests {
             snapshot_log_kv_path: "./data/test-snapshots.log_kv".to_owned(),
             snapshot_append_kv_path: "./data/test-snapshots.append_kv".to_owned(),
             snapshot_mhdb_path: "./data/test-snapshots.mhdb".to_owned(),
+            snapshot_marble_path: "./data/test-snapshots.marble".to_owned(),
             snapshot_loro_kv_path: "./data/test-snapshots.loro_kv".to_owned(),
             snapshot_luckdb_path: "./data/test-snapshots.luckdb.json".to_owned(),
             snapshot_ipjdb_path: "./data/test-snapshots.ipjdb".to_owned(),

@@ -74,6 +74,7 @@ mod lsmdb_snapshot_store;
 mod luckdb_snapshot_store;
 mod mace_snapshot_store;
 mod managed_snapshot_store;
+mod marble_snapshot_store;
 mod mhdb_snapshot_store;
 mod microkv_snapshot_store;
 mod mindb_snapshot_store;
@@ -217,6 +218,7 @@ pub use lsmdb_snapshot_store::LsmdbSnapshotStore;
 pub use luckdb_snapshot_store::LuckdbSnapshotStore;
 pub use mace_snapshot_store::MaceSnapshotStore;
 pub use managed_snapshot_store::ManagedSnapshotStore;
+pub use marble_snapshot_store::MarbleSnapshotStore;
 pub use mhdb_snapshot_store::MhdbSnapshotStore;
 pub use microkv_snapshot_store::MicroKvSnapshotStore;
 pub use mindb_snapshot_store::MindbSnapshotStore;
@@ -557,6 +559,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "mhdb" => Ok(Arc::new(MhdbSnapshotStore::new(
             &config.snapshot_mhdb_path,
+        )?)),
+        "marble" => Ok(Arc::new(MarbleSnapshotStore::new(
+            &config.snapshot_marble_path,
         )?)),
         "loro_kv" => Ok(Arc::new(LoroKvSnapshotStore::new(
             &config.snapshot_loro_kv_path,

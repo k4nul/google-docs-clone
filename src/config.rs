@@ -65,6 +65,7 @@ pub const DEFAULT_SNAPSHOT_LITE_DB_PATH: &str = "./data/snapshots.lite_db";
 pub const DEFAULT_SNAPSHOT_LOG_KV_PATH: &str = "./data/snapshots.log_kv";
 pub const DEFAULT_SNAPSHOT_APPEND_KV_PATH: &str = "./data/snapshots.append_kv";
 pub const DEFAULT_SNAPSHOT_MHDB_PATH: &str = "./data/snapshots.mhdb";
+pub const DEFAULT_SNAPSHOT_MARBLE_PATH: &str = "./data/snapshots.marble";
 pub const DEFAULT_SNAPSHOT_LORO_KV_PATH: &str = "./data/snapshots.loro_kv";
 pub const DEFAULT_SNAPSHOT_LUCKDB_PATH: &str = "./data/snapshots.luckdb.json";
 pub const DEFAULT_SNAPSHOT_IPJDB_PATH: &str = "./data/snapshots.ipjdb";
@@ -213,6 +214,7 @@ pub struct Config {
     pub snapshot_log_kv_path: String,
     pub snapshot_append_kv_path: String,
     pub snapshot_mhdb_path: String,
+    pub snapshot_marble_path: String,
     pub snapshot_loro_kv_path: String,
     pub snapshot_luckdb_path: String,
     pub snapshot_ipjdb_path: String,
@@ -431,6 +433,8 @@ impl Config {
         let snapshot_append_kv_path =
             env_string("SNAPSHOT_APPEND_KV_PATH", DEFAULT_SNAPSHOT_APPEND_KV_PATH)?;
         let snapshot_mhdb_path = env_string("SNAPSHOT_MHDB_PATH", DEFAULT_SNAPSHOT_MHDB_PATH)?;
+        let snapshot_marble_path =
+            env_string("SNAPSHOT_MARBLE_PATH", DEFAULT_SNAPSHOT_MARBLE_PATH)?;
         let snapshot_loro_kv_path =
             env_string("SNAPSHOT_LORO_KV_PATH", DEFAULT_SNAPSHOT_LORO_KV_PATH)?;
         let snapshot_luckdb_path =
@@ -667,6 +671,7 @@ impl Config {
             snapshot_log_kv_path,
             snapshot_append_kv_path,
             snapshot_mhdb_path,
+            snapshot_marble_path,
             snapshot_loro_kv_path,
             snapshot_luckdb_path,
             snapshot_ipjdb_path,
