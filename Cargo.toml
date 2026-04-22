@@ -63,6 +63,7 @@ lsm_storage_engine = "0.1.0"
 lsm_engine = { version = "0.1.9", path = "vendor/lsm_engine" }
 lsmdb = "1.0.0"
 mace-kv = "0.0.28"
+mhdb = "1.0.3"
 mmdb = "3.2.2"
 nanodb = "0.4.5"
 native_db = "0.8.2"
