@@ -1828,6 +1828,7 @@ mod tests {
             snapshot_jasonisnthappy_path: "./data/test-snapshots.jasonisnthappy".to_owned(),
             snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
             snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
+            snapshot_json_mutex_db_path: "./data/test-snapshots.json_mutex_db.json".to_owned(),
             snapshot_feoxdb_path: "./data/test-snapshots.feoxdb".to_owned(),
             snapshot_jsondb_path: "./data/test-snapshots.jsondb.json".to_owned(),
             snapshot_kopperdb_path: "./data/test-snapshots.kopperdb".to_owned(),
