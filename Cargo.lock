@@ -3710,9 +3710,9 @@ dependencies = [
 
 [[package]]
 name = "grumpydb"
-version = "0.2.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48b5570876c4f409f7537bd095482989800303c3c453b023d8a4d71fb2d274b4"
+checksum = "6facda7bd2d90ab7e7c58eb0dcc2df2d7115c434a4af47bfe2127af5a3c756bf"
 dependencies = [
  "crc32fast",
  "parking_lot 0.12.5",

@@ -311,7 +311,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_GREBEDB_PATH`다.
 - grebedb keyspace는 `doc_id -> persisted snapshot JSON` key-value와 explicit `__catalog__` key를 함께 저장하고, `GET /api/documents` catalog는 보조 catalog key를 따라 각 payload를 복원한다. save/delete는 같은 `flush()` 경계로 반영된다.
 - 필수 env는 `SNAPSHOT_GRUMPYDB_PATH`다.
-- grumpydb page/B+Tree object store는 UUID key와 persisted snapshot JSON bytes value를 저장하고, `GET /api/documents` catalog는 full range scan 뒤 각 payload를 복원한다.
+- grumpydb WAL-backed page/B+Tree object store는 UUID key와 persisted snapshot JSON bytes value를 저장하고, `GET /api/documents` catalog는 full range scan 뒤 각 payload를 복원한다. save/delete는 `flush()` checkpoint 경계로 반영된다.
 - 필수 env는 `SNAPSHOT_GRAUS_DB_PATH`다.
 - GrausDb keyspace는 `doc_id -> persisted snapshot JSON` key-value와 explicit `__catalog__` key를 저장하고, `GET /api/documents` catalog는 catalog key 뒤 각 payload를 복원해 문서 메타데이터를 만든다. save/delete 뒤 DB handle을 재오픈해 buffered writer flush와 log replay 복구 경계를 고정한다.
 - 필수 env는 `SNAPSHOT_VSDB_PATH`다.
