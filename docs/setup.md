@@ -40,6 +40,7 @@ cargo run
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `apex_store`, `armdb`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `joydb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, 또는 `managed`
+- `SNAPSHOT_STORE=append_kv`: append_kv append-only 단일 파일 store도 지원한다.
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_AGDB_PATH`: agdb snapshot store 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: Amandine snapshot store 디렉터리 경로
@@ -138,6 +139,7 @@ cargo run
 - `SNAPSHOT_KOIT_PATH`: koit snapshot store JSON 파일 경로
 - `SNAPSHOT_LITE_DB_PATH`: lite_db snapshot store LiteDb 디렉터리 경로
 - `SNAPSHOT_LOG_KV_PATH`: log_kv snapshot store append-only 단일 파일 경로
+- `SNAPSHOT_APPEND_KV_PATH`: append_kv snapshot store append-only 단일 파일 경로
 - `SNAPSHOT_MHDB_PATH`: mhdb snapshot store DB path prefix. 실제 저장 파일은 `<path>.pag`, `<path>.dir`
 - `SNAPSHOT_LORO_KV_PATH`: loro-kv-store snapshot store binary SSTable 파일 경로
 - `SNAPSHOT_LUCKDB_PATH`: luckdb snapshot store JSON document 파일 경로
@@ -275,6 +277,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `jsondb` | 단일 versioned pretty JSON 파일 store | 중간 | write guard drop마다 whole-file pretty JSON rewrite와 전체 역직렬화에 의존하므로 파일 손상 시 startup 전체 복구 실패가 전체 store에 번질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `koit` | 단일 structured JSON 파일 store | 중간 | 전체 catalog를 메모리에 로드한 뒤 save마다 whole-file rewrite와 `sync_all`을 수행하므로 파일 손상 시 startup 전체 복구 실패가 전체 store에 번질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `lite_db` | 디렉터리 + append-only data files | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 sync write로 저장한다. file lock이 단일 writer를 전제하므로 shared multi-writer durability나 authoritative coordination plane으로는 쓰지 않는 것이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `append_kv` | 단일 append-only log 파일 | 중간 | vendored lib target이 노출한 `KvStore`에 `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 JSON string으로 저장한다. save/delete마다 file sync를 수행하지만 compaction이 없어 파일은 계속 커질 수 있으므로 file-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선, vendored lib target patch |
 | `mhdb` | DBM path prefix + `.pag`/`.dir` 파일 쌍 | 낮음 | upstream pair size 제한이 506B라 persisted snapshot JSON bytes와 catalog를 chunked blob key로 나눠 저장한다. `<path>.pag`/`<path>.dir` 파일 쌍 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `luckdb` | 단일 JSON document DB 파일 | 중간 | LuckDB `backend.snapshots` collection에 `doc_id`와 persisted snapshot JSON payload를 함께 저장한다. collection 전체 query로 catalog를 복구하므로 단일 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rubin` | 단일 JSON key-value 파일 | 중간 | Rubin `MemStore` string map에 `doc_id -> persisted snapshot JSON` payload를 저장한다. save/delete마다 whole-file JSON rewrite를 수행하므로 단일 파일 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -545,6 +548,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 catalog key 뒤 각 payload를 다시 읽어 복구된다.
 - `SNAPSHOT_STORE=log_kv`는 `SNAPSHOT_LOG_KV_PATH` append-only 단일 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key로 저장되고, delete는 tombstone string으로 가린다.
+- `SNAPSHOT_STORE=append_kv`는 `SNAPSHOT_APPEND_KV_PATH` append-only 단일 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key로 저장되고, delete는 append_kv tombstone record로 가린다.
 - `SNAPSHOT_STORE=mhdb`는 `SNAPSHOT_MHDB_PATH` path prefix가 만드는 `<path>.pag`/`<path>.dir` DBM 파일 쌍을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload와 catalog는 MHdb pair size 제한을 피하도록 chunked blob key로 나눠 저장된다.
 - `SNAPSHOT_STORE=luckdb`는 `SNAPSHOT_LUCKDB_PATH` 단일 LuckDB JSON document 파일을 통해 vendor-specific embedded database durability를 사용한다.

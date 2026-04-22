@@ -3,6 +3,7 @@ mod aeternusdb_snapshot_store;
 mod agdb_snapshot_store;
 mod amandine_snapshot_store;
 mod apex_store_snapshot_store;
+mod append_kv_snapshot_store;
 mod armdb_snapshot_store;
 mod bitask_snapshot_store;
 mod bitcask_engine_snapshot_store;
@@ -135,6 +136,7 @@ pub use aeternusdb_snapshot_store::AeternusdbSnapshotStore;
 pub use agdb_snapshot_store::AgdbSnapshotStore;
 pub use amandine_snapshot_store::AmandineSnapshotStore;
 pub use apex_store_snapshot_store::ApexStoreSnapshotStore;
+pub use append_kv_snapshot_store::AppendKvSnapshotStore;
 pub use armdb_snapshot_store::ArmdbSnapshotStore;
 pub use bitask_snapshot_store::BitaskSnapshotStore;
 pub use bitcask_engine_snapshot_store::BitcaskEngineSnapshotStore;
@@ -513,6 +515,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "log_kv" => Ok(Arc::new(LogKvSnapshotStore::new(
             &config.snapshot_log_kv_path,
+        )?)),
+        "append_kv" => Ok(Arc::new(AppendKvSnapshotStore::new(
+            &config.snapshot_append_kv_path,
         )?)),
         "mhdb" => Ok(Arc::new(MhdbSnapshotStore::new(
             &config.snapshot_mhdb_path,

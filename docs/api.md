@@ -65,6 +65,7 @@ Response:
 
 active room과 snapshot store에 남아 있는 persisted document catalog를 합쳐 문서 목록을 반환한다.
 - snapshot store는 현재 `file`, `agdb`, `amandine`, `apex_store`, `armdb`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `eight`, `epoch_db`, `etchdb`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `cuendillar`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `sanakirja`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `jfs`, `json_store`, `feoxdb`, `s3`, `managed` durability backend를 지원한다. `apex_store` 모드에서는 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine에서 explicit `__catalog__` key를 읽어 catalog를 복구하고, `mace` 모드에서는 `SNAPSHOT_MACE_PATH` 디렉터리의 Mace `snapshots` bucket과 explicit `__catalog__` key에서 catalog를 복구하며, `janql` 모드에서는 `SNAPSHOT_JANQL_PATH` 디렉터리의 janql WAL/SSTable keyspace에서 `doc_id` key와 explicit `__catalog__` key를 읽어 catalog를 복구한다.
+- `append_kv` durability backend도 지원하며 `SNAPSHOT_APPEND_KV_PATH` 단일 append-only 파일의 explicit `__catalog__` key를 통해 catalog를 복구한다.
 - `cuendillar` 모드에서는 `SNAPSHOT_CUENDILLAR_PATH` 루트 아래 `wal/`과 `sstable/` 디렉터리를 사용하는 LSM engine keyspace 전체 scan으로 catalog를 복구하고, restart recovery를 위해 WAL payload 상한과 sync policy를 보수적으로 높여 둔다.
 - `celerix_store` 모드에서는 `SNAPSHOT_CELERIX_STORE_PATH/snapshots.json` Celerix Store persona 파일의 `documents` app map에 `doc_id -> persisted snapshot JSON` value를 저장하고, catalog는 같은 app map key를 순회해 복구한다.
 - `kopperdb` 모드에서는 `SNAPSHOT_KOPPERDB_PATH` 디렉터리 아래 append-only segment log를 사용해 `doc_id` key와 explicit `__catalog__` key를 유지한다. delete API가 없어 tombstone string을 덮어써 삭제를 가린다.
@@ -369,6 +370,11 @@ Response: `204 No Content`
 - lite_db catalog는 LiteDb 디렉터리의 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key를 저장하고, `GET /api/documents` catalog는 catalog key 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_LOG_KV_PATH`다.
 - log_kv catalog는 append-only 단일 파일의 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key를 저장하고, delete는 tombstone string으로 가린다. `GET /api/documents` catalog는 catalog key 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
+
+### `SNAPSHOT_STORE=append_kv`
+
+- 필수 env는 `SNAPSHOT_APPEND_KV_PATH`다.
+- append_kv catalog는 append-only 단일 파일의 `snapshot:<doc_id> -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key를 저장하고, delete는 append_kv tombstone record로 가린다. `GET /api/documents` catalog는 catalog key 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
 
 ### `SNAPSHOT_STORE=mhdb`
 

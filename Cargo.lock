@@ -501,6 +501,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac436601d6bdde674a0d7fb593e829ffe7b3387c351b356dd20e2d40f5bf3ee5"
 
 [[package]]
+name = "append_kv"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "clap 4.6.1",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -829,6 +838,7 @@ dependencies = [
  "amandine",
  "anyhow",
  "apex-store-rs",
+ "append_kv",
  "armdb",
  "axum",
  "axum-test",

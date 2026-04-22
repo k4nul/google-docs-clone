@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
+append_kv = { version = "0.1.0", path = "vendor/append_kv" }
 aeternusdb = "1.0.1"
 abyssiniandb = "0.1.4"
 agdb = "0.12.10"
