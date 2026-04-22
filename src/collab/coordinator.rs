@@ -1798,6 +1798,7 @@ mod tests {
             snapshot_epoch_db_path: "./data/test-snapshots.epoch_db".to_owned(),
             snapshot_ferrumdb_path: "./data/test-snapshots.ferrumdb".to_owned(),
             snapshot_rumdb_path: "./data/test-snapshots.rumdb".to_owned(),
+            snapshot_rubin_path: "./data/test-snapshots.rubin.json".to_owned(),
             snapshot_shorterdb_path: "./data/test-snapshots.shorterdb".to_owned(),
             snapshot_sqlite_path: "./data/test-snapshots.sqlite3".to_owned(),
             snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),

@@ -666,6 +666,7 @@ dependencies = [
  "redb 2.6.3",
  "roughdb",
  "rskey",
+ "rubin",
  "rumdb",
  "rusqlite",
  "rustbreak",
@@ -6421,6 +6422,19 @@ dependencies = [
  "heapless 0.8.0",
  "num-traits 0.2.19",
  "smallvec 1.15.1",
+]
+
+[[package]]
+name = "rubin"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4d73892d47090a11f0eb0e3a5ced04ab18f658d9cf3263b051d9517242c9502"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -81,6 +81,7 @@ readb = { version = "0.4.1", features = ["write"] }
 rcask = "0.1.0"
 raindb = "1.0.0"
 rumdb = "0.3.0"
+rubin = "0.4.0"
 rskey = "0.4.0"
 rustlite = "0.8.0"
 rusqlite = { version = "0.37", features = ["bundled"] }
