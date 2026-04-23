@@ -14295,8 +14295,31 @@ fn cdb64_snapshot_store_round_trips_document_catalog() {
             .expect("document catalog should reflect cdb64 deletion")
             .is_empty()
     );
+    assert!(
+        reopened
+            .load_snapshot(&document.id)
+            .expect("deleted cdb64 snapshot lookup should succeed")
+            .is_none()
+    );
 
     drop(reopened);
+
+    let reopened_after_delete =
+        Cdb64SnapshotStore::new(&snapshot_path).expect("cdb64 snapshot store should reopen empty");
+    assert!(
+        reopened_after_delete
+            .list_documents()
+            .expect("empty cdb64 catalog should survive reopen")
+            .is_empty()
+    );
+    assert!(
+        reopened_after_delete
+            .load_snapshot(&document.id)
+            .expect("deleted cdb64 snapshot should stay absent after reopen")
+            .is_none()
+    );
+
+    drop(reopened_after_delete);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
