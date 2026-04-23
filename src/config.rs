@@ -117,6 +117,7 @@ pub const DEFAULT_SNAPSHOT_SLED_PATH: &str = "./data/snapshots.sled";
 pub const DEFAULT_SNAPSHOT_RUSTBREAK_PATH: &str = "./data/snapshots.rustbreak";
 pub const DEFAULT_SNAPSHOT_YEDB_PATH: &str = "./data/snapshots.yedb";
 pub const DEFAULT_SNAPSHOT_BTREE_STORE_PATH: &str = "./data/snapshots.btree_store";
+pub const DEFAULT_SNAPSHOT_CACACHE_PATH: &str = "./data/snapshots.cacache";
 pub const DEFAULT_SNAPSHOT_SIAMESDB_PATH: &str = "./data/snapshots.siamesedb";
 pub const DEFAULT_SNAPSHOT_STRUCTSY_PATH: &str = "./data/snapshots.structsy";
 pub const DEFAULT_SNAPSHOT_ABYSSINIANDB_PATH: &str = "./data/snapshots.abyssiniandb";
@@ -276,6 +277,7 @@ pub struct Config {
     pub snapshot_rustbreak_path: String,
     pub snapshot_yedb_path: String,
     pub snapshot_btree_store_path: String,
+    pub snapshot_cacache_path: String,
     pub snapshot_siamesedb_path: String,
     pub snapshot_structsy_path: String,
     pub snapshot_abyssiniandb_path: String,
@@ -547,6 +549,8 @@ impl Config {
             "SNAPSHOT_BTREE_STORE_PATH",
             DEFAULT_SNAPSHOT_BTREE_STORE_PATH,
         )?;
+        let snapshot_cacache_path =
+            env_string("SNAPSHOT_CACACHE_PATH", DEFAULT_SNAPSHOT_CACACHE_PATH)?;
         let snapshot_siamesedb_path =
             env_string("SNAPSHOT_SIAMESDB_PATH", DEFAULT_SNAPSHOT_SIAMESDB_PATH)?;
         let snapshot_structsy_path =
@@ -764,6 +768,7 @@ impl Config {
             snapshot_rustbreak_path,
             snapshot_yedb_path,
             snapshot_btree_store_path,
+            snapshot_cacache_path,
             snapshot_siamesedb_path,
             snapshot_structsy_path,
             snapshot_abyssiniandb_path,

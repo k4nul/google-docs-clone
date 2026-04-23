@@ -22,18 +22,18 @@ use backend::{
         AmandineSnapshotStore, ApexStoreSnapshotStore, AppendKvSnapshotStore,
         AppendLogSnapshotStore, ArmdbSnapshotStore, AssystemSnapshotStore, BitaskSnapshotStore,
         BitcaskEngineSnapshotStore, BitkvRsSnapshotStore, BlazeupSnapshotStore,
-        BlockbucketSnapshotStore, BtreeStoreSnapshotStore, CandystoreSnapshotStore,
-        CanopydbSnapshotStore, CavesSnapshotStore, CelerixStoreSnapshotStore,
-        CitadeldbSnapshotStore, CkydbSnapshotStore, ColonDbSnapshotStore, CrepeDbSnapshotStore,
-        CrystalSnapshotStore, CuendillarSnapshotStore, DataPileSnapshotStore,
-        DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
-        DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore, DocDbSnapshotStore,
-        DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore, EtchdbSnapshotStore,
-        FastKvSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
-        FjallSnapshotStore, FlashKvSnapshotStore, FsDbSnapshotStore, GhaladbSnapshotStore,
-        GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
-        HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
-        HurrahdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
+        BlockbucketSnapshotStore, BtreeStoreSnapshotStore, CacacheSnapshotStore,
+        CandystoreSnapshotStore, CanopydbSnapshotStore, CavesSnapshotStore,
+        CelerixStoreSnapshotStore, CitadeldbSnapshotStore, CkydbSnapshotStore,
+        ColonDbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
+        DataPileSnapshotStore, DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
+        DbliteSnapshotStore, DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore,
+        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore,
+        EtchdbSnapshotStore, FastKvSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
+        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, FsDbSnapshotStore,
+        GhaladbSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore,
+        HeedSnapshotStore, HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore,
+        HmdbSnapshotStore, HurrahdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
         InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
         JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore,
         JsonDbRsSnapshotStore, JsonMutexDbSnapshotStore, JsonStoreSnapshotStore,
@@ -190,6 +190,7 @@ fn test_config() -> Config {
         snapshot_rustbreak_path: "./data/test-snapshots.rustbreak".to_owned(),
         snapshot_yedb_path: "./data/test-snapshots.yedb".to_owned(),
         snapshot_btree_store_path: "./data/test-snapshots.btree_store".to_owned(),
+        snapshot_cacache_path: "./data/test-snapshots.cacache".to_owned(),
         snapshot_siamesedb_path: "./data/test-snapshots.siamesedb".to_owned(),
         snapshot_structsy_path: "./data/test-snapshots.structsy".to_owned(),
         snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
@@ -665,6 +666,14 @@ fn configure_btree_store_snapshot_store(config: &mut Config, root: &std::path::P
     config.snapshot_store = "btree_store".to_owned();
     config.snapshot_btree_store_path = root
         .join("snapshots.btree_store")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_cacache_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "cacache".to_owned();
+    config.snapshot_cacache_path = root
+        .join("snapshots.cacache")
         .to_string_lossy()
         .into_owned();
 }
@@ -4898,6 +4907,53 @@ fn app_state_uses_btree_store_snapshot_store_from_config() {
 
     let reloaded_state =
         AppState::from_config(&config).expect("state should reload persisted btree_store snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_cacache_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("cacache-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.cacache");
+    configure_cacache_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config)
+        .expect("state should initialize with cacache snapshot store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to cacache".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to cacache on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted cacache snapshot");
     let restored_room = reloaded_state
         .rooms()
         .get(&document.id)
@@ -11341,6 +11397,71 @@ fn btree_store_snapshot_store_round_trips_document_catalog() {
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 
     drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn cacache_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("cacache-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.cacache");
+    let store = CacacheSnapshotStore::new(&snapshot_path)
+        .expect("cacache snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Cacache".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to cacache");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from cacache");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from cacache")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened =
+        CacacheSnapshotStore::new(&snapshot_path).expect("cacache snapshot store should reopen");
+    assert_eq!(
+        reopened
+            .list_documents()
+            .expect("document catalog should reload from cacache"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from cacache")
+            .is_some()
+    );
+
+    reopened
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from cacache");
+    assert!(
+        reopened
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened
+            .list_documents()
+            .expect("document catalog should reflect cacache deletion")
+            .is_empty()
+    );
+
+    drop(reopened);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

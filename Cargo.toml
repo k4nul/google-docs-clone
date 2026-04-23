@@ -22,6 +22,7 @@ blockbucket = "0.2.8"
 bitask = "0.1.1"
 btree-store = "0.1.4"
 bytes = "1"
+cacache = { version = "13.1.0", default-features = false, features = ["mmap", "tokio-runtime"] }
 candystore = "1.0.0"
 canopydb = "0.2.5"
 caves = "0.2.1"

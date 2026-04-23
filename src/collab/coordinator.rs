@@ -1891,6 +1891,7 @@ mod tests {
             snapshot_rustbreak_path: "./data/test-snapshots.rustbreak".to_owned(),
             snapshot_yedb_path: "./data/test-snapshots.yedb".to_owned(),
             snapshot_btree_store_path: "./data/test-snapshots.btree_store".to_owned(),
+            snapshot_cacache_path: "./data/test-snapshots.cacache".to_owned(),
             snapshot_siamesedb_path: "./data/test-snapshots.siamesedb".to_owned(),
             snapshot_structsy_path: "./data/test-snapshots.structsy".to_owned(),
             snapshot_abyssiniandb_path: "./data/test-snapshots.abyssiniandb".to_owned(),
