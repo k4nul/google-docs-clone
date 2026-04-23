@@ -1758,7 +1758,12 @@ pub fn room_coordinator_from_config(config: &Config) -> AppResult<Arc<dyn RoomCo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{fs, path::PathBuf, thread, time::Duration};
+    use std::{
+        fs,
+        path::PathBuf,
+        thread,
+        time::{Duration, Instant},
+    };
 
     fn temp_state_dir(test_name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -2113,25 +2118,32 @@ mod tests {
             .expires_at
             .expect("state file should include lease expiry");
 
-        thread::sleep(Duration::from_millis(60));
+        let deadline = Instant::now() + Duration::from_secs(1);
+        let renewed_state = loop {
+            let state: PersistedRoomCoordinatorState =
+                serde_json::from_slice(&fs::read(&state_path).expect("state file should exist"))
+                    .expect("state file should deserialize");
 
-        let renewed_state: PersistedRoomCoordinatorState =
-            serde_json::from_slice(&fs::read(&state_path).expect("state file should exist"))
-                .expect("state file should deserialize");
-        assert_eq!(renewed_state.lease_id, initial_state.lease_id);
-        assert_eq!(renewed_state.epoch, initial_state.epoch);
-        assert!(
-            renewed_state
+            if state
                 .renewed_at
                 .expect("renewed state should include renewed_at")
                 > initial_renewed_at
-        );
-        assert!(
-            renewed_state
-                .expires_at
-                .expect("renewed state should include lease expiry")
-                > initial_expires_at
-        );
+                && state
+                    .expires_at
+                    .expect("renewed state should include lease expiry")
+                    > initial_expires_at
+            {
+                break state;
+            }
+
+            assert!(
+                Instant::now() < deadline,
+                "file coordinator heartbeat did not renew lease before timeout"
+            );
+            thread::sleep(Duration::from_millis(10));
+        };
+        assert_eq!(renewed_state.lease_id, initial_state.lease_id);
+        assert_eq!(renewed_state.epoch, initial_state.epoch);
 
         coordinator
             .room_deactivated(&doc_id)
