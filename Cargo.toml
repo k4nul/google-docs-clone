@@ -75,6 +75,7 @@ json_db_rs = "0.1.0"
 json-mutex-db = "0.0.1"
 toiletdb = "0.1.2"
 kopperdb = "0.1.0"
+kagi = "0.1.1"
 kv = { version = "0.24.0", features = ["json-value"] }
 koit = "0.2.0"
 lite_db = "0.1.6"

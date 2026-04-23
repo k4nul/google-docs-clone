@@ -939,6 +939,7 @@ dependencies = [
  "json_store",
  "jsondb",
  "kafi",
+ "kagi",
  "koit",
  "kopperdb",
  "kstone-core",
@@ -5004,6 +5005,16 @@ dependencies = [
  "bincode 0.9.2",
  "serde 1.0.228",
  "serde_derive",
+]
+
+[[package]]
+name = "kagi"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "344c10f25093935d2d07d86281b7c1b8931fd61dcc75309501d274e7480faf33"
+dependencies = [
+ "ahash 0.7.8",
+ "bincode 2.0.1",
 ]
 
 [[package]]
