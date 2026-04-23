@@ -14160,10 +14160,60 @@ fn jfs_snapshot_store_round_trips_document_catalog() {
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);
-    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.document, document.clone());
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 
     drop(store);
+
+    let reopened_store =
+        JfsSnapshotStore::new(&snapshot_path).expect("jfs snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from jfs"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from jfs")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from jfs");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect jfs deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
+
+    let reopened_after_delete =
+        JfsSnapshotStore::new(&snapshot_path).expect("jfs snapshot store should reopen empty");
+    assert!(
+        reopened_after_delete
+            .list_documents()
+            .expect("empty jfs catalog should survive reopen")
+            .is_empty()
+    );
+    assert!(
+        reopened_after_delete
+            .load_snapshot(&document.id)
+            .expect("deleted jfs snapshot should stay absent after reopen")
+            .is_none()
+    );
+
+    drop(reopened_after_delete);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
