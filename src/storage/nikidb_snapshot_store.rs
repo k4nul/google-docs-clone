@@ -123,6 +123,14 @@ impl SnapshotStore for NikidbSnapshotStore {
                     Err(NKError::ErrBucketNotFound) => return Ok(()),
                     Err(error) => return Err(error),
                 };
+                let catalog = match bucket.get(SNAPSHOT_CATALOG_KEY) {
+                    Some(bytes) => Self::deserialize_catalog(bytes)?,
+                    None => Vec::new(),
+                };
+                if !catalog.iter().any(|value| value == &doc_id_key) {
+                    return Ok(());
+                }
+
                 raw_snapshot = bucket
                     .get(doc_id_key.as_bytes())
                     .map(|bytes| bytes.to_vec());
