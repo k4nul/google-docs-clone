@@ -15336,6 +15336,23 @@ fn kagi_snapshot_store_round_trips_document_catalog() {
 
     drop(reopened_store);
 
+    let reopened_after_delete =
+        KagiSnapshotStore::new(&snapshot_path).expect("kagi snapshot store should reopen empty");
+    assert!(
+        reopened_after_delete
+            .list_documents()
+            .expect("empty kagi catalog should survive reopen")
+            .is_empty()
+    );
+    assert!(
+        reopened_after_delete
+            .load_snapshot(&document.id)
+            .expect("deleted kagi snapshot should stay absent after reopen")
+            .is_none()
+    );
+
+    drop(reopened_after_delete);
+
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
