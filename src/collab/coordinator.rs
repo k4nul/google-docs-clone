@@ -1899,6 +1899,7 @@ mod tests {
             snapshot_dbless_path: "./data/test-snapshots.dbless".to_owned(),
             snapshot_db_rs_path: "./data/test-snapshots.db_rs".to_owned(),
             snapshot_sanakirja_path: "./data/test-snapshots.sanakirja".to_owned(),
+            snapshot_saturn_path: "./data/test-snapshots.saturn".to_owned(),
             snapshot_snaildb_path: "./data/test-snapshots.snaildb".to_owned(),
             snapshot_tinykv_path: "./data/test-snapshots.tinykv.json".to_owned(),
             snapshot_vsdb_path: "./data/test-snapshots.vsdb".to_owned(),

@@ -127,6 +127,7 @@ pub const DEFAULT_SNAPSHOT_DB_RS_PATH: &str = "./data/snapshots.db_rs";
 pub const DEFAULT_SNAPSHOT_DHARMADB_PATH: &str = "./data/snapshots.dharmadb";
 pub const DEFAULT_SNAPSHOT_DIR_CACHE_PATH: &str = "./data/snapshots.dir_cache";
 pub const DEFAULT_SNAPSHOT_SANAKIRJA_PATH: &str = "./data/snapshots.sanakirja";
+pub const DEFAULT_SNAPSHOT_SATURN_PATH: &str = "./data/snapshots.saturn";
 pub const DEFAULT_SNAPSHOT_SNAILDB_PATH: &str = "./data/snapshots.snaildb";
 pub const DEFAULT_SNAPSHOT_TINYKV_PATH: &str = "./data/snapshots.tinykv.json";
 pub const DEFAULT_SNAPSHOT_VSDB_PATH: &str = "./data/snapshots.vsdb";
@@ -281,6 +282,7 @@ pub struct Config {
     pub snapshot_dharmadb_path: String,
     pub snapshot_dir_cache_path: String,
     pub snapshot_sanakirja_path: String,
+    pub snapshot_saturn_path: String,
     pub snapshot_snaildb_path: String,
     pub snapshot_tinykv_path: String,
     pub snapshot_vsdb_path: String,
@@ -559,6 +561,8 @@ impl Config {
             env_string("SNAPSHOT_DIR_CACHE_PATH", DEFAULT_SNAPSHOT_DIR_CACHE_PATH)?;
         let snapshot_sanakirja_path =
             env_string("SNAPSHOT_SANAKIRJA_PATH", DEFAULT_SNAPSHOT_SANAKIRJA_PATH)?;
+        let snapshot_saturn_path =
+            env_string("SNAPSHOT_SATURN_PATH", DEFAULT_SNAPSHOT_SATURN_PATH)?;
         let snapshot_snaildb_path =
             env_string("SNAPSHOT_SNAILDB_PATH", DEFAULT_SNAPSHOT_SNAILDB_PATH)?;
         let snapshot_tinykv_path =
@@ -755,6 +759,7 @@ impl Config {
             snapshot_dharmadb_path,
             snapshot_dir_cache_path,
             snapshot_sanakirja_path,
+            snapshot_saturn_path,
             snapshot_snaildb_path,
             snapshot_tinykv_path,
             snapshot_vsdb_path,
