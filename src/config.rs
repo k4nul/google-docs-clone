@@ -13,6 +13,7 @@ pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_AGDB_PATH: &str = "./data/snapshots.agdb";
 pub const DEFAULT_SNAPSHOT_AMANDINE_PATH: &str = "./data/snapshots.amandine";
+pub const DEFAULT_SNAPSHOT_APPEND_LOG_PATH: &str = "./data/snapshots.append_log";
 pub const DEFAULT_SNAPSHOT_APEX_STORE_PATH: &str = "./data/snapshots.apex_store";
 pub const DEFAULT_SNAPSHOT_ARMDB_PATH: &str = "./data/snapshots.armdb";
 pub const DEFAULT_SNAPSHOT_ASSYSTEM_PATH: &str = "./data/snapshots.assystem";
@@ -171,6 +172,7 @@ pub struct Config {
     pub snapshot_dir: String,
     pub snapshot_agdb_path: String,
     pub snapshot_amandine_path: String,
+    pub snapshot_append_log_path: String,
     pub snapshot_apex_store_path: String,
     pub snapshot_armdb_path: String,
     pub snapshot_assystem_path: String,
@@ -344,6 +346,8 @@ impl Config {
         let snapshot_agdb_path = env_string("SNAPSHOT_AGDB_PATH", DEFAULT_SNAPSHOT_AGDB_PATH)?;
         let snapshot_amandine_path =
             env_string("SNAPSHOT_AMANDINE_PATH", DEFAULT_SNAPSHOT_AMANDINE_PATH)?;
+        let snapshot_append_log_path =
+            env_string("SNAPSHOT_APPEND_LOG_PATH", DEFAULT_SNAPSHOT_APPEND_LOG_PATH)?;
         let snapshot_apex_store_path =
             env_string("SNAPSHOT_APEX_STORE_PATH", DEFAULT_SNAPSHOT_APEX_STORE_PATH)?;
         let snapshot_armdb_path = env_string("SNAPSHOT_ARMDB_PATH", DEFAULT_SNAPSHOT_ARMDB_PATH)?;
@@ -656,6 +660,7 @@ impl Config {
             snapshot_dir,
             snapshot_agdb_path,
             snapshot_amandine_path,
+            snapshot_append_log_path,
             snapshot_apex_store_path,
             snapshot_armdb_path,
             snapshot_assystem_path,

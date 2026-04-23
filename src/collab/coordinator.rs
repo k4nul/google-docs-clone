@@ -1846,6 +1846,7 @@ mod tests {
             snapshot_lmdb_rs_core_path: "./data/test-snapshots.lmdb_rs_core".to_owned(),
             snapshot_log_kv_path: "./data/test-snapshots.log_kv".to_owned(),
             snapshot_append_kv_path: "./data/test-snapshots.append_kv".to_owned(),
+            snapshot_append_log_path: "./data/test-snapshots.append_log".to_owned(),
             snapshot_mhdb_path: "./data/test-snapshots.mhdb".to_owned(),
             snapshot_marble_path: "./data/test-snapshots.marble".to_owned(),
             snapshot_loro_kv_path: "./data/test-snapshots.loro_kv".to_owned(),

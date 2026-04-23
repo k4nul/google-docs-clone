@@ -504,6 +504,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "append-log"
+version = "0.1.4-dev"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44495aacea56b0a4789240d0f4fb0aa1726ff22a795d47c78a274584b80cefe2"
+dependencies = [
+ "crc32fast",
+]
+
+[[package]]
 name = "append-only-bytes"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -859,6 +868,7 @@ dependencies = [
  "amandine",
  "anyhow",
  "apex-store-rs",
+ "append-log",
  "append_kv",
  "armdb",
  "assystem",

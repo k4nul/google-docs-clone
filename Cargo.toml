@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
+append-log = "0.1.4-dev"
 append_kv = { version = "0.1.0", path = "vendor/append_kv" }
 assystem = "1.0.0"
 aeternusdb = "1.0.1"

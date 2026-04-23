@@ -4,6 +4,7 @@ mod agdb_snapshot_store;
 mod amandine_snapshot_store;
 mod apex_store_snapshot_store;
 mod append_kv_snapshot_store;
+mod append_log_snapshot_store;
 mod armdb_snapshot_store;
 mod assystem_snapshot_store;
 mod bitask_snapshot_store;
@@ -157,6 +158,7 @@ pub use agdb_snapshot_store::AgdbSnapshotStore;
 pub use amandine_snapshot_store::AmandineSnapshotStore;
 pub use apex_store_snapshot_store::ApexStoreSnapshotStore;
 pub use append_kv_snapshot_store::AppendKvSnapshotStore;
+pub use append_log_snapshot_store::AppendLogSnapshotStore;
 pub use armdb_snapshot_store::ArmdbSnapshotStore;
 pub use assystem_snapshot_store::AssystemSnapshotStore;
 pub use bitask_snapshot_store::BitaskSnapshotStore;
@@ -427,6 +429,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "amandine" => Ok(Arc::new(AmandineSnapshotStore::new(
             &config.snapshot_amandine_path,
+        )?)),
+        "append_log" => Ok(Arc::new(AppendLogSnapshotStore::new(
+            &config.snapshot_append_log_path,
         )?)),
         "apex_store" => Ok(Arc::new(ApexStoreSnapshotStore::new(
             &config.snapshot_apex_store_path,
