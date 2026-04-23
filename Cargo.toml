@@ -157,6 +157,7 @@ luckdb = "0.1.4"
 ipjdb = "0.16.1"
 lmdb-rs-core = "0.1.0"
 hurrahdb = "0.1.0"
+fs-db = "0.1.0"
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

@@ -1813,6 +1813,7 @@ mod tests {
             snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
             snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
             snapshot_hurrahdb_path: "./data/test-snapshots.hurrahdb".to_owned(),
+            snapshot_fs_db_path: "./data/test-snapshots.fs_db".to_owned(),
             snapshot_icefalldb_path: "./data/test-snapshots.icefalldb".to_owned(),
             snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
             snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),

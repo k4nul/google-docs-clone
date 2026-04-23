@@ -903,6 +903,7 @@ dependencies = [
  "ferrumdb",
  "fjall",
  "flash-kv",
+ "fs-db",
  "futures-util",
  "ghaladb",
  "graus-db",
@@ -3469,6 +3470,16 @@ checksum = "0f158e3ff0a1b334408dc9fb811cd99b446986f4d8b741bb08f9df1604085ae7"
 dependencies = [
  "lazy_static",
  "num",
+]
+
+[[package]]
+name = "fs-db"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a74f1192482f147079b516d710d16ee7fa5fb77820cef174eb96e842214bf2c"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
 ]
 
 [[package]]
