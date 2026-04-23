@@ -40,6 +40,7 @@ pub const DEFAULT_SNAPSHOT_HIGHTOWER_KV_PATH: &str = "./data/snapshots.hightower
 pub const DEFAULT_SNAPSHOT_HMDB_PATH: &str = "./data/snapshots.hmdb";
 pub const DEFAULT_SNAPSHOT_HURRAHDB_PATH: &str = "./data/snapshots.hurrahdb";
 pub const DEFAULT_SNAPSHOT_FS_DB_PATH: &str = "./data/snapshots.fs_db";
+pub const DEFAULT_SNAPSHOT_SQJSON_PATH: &str = "./data/snapshots.sqjson";
 pub const DEFAULT_SNAPSHOT_ICEFALLDB_PATH: &str = "./data/snapshots.icefalldb";
 pub const DEFAULT_SNAPSHOT_BITASK_PATH: &str = "./data/snapshots.bitask";
 pub const DEFAULT_SNAPSHOT_BITKV_RS_PATH: &str = "./data/snapshots.bitkv_rs";
@@ -197,6 +198,7 @@ pub struct Config {
     pub snapshot_hmdb_path: String,
     pub snapshot_hurrahdb_path: String,
     pub snapshot_fs_db_path: String,
+    pub snapshot_sqjson_path: String,
     pub snapshot_icefalldb_path: String,
     pub snapshot_bitask_path: String,
     pub snapshot_bitkv_rs_path: String,
@@ -394,6 +396,8 @@ impl Config {
         let snapshot_hurrahdb_path =
             env_string("SNAPSHOT_HURRAHDB_PATH", DEFAULT_SNAPSHOT_HURRAHDB_PATH)?;
         let snapshot_fs_db_path = env_string("SNAPSHOT_FS_DB_PATH", DEFAULT_SNAPSHOT_FS_DB_PATH)?;
+        let snapshot_sqjson_path =
+            env_string("SNAPSHOT_SQJSON_PATH", DEFAULT_SNAPSHOT_SQJSON_PATH)?;
         let snapshot_icefalldb_path =
             env_string("SNAPSHOT_ICEFALLDB_PATH", DEFAULT_SNAPSHOT_ICEFALLDB_PATH)?;
         let snapshot_bitask_path =
@@ -679,6 +683,7 @@ impl Config {
             snapshot_hmdb_path,
             snapshot_hurrahdb_path,
             snapshot_fs_db_path,
+            snapshot_sqjson_path,
             snapshot_icefalldb_path,
             snapshot_bitask_path,
             snapshot_bitkv_rs_path,
