@@ -1,0 +1,27 @@
+[package]
+name = "bitask"
+version = "0.1.1"
+edition = "2021"
+description = "Bitask is a Rust implementation of Bitcask, a log-structured key-value store optimized for high-performance reads and writes."
+authors = ["Arnau <arnaudiaz@duck.com>"]
+license = "MIT"                                                                                                                               # Most common choice for Rust projects
+repository = "https://github.com/vrnvu/bitask"
+documentation = "https://docs.rs/bitask"
+readme = "README.md"
+keywords = ["database", "wal", "key-value", "storage", "bitcask"]
+categories = ["database-implementations", "data-structures"]
+
+[lib]
+name = "bitask"
+
+[dependencies]
+anyhow = "1.0.95"
+clap = { version = "4.5.26", features = ["derive"] }
+crc32fast = "1.4.2"
+env_logger = "0.11.6"
+fs2 = "0.4.3"
+log = "0.4.25"
+thiserror = "2.0.11"
+
+[dev-dependencies]
+tempfile = "3.15.0"

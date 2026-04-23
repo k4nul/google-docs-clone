@@ -19,7 +19,7 @@ base64 = "0.22.1"
 bitkv-rs = "0.2.1"
 bitcask-engine-rs = "0.1.0"
 blockbucket = "0.2.8"
-bitask = "0.1.1"
+bitask = { version = "0.1.1", path = "vendor/bitask" }
 btree-store = "0.1.4"
 bytes = "1"
 cacache = { version = "13.1.0", default-features = false, features = ["mmap", "tokio-runtime"] }

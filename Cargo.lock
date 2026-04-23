@@ -1148,8 +1148,6 @@ checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
 [[package]]
 name = "bitask"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f881aa29bccb11f38fd1b4a24dfdfdc3937535fdd3ce22de182ad52f55261a84"
 dependencies = [
  "anyhow",
  "clap 4.6.1",
