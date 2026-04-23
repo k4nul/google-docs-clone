@@ -32,28 +32,28 @@ use backend::{
         FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, GhaladbSnapshotStore,
         GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
         HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
-        IcefalldbSnapshotStore, InMemorySnapshotStore, InfusedbSnapshotStore, IpjdbSnapshotStore,
-        JammdbSnapshotStore, JanqlSnapshotStore, JasondbSnapshotStore, JasonisnthappySnapshotStore,
-        JfsSnapshotStore, JoydbSnapshotStore, JsonMutexDbSnapshotStore, JsonStoreSnapshotStore,
-        JsondbSnapshotStore, KafiSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
-        KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore, LiteDbSnapshotStore,
-        LmdbRsCoreSnapshotStore, LogKvSnapshotStore, LoroKvSnapshotStore, LsmEngineSnapshotStore,
-        LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore, LsmdbSnapshotStore,
-        LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MarbleSnapshotStore,
-        MhdbSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore,
-        MuDbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore,
-        NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore,
-        PersistentKvSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore,
-        RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore,
-        RskeySnapshotStore, RubinSnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore,
-        RustcaskSnapshotStore, RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore,
-        SaberdbSnapshotStore, SanakirjaSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore,
-        SiamesedbSnapshotStore, SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore,
-        SmolldbSnapshotStore, SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore,
-        StructsySnapshotStore, SurrealkvSnapshotStore, ThetadbSnapshotStore,
-        ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore, TinydbSnapshotStore,
-        TinykvSnapshotStore, ToiletdbSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
-        YakvdbSnapshotStore, YedbSnapshotStore,
+        HurrahdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
+        InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
+        JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore,
+        JsonMutexDbSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore,
+        KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore,
+        LedgerKvSnapshotStore, LiteDbSnapshotStore, LmdbRsCoreSnapshotStore, LogKvSnapshotStore,
+        LoroKvSnapshotStore, LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore,
+        LsmTreeSnapshotStore, LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore,
+        ManagedSnapshotStore, MarbleSnapshotStore, MhdbSnapshotStore, MicroKvSnapshotStore,
+        MindbSnapshotStore, MmdbSnapshotStore, MuDbSnapshotStore, NanodbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
+        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RubinSnapshotStore,
+        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
+        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
+        ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore,
+        SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore,
+        SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore,
+        ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore,
+        TinydbSnapshotStore, TinykvSnapshotStore, ToiletdbSnapshotStore, VsdbSnapshotStore,
+        YakvSnapshotStore, YakvdbSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -108,6 +108,7 @@ fn test_config() -> Config {
         snapshot_heed_path: "./data/test-snapshots.heed".to_owned(),
         snapshot_hightower_kv_path: "./data/test-snapshots.hightower_kv".to_owned(),
         snapshot_hmdb_path: "./data/test-snapshots.hmdb".to_owned(),
+        snapshot_hurrahdb_path: "./data/test-snapshots.hurrahdb".to_owned(),
         snapshot_icefalldb_path: "./data/test-snapshots.icefalldb".to_owned(),
         snapshot_bitask_path: "./data/test-snapshots.bitask".to_owned(),
         snapshot_bitkv_rs_path: "./data/test-snapshots.bitkv_rs".to_owned(),
@@ -1132,6 +1133,14 @@ fn configure_toiletdb_snapshot_store(config: &mut Config, root: &std::path::Path
 fn configure_hmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "hmdb".to_owned();
     config.snapshot_hmdb_path = root.join("snapshots.hmdb").to_string_lossy().into_owned();
+}
+
+fn configure_hurrahdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "hurrahdb".to_owned();
+    config.snapshot_hurrahdb_path = root
+        .join("snapshots.hurrahdb")
+        .to_string_lossy()
+        .into_owned();
 }
 
 fn configure_icefalldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -8822,6 +8831,53 @@ fn app_state_uses_hmdb_snapshot_store_from_config() {
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
+#[tokio::test]
+async fn app_state_uses_hurrahdb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("hurrahdb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.hurrahdb");
+    configure_hurrahdb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with hurrahdb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to hurrahdb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to hurrahdb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted hurrahdb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
 #[test]
 fn app_state_uses_icefalldb_snapshot_store_from_config() {
     let mut config = test_config();
@@ -15415,6 +15471,54 @@ fn hmdb_snapshot_store_round_trips_document_catalog() {
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 
     drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn hurrahdb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("hurrahdb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.hurrahdb");
+    let store = HurrahdbSnapshotStore::new(&snapshot_path)
+        .expect("hurrahdb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("HurrahDB".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to hurrahdb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from hurrahdb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from hurrahdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened =
+        HurrahdbSnapshotStore::new(&snapshot_path).expect("hurrahdb snapshot store should reopen");
+    let reopened_documents = reopened
+        .list_documents()
+        .expect("document catalog should reload from hurrahdb");
+    let reopened_snapshot = reopened
+        .load_snapshot(&document.id)
+        .expect("snapshot should reload from hurrahdb")
+        .expect("snapshot should exist after reopen");
+
+    assert_eq!(reopened_documents, vec![document.clone()]);
+    assert_eq!(reopened_snapshot.document, document);
+    assert_eq!(reopened_snapshot.update, vec![1, 2, 3]);
+
+    drop(reopened);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
