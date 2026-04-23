@@ -12570,18 +12570,44 @@ fn grumpydb_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert!(snapshot_path.join("data.db").exists());
+    assert!(snapshot_path.join("index.db").exists());
+    assert!(snapshot_path.join("wal.log").exists());
 
-    store
+    drop(store);
+
+    let reopened_store =
+        GrumpydbSnapshotStore::new(&snapshot_path).expect("grumpydb snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from grumpydb"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from grumpydb")
+            .is_some()
+    );
+
+    reopened_store
         .delete_snapshot(&loaded_snapshot.document.id)
         .expect("snapshot should delete from grumpydb");
     assert!(
-        store
+        reopened_store
             .load_snapshot(&loaded_snapshot.document.id)
             .expect("deleted snapshot lookup should succeed")
             .is_none()
     );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect grumpydb deletion")
+            .is_empty()
+    );
 
-    drop(store);
+    drop(reopened_store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
