@@ -923,6 +923,7 @@ dependencies = [
  "jfs",
  "joydb",
  "json-mutex-db",
+ "json_db_rs",
  "json_store",
  "jsondb",
  "kafi",
@@ -4864,6 +4865,16 @@ dependencies = [
  "serde 1.0.228",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "json_db_rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d11910616857a19575ca29a7a4b9f06a3ccb35606d0bcefcaf8ad6f38d3451f"
+dependencies = [
+ "serde 1.0.228",
+ "serde_json",
 ]
 
 [[package]]

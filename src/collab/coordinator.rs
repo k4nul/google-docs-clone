@@ -1833,6 +1833,7 @@ mod tests {
             snapshot_jasonisnthappy_path: "./data/test-snapshots.jasonisnthappy".to_owned(),
             snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
             snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
+            snapshot_json_db_rs_path: "./data/test-snapshots.json_db_rs.json".to_owned(),
             snapshot_json_mutex_db_path: "./data/test-snapshots.json_mutex_db.json".to_owned(),
             snapshot_toiletdb_path: "./data/test-snapshots.toiletdb.json".to_owned(),
             snapshot_feoxdb_path: "./data/test-snapshots.feoxdb".to_owned(),

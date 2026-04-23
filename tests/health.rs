@@ -35,25 +35,26 @@ use backend::{
         HmdbSnapshotStore, HurrahdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
         InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
         JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore,
-        JsonMutexDbSnapshotStore, JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore,
-        KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore,
-        LedgerKvSnapshotStore, LiteDbSnapshotStore, LmdbRsCoreSnapshotStore, LogKvSnapshotStore,
-        LoroKvSnapshotStore, LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore,
-        LsmTreeSnapshotStore, LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore,
-        ManagedSnapshotStore, MarbleSnapshotStore, MhdbSnapshotStore, MicroKvSnapshotStore,
-        MindbSnapshotStore, MmdbSnapshotStore, MuDbSnapshotStore, NanodbSnapshotStore,
-        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
-        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
-        PickleDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore,
-        RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore, RubinSnapshotStore,
-        RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
-        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
-        SaturnSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
-        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
-        SnaildbSnapshotStore, SnapshotStore, SqliteSnapshotStore, StructsySnapshotStore,
-        SurrealkvSnapshotStore, ThetadbSnapshotStore, ThunderdbSnapshotStore, TinkvSnapshotStore,
-        TinybaseSnapshotStore, TinydbSnapshotStore, TinykvSnapshotStore, ToiletdbSnapshotStore,
-        VsdbSnapshotStore, YakvSnapshotStore, YakvdbSnapshotStore, YedbSnapshotStore,
+        JsonDbRsSnapshotStore, JsonMutexDbSnapshotStore, JsonStoreSnapshotStore,
+        JsondbSnapshotStore, KafiSnapshotStore, KoitSnapshotStore, KopperdbSnapshotStore,
+        KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore, LiteDbSnapshotStore,
+        LmdbRsCoreSnapshotStore, LogKvSnapshotStore, LoroKvSnapshotStore, LsmEngineSnapshotStore,
+        LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore, LsmdbSnapshotStore,
+        LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore, MarbleSnapshotStore,
+        MhdbSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore, MmdbSnapshotStore,
+        MuDbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore, NebariSnapshotStore,
+        NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore, ParityDbSnapshotStore,
+        PersistentKvSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore, RaindbSnapshotStore,
+        RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore,
+        RskeySnapshotStore, RubinSnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore,
+        RustcaskSnapshotStore, RustliteSnapshotStore, RustyLeveldbSnapshotStore, S3SnapshotStore,
+        SaberdbSnapshotStore, SanakirjaSnapshotStore, SaturnSnapshotStore, ScdbSnapshotStore,
+        ShorterDbSnapshotStore, SiamesedbSnapshotStore, SimpleDbSnapshotStore, SkvSnapshotStore,
+        SledSnapshotStore, SmolldbSnapshotStore, SnaildbSnapshotStore, SnapshotStore,
+        SqliteSnapshotStore, StructsySnapshotStore, SurrealkvSnapshotStore, ThetadbSnapshotStore,
+        ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore, TinydbSnapshotStore,
+        TinykvSnapshotStore, ToiletdbSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
+        YakvdbSnapshotStore, YedbSnapshotStore,
     },
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -129,6 +130,7 @@ fn test_config() -> Config {
         snapshot_jasonisnthappy_path: "./data/test-snapshots.jasonisnthappy".to_owned(),
         snapshot_jfs_path: "./data/test-snapshots.jfs.json".to_owned(),
         snapshot_json_store_path: "./data/test-snapshots.json_store.jsonl".to_owned(),
+        snapshot_json_db_rs_path: "./data/test-snapshots.json_db_rs.json".to_owned(),
         snapshot_json_mutex_db_path: "./data/test-snapshots.json_mutex_db.json".to_owned(),
         snapshot_toiletdb_path: "./data/test-snapshots.toiletdb.json".to_owned(),
         snapshot_feoxdb_path: "./data/test-snapshots.feoxdb".to_owned(),
@@ -1112,6 +1114,14 @@ fn configure_json_store_snapshot_store(config: &mut Config, root: &std::path::Pa
     config.snapshot_store = "json_store".to_owned();
     config.snapshot_json_store_path = root
         .join("snapshots.json_store.jsonl")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_json_db_rs_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "json_db_rs".to_owned();
+    config.snapshot_json_db_rs_path = root
+        .join("snapshots.json_db_rs.json")
         .to_string_lossy()
         .into_owned();
 }
@@ -7338,6 +7348,53 @@ fn app_state_uses_json_store_snapshot_store_from_config() {
 
     let reloaded_state =
         AppState::from_config(&config).expect("state should reload persisted json_store snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_json_db_rs_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("json-db-rs-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.json_db_rs.json");
+    configure_json_db_rs_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with json_db_rs store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to json_db_rs".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to json_db_rs on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted json_db_rs snapshot");
     let restored_room = reloaded_state
         .rooms()
         .get(&document.id)
@@ -13679,6 +13736,49 @@ fn json_store_snapshot_store_round_trips_document_catalog() {
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 
     drop(store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn json_db_rs_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("json-db-rs-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.json_db_rs.json");
+    let store = JsonDbRsSnapshotStore::new(&snapshot_path)
+        .expect("json_db_rs snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("JsonDbRs".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to json_db_rs");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from json_db_rs");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from json_db_rs")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store = JsonDbRsSnapshotStore::new(&snapshot_path)
+        .expect("json_db_rs snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from json_db_rs"),
+        vec![document]
+    );
+
+    drop(reopened_store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
