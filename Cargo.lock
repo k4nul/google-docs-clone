@@ -929,6 +929,7 @@ dependencies = [
  "kv 0.24.0",
  "ledger-kv",
  "lite_db",
+ "lmdb-rs-core",
  "log_kv",
  "loro-kv-store",
  "lsm-tree",
@@ -5146,6 +5147,19 @@ dependencies = [
  "cc",
  "doxygen-rs",
  "libc",
+]
+
+[[package]]
+name = "lmdb-rs-core"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60bacd5c06a286435f2245201a0ff4457b7bd81f8cac8b82c0f1e1c03d2ae9f5"
+dependencies = [
+ "bitflags 2.11.1",
+ "libc",
+ "memmap2",
+ "thiserror 2.0.18",
+ "tracing",
 ]
 
 [[package]]

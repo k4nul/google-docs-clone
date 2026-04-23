@@ -66,6 +66,7 @@ mod kstone_snapshot_store;
 mod kv_snapshot_store;
 mod ledger_kv_snapshot_store;
 mod lite_db_snapshot_store;
+mod lmdb_rs_core_snapshot_store;
 mod log_kv_snapshot_store;
 mod loro_kv_snapshot_store;
 mod lsm_engine_snapshot_store;
@@ -212,6 +213,7 @@ pub use kstone_snapshot_store::KstoneSnapshotStore;
 pub use kv_snapshot_store::KvSnapshotStore;
 pub use ledger_kv_snapshot_store::LedgerKvSnapshotStore;
 pub use lite_db_snapshot_store::LiteDbSnapshotStore;
+pub use lmdb_rs_core_snapshot_store::LmdbRsCoreSnapshotStore;
 pub use log_kv_snapshot_store::LogKvSnapshotStore;
 pub use loro_kv_snapshot_store::LoroKvSnapshotStore;
 pub use lsm_engine_snapshot_store::LsmEngineSnapshotStore;
@@ -560,6 +562,9 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
         )?)),
         "lite_db" => Ok(Arc::new(LiteDbSnapshotStore::new(
             &config.snapshot_lite_db_path,
+        )?)),
+        "lmdb_rs_core" => Ok(Arc::new(LmdbRsCoreSnapshotStore::new(
+            &config.snapshot_lmdb_rs_core_path,
         )?)),
         "log_kv" => Ok(Arc::new(LogKvSnapshotStore::new(
             &config.snapshot_log_kv_path,

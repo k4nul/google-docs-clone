@@ -1838,6 +1838,7 @@ mod tests {
             snapshot_kv_path: "./data/test-snapshots.kv".to_owned(),
             snapshot_koit_path: "./data/test-snapshots.koit.json".to_owned(),
             snapshot_lite_db_path: "./data/test-snapshots.lite_db".to_owned(),
+            snapshot_lmdb_rs_core_path: "./data/test-snapshots.lmdb_rs_core".to_owned(),
             snapshot_log_kv_path: "./data/test-snapshots.log_kv".to_owned(),
             snapshot_append_kv_path: "./data/test-snapshots.append_kv".to_owned(),
             snapshot_mhdb_path: "./data/test-snapshots.mhdb".to_owned(),

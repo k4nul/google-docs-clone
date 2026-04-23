@@ -64,6 +64,7 @@ pub const DEFAULT_SNAPSHOT_KOPPERDB_PATH: &str = "./data/snapshots.kopperdb";
 pub const DEFAULT_SNAPSHOT_KV_PATH: &str = "./data/snapshots.kv";
 pub const DEFAULT_SNAPSHOT_KOIT_PATH: &str = "./data/snapshots.koit.json";
 pub const DEFAULT_SNAPSHOT_LITE_DB_PATH: &str = "./data/snapshots.lite_db";
+pub const DEFAULT_SNAPSHOT_LMDB_RS_CORE_PATH: &str = "./data/snapshots.lmdb_rs_core";
 pub const DEFAULT_SNAPSHOT_LOG_KV_PATH: &str = "./data/snapshots.log_kv";
 pub const DEFAULT_SNAPSHOT_APPEND_KV_PATH: &str = "./data/snapshots.append_kv";
 pub const DEFAULT_SNAPSHOT_MHDB_PATH: &str = "./data/snapshots.mhdb";
@@ -215,6 +216,7 @@ pub struct Config {
     pub snapshot_kv_path: String,
     pub snapshot_koit_path: String,
     pub snapshot_lite_db_path: String,
+    pub snapshot_lmdb_rs_core_path: String,
     pub snapshot_log_kv_path: String,
     pub snapshot_append_kv_path: String,
     pub snapshot_mhdb_path: String,
@@ -436,6 +438,10 @@ impl Config {
         let snapshot_koit_path = env_string("SNAPSHOT_KOIT_PATH", DEFAULT_SNAPSHOT_KOIT_PATH)?;
         let snapshot_lite_db_path =
             env_string("SNAPSHOT_LITE_DB_PATH", DEFAULT_SNAPSHOT_LITE_DB_PATH)?;
+        let snapshot_lmdb_rs_core_path = env_string(
+            "SNAPSHOT_LMDB_RS_CORE_PATH",
+            DEFAULT_SNAPSHOT_LMDB_RS_CORE_PATH,
+        )?;
         let snapshot_log_kv_path =
             env_string("SNAPSHOT_LOG_KV_PATH", DEFAULT_SNAPSHOT_LOG_KV_PATH)?;
         let snapshot_append_kv_path =
@@ -678,6 +684,7 @@ impl Config {
             snapshot_kv_path,
             snapshot_koit_path,
             snapshot_lite_db_path,
+            snapshot_lmdb_rs_core_path,
             snapshot_log_kv_path,
             snapshot_append_kv_path,
             snapshot_mhdb_path,
