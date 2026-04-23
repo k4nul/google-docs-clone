@@ -27,6 +27,7 @@ candystore = "1.0.0"
 canopydb = "0.2.5"
 caves = "0.2.1"
 celerix-store = "0.1.2"
+cdb64 = "0.2.0"
 chrono = { version = "0.4", features = ["serde"] }
 citadeldb = { version = "0.8.0", default-features = false }
 ckydb = "0.0.5"
