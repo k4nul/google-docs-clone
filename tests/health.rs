@@ -12612,10 +12612,45 @@ fn highlandcows_isam_snapshot_store_round_trips_document_catalog() {
         .expect("snapshot should exist");
 
     assert_eq!(listed_documents, vec![document.clone()]);
-    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.document, document.clone());
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert!(snapshot_path.with_extension("idb").exists());
+    assert!(snapshot_path.with_extension("idx").exists());
 
     drop(store);
+
+    let reopened_store = HighlandcowsIsamSnapshotStore::new(&snapshot_path)
+        .expect("highlandcows-isam snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from highlandcows-isam"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from highlandcows-isam")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from highlandcows-isam");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect highlandcows-isam deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
