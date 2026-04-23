@@ -1822,6 +1822,7 @@ mod tests {
             snapshot_citadeldb_path: "./data/test-snapshots.citadeldb".to_owned(),
             snapshot_citadeldb_passphrase: "test-citadel-snapshot-passphrase".to_owned(),
             snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
+            snapshot_data_pile_path: "./data/test-snapshots.data_pile".to_owned(),
             snapshot_datastack_path: "./data/test-snapshots.datastack".to_owned(),
             snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
             snapshot_mace_path: "./data/test-snapshots.mace".to_owned(),

@@ -48,6 +48,7 @@ pub const DEFAULT_SNAPSHOT_CELERIX_STORE_PATH: &str = "./data/snapshots.celerix_
 pub const DEFAULT_SNAPSHOT_CITADELDB_PATH: &str = "./data/snapshots.citadeldb";
 pub const DEFAULT_SNAPSHOT_CITADELDB_PASSPHRASE: &str = "dev-citadel-snapshot-passphrase";
 pub const DEFAULT_SNAPSHOT_CUENDILLAR_PATH: &str = "./data/snapshots.cuendillar";
+pub const DEFAULT_SNAPSHOT_DATA_PILE_PATH: &str = "./data/snapshots.data_pile";
 pub const DEFAULT_SNAPSHOT_DATASTACK_PATH: &str = "./data/snapshots.datastack";
 pub const DEFAULT_SNAPSHOT_JAMMDB_PATH: &str = "./data/snapshots.jammdb";
 pub const DEFAULT_SNAPSHOT_MACE_PATH: &str = "./data/snapshots.mace";
@@ -200,6 +201,7 @@ pub struct Config {
     pub snapshot_citadeldb_path: String,
     pub snapshot_citadeldb_passphrase: String,
     pub snapshot_cuendillar_path: String,
+    pub snapshot_data_pile_path: String,
     pub snapshot_datastack_path: String,
     pub snapshot_jammdb_path: String,
     pub snapshot_mace_path: String,
@@ -407,6 +409,8 @@ impl Config {
         )?;
         let snapshot_cuendillar_path =
             env_string("SNAPSHOT_CUENDILLAR_PATH", DEFAULT_SNAPSHOT_CUENDILLAR_PATH)?;
+        let snapshot_data_pile_path =
+            env_string("SNAPSHOT_DATA_PILE_PATH", DEFAULT_SNAPSHOT_DATA_PILE_PATH)?;
         let snapshot_datastack_path =
             env_string("SNAPSHOT_DATASTACK_PATH", DEFAULT_SNAPSHOT_DATASTACK_PATH)?;
         let snapshot_jammdb_path =
@@ -668,6 +672,7 @@ impl Config {
             snapshot_citadeldb_path,
             snapshot_citadeldb_passphrase,
             snapshot_cuendillar_path,
+            snapshot_data_pile_path,
             snapshot_datastack_path,
             snapshot_jammdb_path,
             snapshot_mace_path,

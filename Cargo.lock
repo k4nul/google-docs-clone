@@ -304,7 +304,7 @@ dependencies = [
  "bloomfilter 3.0.1",
  "crc32fast",
  "crossbeam",
- "memmap2",
+ "memmap2 0.9.10",
  "thiserror 2.0.18",
  "tracing",
 ]
@@ -884,6 +884,7 @@ dependencies = [
  "crystal",
  "cuendillar",
  "dashmap 6.1.0",
+ "data-pile",
  "datastack",
  "db-rs",
  "db-rs-derive",
@@ -1208,7 +1209,7 @@ dependencies = [
  "fs_extra",
  "jammdb",
  "log",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "prost 0.12.6",
  "rand 0.8.6",
@@ -1541,7 +1542,7 @@ dependencies = [
  "crc16-ibm3740-fast",
  "fslock 0.2.1",
  "libc",
- "memmap2",
+ "memmap2 0.9.10",
  "num_cpus",
  "parking_lot 0.12.5",
  "postcard",
@@ -1822,7 +1823,7 @@ checksum = "d768df43e6846bd2bc5a03e7397e9c7b4a0cea45faf0753969b22a9b970543a8"
 dependencies = [
  "citadeldb-core",
  "libc",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "windows-sys 0.59.0",
  "xxhash-rust",
@@ -2622,6 +2623,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-pile"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48846bf4556c08a96570ca7a29cb7c3c83ce7bb70b027fbe143a0cfdbcb06aa1"
+dependencies = [
+ "memmap2 0.2.3",
+]
+
+[[package]]
 name = "datastack"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3361,7 +3371,7 @@ dependencies = [
  "jammdb",
  "lazy_static",
  "log",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "prost 0.13.5",
  "rand 0.9.4",
@@ -4642,7 +4652,7 @@ dependencies = [
  "fnv",
  "fs4 0.7.0",
  "libc",
- "memmap2",
+ "memmap2 0.9.10",
  "page_size 0.6.0",
  "sha3",
 ]
@@ -4950,7 +4960,7 @@ dependencies = [
  "crc32c",
  "crc32fast",
  "crossbeam",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "serde 1.0.228",
  "serde_json",
@@ -5024,7 +5034,7 @@ dependencies = [
  "fs-err",
  "indexmap 2.14.0",
  "log",
- "memmap2",
+ "memmap2 0.9.10",
  "sha2 0.10.9",
 ]
 
@@ -5127,7 +5137,7 @@ dependencies = [
  "fs2",
  "jammdb",
  "log",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "prost 0.13.5",
 ]
@@ -5157,7 +5167,7 @@ checksum = "60bacd5c06a286435f2245201a0ff4457b7bd81f8cac8b82c0f1e1c03d2ae9f5"
 dependencies = [
  "bitflags 2.11.1",
  "libc",
- "memmap2",
+ "memmap2 0.9.10",
  "thiserror 2.0.18",
  "tracing",
 ]
@@ -5339,7 +5349,7 @@ dependencies = [
  "crc32fast",
  "dirs 6.0.0",
  "lru 0.16.4",
- "memmap2",
+ "memmap2 0.9.10",
  "snap 1.1.1",
 ]
 
@@ -5499,6 +5509,15 @@ checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "memmap2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "723e3ebdcdc5c023db1df315364573789f8857c11b631a2fdfad7c00f5c046b4"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -6160,7 +6179,7 @@ dependencies = [
  "libc",
  "log",
  "lz4",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.12.5",
  "rand 0.9.4",
  "siphasher",
@@ -7843,7 +7862,7 @@ dependencies = [
  "fs4 0.6.6",
  "libc",
  "log",
- "memmap2",
+ "memmap2 0.9.10",
  "parking_lot 0.11.2",
  "sanakirja-core",
  "serde 1.0.228",

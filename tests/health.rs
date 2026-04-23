@@ -25,12 +25,12 @@ use backend::{
         BtreeStoreSnapshotStore, CandystoreSnapshotStore, CanopydbSnapshotStore,
         CavesSnapshotStore, CelerixStoreSnapshotStore, CitadeldbSnapshotStore, CkydbSnapshotStore,
         ColonDbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
-        DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore, DbliteSnapshotStore,
-        DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore, DocDbSnapshotStore,
-        DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore, EtchdbSnapshotStore,
-        FastKvSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore, FileSnapshotStore,
-        FjallSnapshotStore, FlashKvSnapshotStore, GhaladbSnapshotStore, GrausDbSnapshotStore,
-        GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
+        DataPileSnapshotStore, DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
+        DbliteSnapshotStore, DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore,
+        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore,
+        EtchdbSnapshotStore, FastKvSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
+        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, GhaladbSnapshotStore,
+        GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore, HeedSnapshotStore,
         HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore, HmdbSnapshotStore,
         IcefalldbSnapshotStore, InMemorySnapshotStore, InfusedbSnapshotStore, IpjdbSnapshotStore,
         JammdbSnapshotStore, JanqlSnapshotStore, JasondbSnapshotStore, JasonisnthappySnapshotStore,
@@ -118,6 +118,7 @@ fn test_config() -> Config {
         snapshot_citadeldb_path: "./data/test-snapshots.citadeldb".to_owned(),
         snapshot_citadeldb_passphrase: "test-citadel-snapshot-passphrase".to_owned(),
         snapshot_cuendillar_path: "./data/test-snapshots.cuendillar".to_owned(),
+        snapshot_data_pile_path: "./data/test-snapshots.data_pile".to_owned(),
         snapshot_datastack_path: "./data/test-snapshots.datastack".to_owned(),
         snapshot_jammdb_path: "./data/test-snapshots.jammdb".to_owned(),
         snapshot_mace_path: "./data/test-snapshots.mace".to_owned(),
@@ -949,6 +950,14 @@ fn configure_lmdb_rs_core_snapshot_store(config: &mut Config, root: &std::path::
     config.snapshot_store = "lmdb_rs_core".to_owned();
     config.snapshot_lmdb_rs_core_path = root
         .join("snapshots.lmdb_rs_core")
+        .to_string_lossy()
+        .into_owned();
+}
+
+fn configure_data_pile_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "data_pile".to_owned();
+    config.snapshot_data_pile_path = root
+        .join("snapshots.data_pile")
         .to_string_lossy()
         .into_owned();
 }
@@ -7556,6 +7565,54 @@ fn app_state_uses_lmdb_rs_core_snapshot_store_from_config() {
 }
 
 #[test]
+fn app_state_uses_data_pile_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("data-pile-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.data_pile");
+    configure_data_pile_snapshot_store(&mut config, &snapshot_dir);
+
+    let state =
+        AppState::from_config(&config).expect("state should initialize with data_pile store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to data_pile".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to data_pile on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted data_pile snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
+    assert!(snapshot_path.join("data").exists());
+    assert!(snapshot_path.join("seqno").exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn app_state_uses_log_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("log-kv-store-config");
@@ -13698,6 +13755,71 @@ fn lmdb_rs_core_snapshot_store_round_trips_document_catalog() {
         reopened_store
             .list_documents()
             .expect("document catalog should reflect lmdb_rs_core deletion")
+            .is_empty()
+    );
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn data_pile_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("data-pile-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.data_pile");
+    let store = DataPileSnapshotStore::new(&snapshot_path)
+        .expect("data_pile snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("DataPile".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to data_pile");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from data_pile");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from data_pile")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        DataPileSnapshotStore::new(&snapshot_path).expect("data_pile snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from data_pile"),
+        vec![document.clone()]
+    );
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("snapshot should reload from data_pile")
+            .is_some()
+    );
+
+    reopened_store
+        .delete_snapshot(&document.id)
+        .expect("snapshot should delete from data_pile");
+    assert!(
+        reopened_store
+            .load_snapshot(&document.id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect data_pile deletion")
             .is_empty()
     );
 
