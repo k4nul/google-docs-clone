@@ -5543,9 +5543,9 @@ dependencies = [
 
 [[package]]
 name = "mace-kv"
-version = "0.0.28"
+version = "0.0.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49649cd5277e209ffb58a923d666029df2b5c0f3425388dd80e03a2bee96adab"
+checksum = "c8cf1655b23bed9a585386af49aeb1e839a5f52fc15da89da429356741244521"
 dependencies = [
  "btree-store",
  "crc32c",
@@ -5554,7 +5554,7 @@ dependencies = [
  "libc",
  "log",
  "parking_lot 0.12.5",
- "rand 0.9.4",
+ "rand 0.10.1",
  "rustc-hash",
 ]
 
