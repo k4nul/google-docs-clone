@@ -12035,6 +12035,98 @@ fn managed_snapshot_store_round_trips_document_catalog() {
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn managed_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let harness = spawn_mock_managed_coordination_service(Some("snapshot-secret")).await;
+    let document_id = Uuid::new_v4();
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original Managed".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store = ManagedSnapshotStore::new(
+        &harness.snapshot_base_url,
+        Some("snapshot-secret".to_owned()),
+        Duration::from_secs(5),
+    )
+    .expect("managed snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to managed store");
+    drop(store);
+
+    let reopened_store = ManagedSnapshotStore::new(
+        &harness.snapshot_base_url,
+        Some("snapshot-secret".to_owned()),
+        Duration::from_secs(5),
+    )
+    .expect("managed snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from managed store after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect managed deletion")
+            .is_empty()
+    );
+    assert!(
+        harness.state.snapshot(&document_id).is_none(),
+        "managed snapshot service should remove deleted snapshot"
+    );
+    drop(reopened_store);
+
+    let replacement_document = backend::models::document::Document::new(
+        document_id,
+        Some("Replacement Managed".to_owned()),
+    );
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store = ManagedSnapshotStore::new(
+        &harness.snapshot_base_url,
+        Some("snapshot-secret".to_owned()),
+        Duration::from_secs(5),
+    )
+    .expect("managed snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store = ManagedSnapshotStore::new(
+        &harness.snapshot_base_url,
+        Some("snapshot-secret".to_owned()),
+        Duration::from_secs(5),
+    )
+    .expect("managed snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement managed snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+    assert_eq!(
+        harness
+            .state
+            .snapshot(&document_id)
+            .expect("managed snapshot service should store replacement snapshot")
+            .update,
+        vec![4, 5, 6, 7]
+    );
+}
+
 #[test]
 fn redb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("redb-store-roundtrip");
