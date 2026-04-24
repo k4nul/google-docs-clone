@@ -129,6 +129,7 @@ fn authorized_room(
     id: Uuid,
 ) -> AppResult<std::sync::Arc<Room>> {
     let token = require_bearer_token(headers)?;
+    state.ensure_local_room_owner(&id)?;
     let room = state
         .rooms()
         .get_or_restore(&id)

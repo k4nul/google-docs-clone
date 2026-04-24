@@ -2,7 +2,10 @@ use axum::http::StatusCode;
 use axum_test::{TestServer, WsMessage};
 use backend::{
     app::build_app,
-    collab::rooms::RoomRegistry,
+    collab::{
+        locator::{ResolvedRoom, RoomLocator, RoomLocatorError, RoomOwnerHint},
+        rooms::RoomRegistry,
+    },
     config::Config,
     state::AppState,
     storage::{DocumentSnapshot, FileSnapshotStore, InMemorySnapshotStore, SnapshotStore},
@@ -25,6 +28,9 @@ fn test_config() -> Config {
         api_token: "test-admin-token".to_owned(),
         snapshot_store: "memory".to_owned(),
         snapshot_dir: "./data/test-snapshots".to_owned(),
+        room_locator: "local".to_owned(),
+        node_id: "test-node".to_owned(),
+        room_owner_hints_path: None,
     }
 }
 
@@ -38,6 +44,18 @@ fn admin_auth_header(config: &Config) -> String {
 
 fn document_auth_header(access_token: &str) -> String {
     format!("Bearer {access_token}")
+}
+
+#[derive(Debug, Default)]
+struct RemoteRoomLocator;
+
+impl RoomLocator for RemoteRoomLocator {
+    fn resolve(&self, doc_id: &Uuid) -> Result<ResolvedRoom, RoomLocatorError> {
+        Ok(ResolvedRoom::Remote(RoomOwnerHint {
+            node_id: format!("node-for-{doc_id}"),
+            base_url: Some("http://node-b.internal:4000".to_owned()),
+        }))
+    }
 }
 
 fn decode_sync_message(payload: impl AsRef<[u8]>) -> SyncMessage {
@@ -346,6 +364,49 @@ async fn document_detail_endpoint_rejects_missing_document_with_json_error() {
         payload["message"],
         format!("document `{doc_id}` was not found")
     );
+}
+
+#[tokio::test]
+async fn document_detail_endpoint_rejects_non_local_room_owner() {
+    let config = test_config();
+    let state = AppState::with_snapshot_store_and_locator(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        Arc::new(InMemorySnapshotStore::new()),
+        Arc::new(RemoteRoomLocator),
+    )
+    .expect("state should initialize with rejecting locator");
+    let document = state
+        .rooms()
+        .create_document(Some("Remote owner".to_owned()))
+        .expect("document should be created");
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await;
+
+    response.assert_status(StatusCode::CONFLICT);
+
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "conflict");
+    assert_eq!(
+        payload["message"],
+        format!(
+            "document `{}` is owned by another collaboration node",
+            document.id
+        )
+    );
+    assert_eq!(
+        payload["owner"]["node_id"],
+        format!("node-for-{}", document.id)
+    );
+    assert_eq!(payload["owner"]["base_url"], "http://node-b.internal:4000");
 }
 
 #[tokio::test]
@@ -898,6 +959,69 @@ async fn app_state_with_file_store_skips_corrupt_snapshots_during_startup() {
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
+#[tokio::test]
+async fn app_state_with_file_store_cleans_matching_stale_temp_snapshots_during_startup() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("file-store-stale-temp-startup");
+    config.snapshot_store = "file".to_owned();
+    config.snapshot_dir = snapshot_dir.to_string_lossy().into_owned();
+
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let valid_document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Healthy".to_owned()));
+    let valid_update = Doc::new()
+        .transact()
+        .encode_state_as_update_v1(&StateVector::default());
+    store
+        .save_snapshot(DocumentSnapshot::new(valid_document.clone(), valid_update))
+        .expect("valid snapshot should save");
+
+    let stale_temp_path =
+        snapshot_dir.join(format!("{}.json.{}.tmp", valid_document.id, Uuid::new_v4()));
+    fs::write(&stale_temp_path, br#"{"partial":true}"#)
+        .expect("stale temp snapshot fixture should be written");
+
+    let state = AppState::from_config(&config)
+        .expect("startup hydration should clean stale temp files and restore valid snapshots");
+    let hydrated_documents = state
+        .rooms()
+        .list_documents()
+        .expect("document catalog should still be available");
+
+    assert!(state.rooms().get(&valid_document.id).is_some());
+    assert_eq!(hydrated_documents, vec![valid_document]);
+    assert!(!stale_temp_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_with_file_store_cleans_orphan_stale_temp_snapshots_during_startup() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("file-store-orphan-stale-temp-startup");
+    config.snapshot_store = "file".to_owned();
+    config.snapshot_dir = snapshot_dir.to_string_lossy().into_owned();
+
+    let orphan_doc_id = Uuid::new_v4();
+    let stale_temp_path = snapshot_dir.join(format!("{orphan_doc_id}.json.{}.tmp", Uuid::new_v4()));
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    fs::write(&stale_temp_path, br#"{"partial":true}"#)
+        .expect("stale temp snapshot fixture should be written");
+
+    let state =
+        AppState::from_config(&config).expect("startup hydration should clean orphan temp files");
+    let hydrated_documents = state
+        .rooms()
+        .list_documents()
+        .expect("document catalog should remain empty");
+
+    assert!(state.rooms().get(&orphan_doc_id).is_none());
+    assert!(hydrated_documents.is_empty());
+    assert!(!stale_temp_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
 #[test]
 fn file_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("file-store-unit");
@@ -921,6 +1045,162 @@ fn file_snapshot_store_round_trips_document_catalog() {
     assert_eq!(listed_documents, vec![document.clone()]);
     assert_eq!(loaded_snapshot.document, document);
     assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn file_snapshot_store_replaces_existing_snapshot_without_leaking_temp_files() {
+    let snapshot_dir = temp_snapshot_dir("file-store-atomic-save");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Atomic".to_owned()));
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![1, 2, 3]))
+        .expect("initial snapshot should save");
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![9, 8, 7]))
+        .expect("replacement snapshot should save");
+
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from file store")
+        .expect("snapshot should exist");
+    let directory_entries = fs::read_dir(&snapshot_dir)
+        .expect("snapshot directory should be readable")
+        .map(|entry| entry.expect("snapshot entry should be readable").path())
+        .collect::<Vec<_>>();
+    let json_entries = directory_entries
+        .iter()
+        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("json"))
+        .count();
+    let temp_entries = directory_entries
+        .iter()
+        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("tmp"))
+        .count();
+
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![9, 8, 7]);
+    assert_eq!(json_entries, 1);
+    assert_eq!(temp_entries, 0);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn file_snapshot_store_ignores_stale_temp_files_when_listing_documents() {
+    let snapshot_dir = temp_snapshot_dir("file-store-stale-temp");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Atomic".to_owned()));
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![4, 5, 6]))
+        .expect("snapshot should save");
+
+    let stale_temp_path = snapshot_dir.join(format!("{}.json.{}.tmp", document.id, Uuid::new_v4()));
+    fs::write(&stale_temp_path, br#"{"partial":true}"#)
+        .expect("stale temp snapshot fixture should be written");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should ignore stale temp files");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should still load from file store")
+        .expect("snapshot should still exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6]);
+    assert!(stale_temp_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn file_snapshot_store_delete_snapshot_removes_matching_stale_temp_files() {
+    let snapshot_dir = temp_snapshot_dir("file-store-delete-stale-temp");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Atomic".to_owned()));
+    let unrelated_doc_id = Uuid::new_v4();
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![4, 5, 6]))
+        .expect("snapshot should save");
+
+    let matching_temp_path =
+        snapshot_dir.join(format!("{}.json.{}.tmp", document.id, Uuid::new_v4()));
+    let unrelated_temp_path =
+        snapshot_dir.join(format!("{}.json.{}.tmp", unrelated_doc_id, Uuid::new_v4()));
+    fs::write(&matching_temp_path, br#"{"partial":true}"#)
+        .expect("matching stale temp snapshot fixture should be written");
+    fs::write(&unrelated_temp_path, br#"{"partial":true}"#)
+        .expect("unrelated stale temp snapshot fixture should be written");
+
+    store
+        .delete_snapshot(&document.id)
+        .expect("delete should remove snapshot and matching temp files");
+
+    assert!(
+        store
+            .load_snapshot(&document.id)
+            .expect("snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(!matching_temp_path.exists());
+    assert!(unrelated_temp_path.exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[cfg(unix)]
+#[test]
+fn file_snapshot_store_preserves_previous_snapshot_when_atomic_replace_cannot_write_temp_file() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let snapshot_dir = temp_snapshot_dir("file-store-atomic-save-failure");
+    let store = FileSnapshotStore::new(&snapshot_dir).expect("file store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Atomic".to_owned()));
+
+    store
+        .save_snapshot(DocumentSnapshot::new(document.clone(), vec![1, 2, 3]))
+        .expect("initial snapshot should save");
+
+    let original_permissions = fs::metadata(&snapshot_dir)
+        .expect("snapshot directory metadata should be readable")
+        .permissions();
+    let mut readonly_permissions = original_permissions.clone();
+    readonly_permissions.set_mode(0o555);
+    fs::set_permissions(&snapshot_dir, readonly_permissions)
+        .expect("snapshot directory should become read-only");
+
+    let failed_save = store.save_snapshot(DocumentSnapshot::new(document.clone(), vec![9, 8, 7]));
+
+    fs::set_permissions(&snapshot_dir, original_permissions)
+        .expect("snapshot directory permissions should be restored");
+
+    assert!(matches!(
+        failed_save,
+        Err(backend::storage::StorageError::Io(message)) if message.contains(".tmp")
+    ));
+
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("original snapshot should still load")
+        .expect("original snapshot should still exist");
+    let temp_entries = fs::read_dir(&snapshot_dir)
+        .expect("snapshot directory should be readable")
+        .map(|entry| entry.expect("snapshot entry should be readable").path())
+        .filter(|path| path.extension().and_then(|value| value.to_str()) == Some("tmp"))
+        .count();
+
+    assert_eq!(loaded_snapshot.document, document);
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+    assert_eq!(temp_entries, 0);
 
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }

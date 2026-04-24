@@ -1,5 +1,6 @@
 use std::{
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
@@ -21,11 +22,34 @@ impl FileSnapshotStore {
         let root = root.into();
         ensure_snapshot_dir(&root)?;
 
-        Ok(Self { root })
+        let store = Self { root };
+        let cleaned_temp_snapshots = store.cleanup_stale_temp_snapshots()?;
+        if cleaned_temp_snapshots > 0 {
+            tracing::info!(
+                root = %store.root.display(),
+                cleaned_temp_snapshots,
+                "removed stale temp snapshots during file snapshot store initialization"
+            );
+        }
+
+        Ok(store)
     }
 
     fn snapshot_path(&self, doc_id: &Uuid) -> PathBuf {
         self.root.join(format!("{doc_id}.json"))
+    }
+
+    fn temp_snapshot_path(&self, doc_id: &Uuid) -> PathBuf {
+        self.root
+            .join(format!("{doc_id}.json.{}.tmp", Uuid::new_v4()))
+    }
+
+    fn temp_snapshot_prefix(&self, doc_id: &Uuid) -> String {
+        format!("{doc_id}.json.")
+    }
+
+    fn is_temp_snapshot_file_name(file_name: &str) -> bool {
+        file_name.ends_with(".tmp") && file_name.contains(".json.")
     }
 
     fn read_snapshot(&self, path: &Path, doc_id: &Uuid) -> Result<DocumentSnapshot, StorageError> {
@@ -35,6 +59,93 @@ impl FileSnapshotStore {
             .map_err(|_| StorageError::CorruptSnapshot(*doc_id))?;
 
         Ok(snapshot.into())
+    }
+
+    fn remove_file_if_exists(&self, path: &Path) -> Result<(), StorageError> {
+        match fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(StorageError::Io(format!("{}: {error}", path.display()))),
+        }
+    }
+
+    fn stale_temp_snapshot_paths(&self) -> Result<Vec<PathBuf>, StorageError> {
+        let mut paths = Vec::new();
+
+        for entry in fs::read_dir(&self.root)
+            .map_err(|error| StorageError::Io(format!("{}: {error}", self.root.display())))?
+        {
+            let entry = entry.map_err(|error| StorageError::Io(error.to_string()))?;
+            let path = entry.path();
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+                continue;
+            };
+
+            if Self::is_temp_snapshot_file_name(file_name) {
+                paths.push(path);
+            }
+        }
+
+        Ok(paths)
+    }
+
+    fn matching_temp_snapshot_paths(&self, doc_id: &Uuid) -> Result<Vec<PathBuf>, StorageError> {
+        let temp_prefix = self.temp_snapshot_prefix(doc_id);
+        let mut paths = Vec::new();
+
+        for path in self.stale_temp_snapshot_paths()? {
+            let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+                continue;
+            };
+            if file_name.starts_with(&temp_prefix) {
+                paths.push(path);
+            }
+        }
+
+        Ok(paths)
+    }
+
+    fn cleanup_stale_temp_snapshots(&self) -> Result<usize, StorageError> {
+        let mut removed = 0;
+
+        for path in self.stale_temp_snapshot_paths()? {
+            match self.remove_file_if_exists(&path) {
+                Ok(()) => removed += 1,
+                Err(error) => {
+                    tracing::warn!(
+                        path = %path.display(),
+                        %error,
+                        "failed to remove stale temp snapshot during file snapshot store initialization"
+                    );
+                }
+            }
+        }
+
+        Ok(removed)
+    }
+
+    fn write_snapshot_atomically(
+        &self,
+        doc_id: &Uuid,
+        path: &Path,
+        bytes: &[u8],
+    ) -> Result<(), StorageError> {
+        let temp_path = self.temp_snapshot_path(doc_id);
+
+        if let Err(error) = fs::write(&temp_path, bytes) {
+            let _ = fs::remove_file(&temp_path);
+            return Err(StorageError::Io(format!(
+                "{}: {error}",
+                temp_path.display()
+            )));
+        }
+
+        if let Err(error) = fs::rename(&temp_path, path) {
+            let _ = fs::remove_file(&temp_path);
+            return Err(StorageError::Io(format!("{}: {error}", path.display())));
+        }
+
+        Ok(())
     }
 }
 
@@ -54,19 +165,19 @@ impl SnapshotStore for FileSnapshotStore {
         let bytes = serde_json::to_vec(&PersistedSnapshot::from(snapshot))
             .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))?;
 
-        fs::write(&path, bytes)
-            .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))?;
+        self.write_snapshot_atomically(&doc_id, &path, &bytes)?;
         Ok(())
     }
 
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let path = self.snapshot_path(doc_id);
-        if !path.exists() {
-            return Ok(());
+
+        self.remove_file_if_exists(&path)?;
+
+        for temp_path in self.matching_temp_snapshot_paths(doc_id)? {
+            self.remove_file_if_exists(&temp_path)?;
         }
 
-        fs::remove_file(&path)
-            .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))?;
         Ok(())
     }
 

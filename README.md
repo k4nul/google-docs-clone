@@ -223,6 +223,7 @@ docs/repo-readme-refresh
 |-- .env.example
 |-- Cargo.toml
 |-- docs/
+|-- scripts/
 |-- src/
 |   |-- app.rs
 |   |-- auth.rs
