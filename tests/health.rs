@@ -11280,6 +11280,78 @@ fn jasonisnthappy_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+fn jasonisnthappy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("jasonisnthappy-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.jasonisnthappy");
+    let document_id = Uuid::new_v4();
+    let original_document = backend::models::document::Document::new(
+        document_id,
+        Some("Original JasonIsntHappy".to_owned()),
+    );
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store = JasonisnthappySnapshotStore::new(&snapshot_path)
+        .expect("jasonisnthappy snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to jasonisnthappy");
+    drop(store);
+
+    let reopened_store = JasonisnthappySnapshotStore::new(&snapshot_path)
+        .expect("jasonisnthappy snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from jasonisnthappy after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect jasonisnthappy deletion")
+            .is_empty()
+    );
+    drop(reopened_store);
+
+    let replacement_document = backend::models::document::Document::new(
+        document_id,
+        Some("Replacement JasonIsntHappy".to_owned()),
+    );
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store = JasonisnthappySnapshotStore::new(&snapshot_path)
+        .expect("jasonisnthappy snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store = JasonisnthappySnapshotStore::new(&snapshot_path)
+        .expect("jasonisnthappy snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement jasonisnthappy snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn datastack_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("datastack-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
