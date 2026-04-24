@@ -67,6 +67,10 @@ impl DbliteSnapshotStore {
 
         Ok(snapshot)
     }
+
+    fn map_io_error(&self, error: std::io::Error) -> StorageError {
+        StorageError::Io(format!("{}: {error}", self.path.display()))
+    }
 }
 
 impl SnapshotStore for DbliteSnapshotStore {
@@ -74,7 +78,7 @@ impl SnapshotStore for DbliteSnapshotStore {
         let mut database = self.lock_database()?;
         let Some(bytes) = database
             .get(&doc_id.to_string())
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?
+            .map_err(|error| self.map_io_error(error))?
         else {
             return Ok(None);
         };
@@ -93,23 +97,30 @@ impl SnapshotStore for DbliteSnapshotStore {
 
         database
             .set(&doc_id.to_string(), &bytes)
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
+            .map_err(|error| self.map_io_error(error))
     }
 
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let mut database = self.lock_database()?;
-        database
+        let deleted = database
             .delete(&doc_id.to_string())
-            .map(|_| ())
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
+            .map_err(|error| self.map_io_error(error))?;
+
+        if deleted {
+            // dblite appends delete tombstones; compact to prevent a later reused data slot
+            // from being shadowed by the older tombstone on the next reopen.
+            database
+                .compact()
+                .map_err(|error| self.map_io_error(error))?;
+        }
+
+        Ok(())
     }
 
     fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
         let mut database = self.lock_database()?;
         let mut documents = Vec::new();
-        let keys = database
-            .keys()
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        let keys = database.keys().map_err(|error| self.map_io_error(error))?;
 
         for key in keys {
             let Ok(doc_id) = Uuid::parse_str(&key) else {
@@ -132,10 +143,7 @@ impl SnapshotStore for DbliteSnapshotStore {
                     "skipping missing dblite snapshot while building document catalog"
                 ),
                 Err(error) => {
-                    return Err(StorageError::Io(format!(
-                        "{}: {error}",
-                        self.path.display()
-                    )));
+                    return Err(self.map_io_error(error));
                 }
             }
         }
