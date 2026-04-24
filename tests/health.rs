@@ -13173,6 +13173,75 @@ fn vsdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+fn vsdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("vsdb-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.vsdb");
+    let document_id = Uuid::new_v4();
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original vsdb".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store =
+        VsdbSnapshotStore::new(&snapshot_root).expect("vsdb snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to vsdb");
+    drop(store);
+
+    let reopened_store =
+        VsdbSnapshotStore::new(&snapshot_root).expect("vsdb snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from vsdb after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect vsdb deletion")
+            .is_empty()
+    );
+    drop(reopened_store);
+
+    let replacement_document =
+        backend::models::document::Document::new(document_id, Some("Replacement vsdb".to_owned()));
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store =
+        VsdbSnapshotStore::new(&snapshot_root).expect("vsdb snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store =
+        VsdbSnapshotStore::new(&snapshot_root).expect("vsdb snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement vsdb snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+    assert!(snapshot_root.join("store.meta.json").exists());
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn tinybase_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinybase-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
