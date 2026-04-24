@@ -42,8 +42,14 @@
 
 ## Branch / PR Conventions
 
-- 브랜치 접두사는 기본적으로 `codex/`를 사용한다
+- 모든 작업 브랜치는 `main`에서 분기한다
+- 브랜치 하나당 작업 목적 하나만 담당한다
+- 브랜치 이름은 `<type>/<scope>-<short-kebab-description>` 형식을 권장한다
+- 예시: `feat/websocket-document-sync`, `fix/storage-file-snapshot-catalog`, `docs/repo-readme-refresh`
+- 장기 브랜치보다 짧고 작은 브랜치를 선호한다
+- 실험성 작업은 `wip/` 접두사를 사용할 수 있지만 merge 전에는 목적이 드러나는 이름으로 정리한다
 - 작은 단위 PR을 선호한다
+- PR 생성 전 최신 `main` 기준으로 충돌을 정리한다
 - PR 전 `build`, `lint`, `test`, `typecheck`를 모두 통과시킨다
 - 동일한 검증은 `.github/workflows/ci.yml`에서도 자동 실행한다
 - baseline code owner 설정은 `.github/CODEOWNERS`에서 관리한다

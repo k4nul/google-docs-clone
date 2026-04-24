@@ -11,6 +11,11 @@
 - 커밋 메시지는 반드시 `type(scope): subject` 형식을 따른다.
 - 허용 type은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 사용한다.
 - scope는 front-end 문맥에 맞는 `ui`, `editor`, `auth`, `api`, `state`, `router`, `styles`, `docs`, `repo` 중에서 고른다.
+- 모든 작업 브랜치는 `main`에서 분기한다.
+- 브랜치 하나에는 하나의 작업 목적만 담는다.
+- 브랜치 이름은 기본적으로 `<type>/<scope>-<short-kebab-description>` 형식을 따른다.
+- 실험성 작업은 `wip/` 접두사를 사용할 수 있지만 merge 전에는 목적이 드러나는 이름으로 정리한다.
+- PR 생성 전 최신 `main` 기준으로 충돌을 정리한다.
 - subject는 현재형으로 쓰고, 첫 글자는 소문자, 마침표는 금지하며, 변경 내용을 구체적으로 드러낸다.
 - 한 커밋에는 한 가지 목적만 담고, 기능 추가와 리팩터링은 섞지 않는다.
 - 포맷팅만 한 변경은 별도 커밋으로 분리한다.

@@ -125,7 +125,8 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 ## PR 규칙
 
 - PR은 한 가지 목적만 담는 작은 단위로 만든다.
-- 브랜치 머지 전 로컬에서 아래 명령을 모두 확인한다.
+- PR 생성 전 최신 `main` 기준으로 충돌을 정리한다.
+- PR 생성 전 로컬에서 아래 명령을 모두 확인한다.
   - `npm run build`
   - `npm run lint`
   - `npm run test`
@@ -138,16 +139,20 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ## 브랜치 규칙
 
-- 기본 브랜치 접두사는 `codex/`를 사용한다.
+- 모든 작업 브랜치는 `main`에서 분기한다.
+- 브랜치 하나당 작업 목적 하나만 담당한다.
+- 브랜치 이름은 `<type>/<scope>-<short-kebab-description>` 형식을 권장한다.
 - 담당자는 한 명이지만 기능마다 별도 브랜치를 만든다.
-- 한 브랜치에는 한 기능 또는 한 수정 목적만 담는다.
 - 문서 전용 수정도 가능하면 별도 브랜치로 분리한다.
-- 병합 전 최신 기준 브랜치를 반영하고 품질 게이트를 다시 실행한다.
+- 장기 브랜치보다 짧고 작은 브랜치를 선호한다.
+- 실험성 작업은 `wip/` 접두사를 사용할 수 있지만, merge 전에는 목적이 드러나는 이름으로 정리한다.
+- PR 생성 전 최신 `main` 기준으로 충돌을 정리하고 품질 게이트를 다시 실행한다.
 
-- `codex/feature-editor-shell`
-- `codex/feature-document-list`
-- `codex/fix-ws-reconnect`
-- `codex/docs-readme-guide`
+### 브랜치 예시
+
+- `feat/websocket-document-sync`
+- `fix/storage-file-snapshot-catalog`
+- `docs/repo-readme-refresh`
 
 ## 실행 방법
 
