@@ -82,6 +82,20 @@
       "split_large_docs_and_feature_changes": true
     }
   },
+  "branch_policy": {
+    "base_branch": "main",
+    "single_purpose_per_branch": true,
+    "preferred_name_format": "<type>/<scope>-<short-kebab-description>",
+    "prefer_short_lived_branches": true,
+    "reconcile_with_latest_main_before_pr": true,
+    "wip_prefix_allowed_for_experiments": true,
+    "rename_wip_branch_before_merge": true,
+    "examples": [
+      "feat/websocket-document-sync",
+      "fix/storage-file-snapshot-catalog",
+      "docs/repo-readme-refresh"
+    ]
+  },
   "harness": {
     "path_base": "repo_root",
     "powershell_restricted_commands": {
