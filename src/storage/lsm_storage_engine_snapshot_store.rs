@@ -12,6 +12,7 @@ use crate::{
 
 const SNAPSHOT_CATALOG_KEY: &[u8] = b"__catalog__";
 const SNAPSHOT_KEY_PREFIX: &str = "snapshot:";
+const SNAPSHOT_TOMBSTONE_PAYLOAD: &[u8] = b"__deleted__";
 const MAX_MEMTABLE_SIZE: usize = 1024 * 1024;
 
 pub struct LsmStorageEngineSnapshotStore {
@@ -101,6 +102,10 @@ impl LsmStorageEngineSnapshotStore {
 
         Ok(snapshot)
     }
+
+    fn is_tombstone_payload(payload: &[u8]) -> bool {
+        payload == SNAPSHOT_TOMBSTONE_PAYLOAD
+    }
 }
 
 impl SnapshotStore for LsmStorageEngineSnapshotStore {
@@ -112,6 +117,10 @@ impl SnapshotStore for LsmStorageEngineSnapshotStore {
         else {
             return Ok(None);
         };
+
+        if Self::is_tombstone_payload(&payload) {
+            return Ok(None);
+        }
 
         self.deserialize_snapshot(*doc_id, &payload).map(Some)
     }
@@ -144,8 +153,13 @@ impl SnapshotStore for LsmStorageEngineSnapshotStore {
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let engine = self.lock_engine()?;
         engine
-            .delete(Self::snapshot_key(doc_id))
-            .map_err(|error| self.map_error("delete lsm_storage_engine snapshot", error))?;
+            .put(
+                Self::snapshot_key(doc_id),
+                SNAPSHOT_TOMBSTONE_PAYLOAD.to_vec(),
+            )
+            .map_err(|error| {
+                self.map_error("write lsm_storage_engine snapshot tombstone", error)
+            })?;
 
         let mut catalog = self.read_catalog(&engine)?;
         let original_len = catalog.len();
@@ -166,6 +180,11 @@ impl SnapshotStore for LsmStorageEngineSnapshotStore {
 
         for doc_id in catalog {
             match engine.get(&Self::snapshot_key(&doc_id)) {
+                Ok(Some(payload)) if Self::is_tombstone_payload(&payload) => tracing::warn!(
+                    doc_id = %doc_id,
+                    path = %self.path.display(),
+                    "skipping tombstoned lsm_storage_engine snapshot referenced by catalog"
+                ),
                 Ok(Some(payload)) => match self.deserialize_snapshot(doc_id, &payload) {
                     Ok(snapshot) => documents.push(snapshot.document),
                     Err(StorageError::CorruptSnapshot(doc_id)) => tracing::warn!(
