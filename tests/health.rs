@@ -15199,6 +15199,72 @@ fn lmdb_rs_core_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+fn lmdb_rs_core_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("lmdb-rs-core-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.lmdb_rs_core");
+    let document_id = Uuid::new_v4();
+    let original_document = backend::models::document::Document::new(
+        document_id,
+        Some("Original LmdbRsCore".to_owned()),
+    );
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store = LmdbRsCoreSnapshotStore::new(&snapshot_path)
+        .expect("lmdb_rs_core snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to lmdb_rs_core");
+    drop(store);
+
+    let reopened_store = LmdbRsCoreSnapshotStore::new(&snapshot_path)
+        .expect("lmdb_rs_core snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from lmdb_rs_core after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    drop(reopened_store);
+
+    let replacement_document = backend::models::document::Document::new(
+        document_id,
+        Some("Replacement LmdbRsCore".to_owned()),
+    );
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store = LmdbRsCoreSnapshotStore::new(&snapshot_path)
+        .expect("lmdb_rs_core snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store = LmdbRsCoreSnapshotStore::new(&snapshot_path)
+        .expect("lmdb_rs_core snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement lmdb_rs_core snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn data_pile_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("data-pile-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
