@@ -13411,6 +13411,68 @@ fn caves_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+fn caves_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("caves-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_root = snapshot_dir.join("snapshots.caves");
+    let document_id = Uuid::new_v4();
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original Caves".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store =
+        CavesSnapshotStore::new(&snapshot_root).expect("caves snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to caves");
+    drop(store);
+
+    let reopened_store =
+        CavesSnapshotStore::new(&snapshot_root).expect("caves snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from caves after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    drop(reopened_store);
+
+    let replacement_document =
+        backend::models::document::Document::new(document_id, Some("Replacement Caves".to_owned()));
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store =
+        CavesSnapshotStore::new(&snapshot_root).expect("caves snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store =
+        CavesSnapshotStore::new(&snapshot_root).expect("caves snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement caves snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn structsy_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("structsy-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
