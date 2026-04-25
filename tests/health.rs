@@ -27065,6 +27065,135 @@ fn s3_snapshot_store_round_trips_document_catalog() {
     );
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn s3_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let harness = spawn_mock_s3_snapshot_service().await;
+    let document_id = Uuid::new_v4();
+    let object_key = format!("snapshots/unit-tests/{document_id}.json");
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original S3".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store = S3SnapshotStore::new(
+        &harness.endpoint,
+        "us-east-1",
+        &harness.bucket,
+        "snapshots/unit-tests/",
+        &harness.access_key_id,
+        &harness.secret_access_key,
+        None,
+        Duration::from_secs(5),
+        true,
+    )
+    .expect("s3 snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to s3 store");
+    assert!(
+        harness.state.object(&object_key).is_some(),
+        "mock s3 service should store the initial snapshot object"
+    );
+    drop(store);
+
+    let reopened_store = S3SnapshotStore::new(
+        &harness.endpoint,
+        "us-east-1",
+        &harness.bucket,
+        "snapshots/unit-tests/",
+        &harness.access_key_id,
+        &harness.secret_access_key,
+        None,
+        Duration::from_secs(5),
+        true,
+    )
+    .expect("s3 snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from s3 store after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect s3 deletion")
+            .is_empty()
+    );
+    assert!(
+        harness.state.object(&object_key).is_none(),
+        "mock s3 service should remove the deleted snapshot object"
+    );
+    drop(reopened_store);
+
+    let replacement_document =
+        backend::models::document::Document::new(document_id, Some("Replacement S3".to_owned()));
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7, 8]);
+    let replacement_store = S3SnapshotStore::new(
+        &harness.endpoint,
+        "us-east-1",
+        &harness.bucket,
+        "snapshots/unit-tests/",
+        &harness.access_key_id,
+        &harness.secret_access_key,
+        None,
+        Duration::from_secs(5),
+        true,
+    )
+    .expect("s3 snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    let replacement_payload = harness
+        .state
+        .object(&object_key)
+        .expect("mock s3 service should store the replacement snapshot object");
+    let replacement_payload: Value = serde_json::from_slice(&replacement_payload)
+        .expect("replacement snapshot object should be valid JSON");
+    assert_eq!(
+        replacement_payload["document"]["id"],
+        document_id.to_string()
+    );
+    assert_eq!(replacement_payload["document"]["title"], "Replacement S3");
+    drop(replacement_store);
+
+    let final_store = S3SnapshotStore::new(
+        &harness.endpoint,
+        "us-east-1",
+        &harness.bucket,
+        "snapshots/unit-tests/",
+        &harness.access_key_id,
+        &harness.secret_access_key,
+        None,
+        Duration::from_secs(5),
+        true,
+    )
+    .expect("s3 snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement s3 snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7, 8]);
+    assert!(
+        harness
+            .state
+            .last_authorization()
+            .is_some_and(|header| header.contains("Credential=test-access-key/")),
+        "s3 requests should be signed with the configured access key"
+    );
+}
+
 #[test]
 fn sqlite_snapshot_store_skips_corrupt_rows_when_listing_documents() {
     let snapshot_dir = temp_snapshot_dir("sqlite-store-corrupt-catalog");
