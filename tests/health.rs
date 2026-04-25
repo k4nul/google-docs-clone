@@ -24955,6 +24955,73 @@ fn fs_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+fn fs_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("fs-db-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.fs_db");
+    let document_id = Uuid::new_v4();
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original fs-db".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store =
+        FsDbSnapshotStore::new(&snapshot_path).expect("fs-db snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to fs-db");
+    drop(store);
+
+    let reopened_store =
+        FsDbSnapshotStore::new(&snapshot_path).expect("fs-db snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from fs-db after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect fs-db deletion")
+            .is_empty()
+    );
+    drop(reopened_store);
+
+    let replacement_document =
+        backend::models::document::Document::new(document_id, Some("Replacement fs-db".to_owned()));
+    let replacement_snapshot = DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6]);
+    let replacement_store =
+        FsDbSnapshotStore::new(&snapshot_path).expect("fs-db snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store =
+        FsDbSnapshotStore::new(&snapshot_path).expect("fs-db snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement fs-db snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6]);
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn sqjson_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("sqjson-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
