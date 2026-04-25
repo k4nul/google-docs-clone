@@ -79,17 +79,6 @@ impl RustcaskSnapshotStore {
         ))
     }
 
-    fn map_remove_error(
-        path: &std::path::Path,
-        error: rustcask::error::RemoveError,
-        operation: &str,
-    ) -> StorageError {
-        StorageError::Io(format!(
-            "{}: failed to {operation}: {error}",
-            path.display()
-        ))
-    }
-
     fn load_catalog(&self, store: &mut Rustcask) -> Result<Vec<String>, StorageError> {
         let Some(bytes) = store
             .get(&SNAPSHOT_CATALOG_KEY.to_vec())
@@ -135,7 +124,16 @@ impl RustcaskSnapshotStore {
 impl SnapshotStore for RustcaskSnapshotStore {
     fn load_snapshot(&self, doc_id: &Uuid) -> Result<Option<DocumentSnapshot>, StorageError> {
         let mut store = self.lock_store()?;
-        let key = doc_id.to_string().into_bytes();
+        let doc_id_key = doc_id.to_string();
+        let catalog = self.load_catalog(&mut store)?;
+
+        // Rustcask can panic when a deleted key resolves to a tombstone on direct `get`.
+        // The catalog is the adapter's authoritative membership index, so skip deleted keys here.
+        if !catalog.iter().any(|entry| entry == &doc_id_key) {
+            return Ok(None);
+        }
+
+        let key = doc_id_key.into_bytes();
         let snapshot = store
             .get(&key)
             .map_err(|error| Self::map_get_error(&self.path, error, "read rustcask snapshot"))?;
@@ -174,11 +172,11 @@ impl SnapshotStore for RustcaskSnapshotStore {
         let key = doc_id.to_string();
         let mut catalog = self.load_catalog(&mut store)?;
 
-        store.remove(key.as_bytes().to_vec()).map_err(|error| {
-            Self::map_remove_error(&self.path, error, "delete rustcask snapshot")
-        })?;
         catalog.retain(|entry| entry != &key);
 
+        // Rustcask 0.1.0 panics inside `remove` when the previous value exists.
+        // Treat the catalog as the authoritative live set and leave the payload orphaned
+        // until a later save overwrites the same key or a future compaction path is added.
         self.save_catalog(&mut store, &catalog)
     }
 
