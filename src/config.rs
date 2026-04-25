@@ -28,6 +28,7 @@ pub const DEFAULT_SNAPSHOT_HIGHLANDCOWS_ISAM_PATH: &str = "./data/snapshots.high
 pub const DEFAULT_SNAPSHOT_SIMPLE_DB_PATH: &str = "./data/snapshots.simple_db";
 pub const DEFAULT_SNAPSHOT_DOCDB_PATH: &str = "./data/snapshots.docdb.json";
 pub const DEFAULT_SNAPSHOT_EMDB_PATH: &str = "./data/snapshots.emdb";
+pub const DEFAULT_SNAPSHOT_OSMIUMDB_PATH: &str = "./data/snapshots.osmiumdb";
 pub const DEFAULT_SNAPSHOT_EIGHT_PATH: &str = "./data/snapshots.eight";
 pub const DEFAULT_SNAPSHOT_EPOCH_DB_PATH: &str = "./data/snapshots.epoch_db";
 pub const DEFAULT_SNAPSHOT_ETCHDB_PATH: &str = "./data/snapshots.etchdb";
@@ -192,6 +193,7 @@ pub struct Config {
     pub snapshot_simple_db_path: String,
     pub snapshot_docdb_path: String,
     pub snapshot_emdb_path: String,
+    pub snapshot_osmiumdb_path: String,
     pub snapshot_eight_path: String,
     pub snapshot_epoch_db_path: String,
     pub snapshot_etchdb_path: String,
@@ -387,6 +389,8 @@ impl Config {
             env_string("SNAPSHOT_SIMPLE_DB_PATH", DEFAULT_SNAPSHOT_SIMPLE_DB_PATH)?;
         let snapshot_docdb_path = env_string("SNAPSHOT_DOCDB_PATH", DEFAULT_SNAPSHOT_DOCDB_PATH)?;
         let snapshot_emdb_path = env_string("SNAPSHOT_EMDB_PATH", DEFAULT_SNAPSHOT_EMDB_PATH)?;
+        let snapshot_osmiumdb_path =
+            env_string("SNAPSHOT_OSMIUMDB_PATH", DEFAULT_SNAPSHOT_OSMIUMDB_PATH)?;
         let snapshot_eight_path = env_string("SNAPSHOT_EIGHT_PATH", DEFAULT_SNAPSHOT_EIGHT_PATH)?;
         let snapshot_epoch_db_path =
             env_string("SNAPSHOT_EPOCH_DB_PATH", DEFAULT_SNAPSHOT_EPOCH_DB_PATH)?;
@@ -692,6 +696,7 @@ impl Config {
             snapshot_simple_db_path,
             snapshot_docdb_path,
             snapshot_emdb_path,
+            snapshot_osmiumdb_path,
             snapshot_eight_path,
             snapshot_epoch_db_path,
             snapshot_etchdb_path,

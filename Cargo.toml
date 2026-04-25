@@ -48,6 +48,7 @@ dbless = "0.2.0"
 docdb = "0.1.0"
 dotenvy = "0.15"
 emdb = "0.7.0"
+osmiumdb = "0.1.0"
 eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"] }
 epoch-db = "0.2.9"
 etchdb = "0.3.3"

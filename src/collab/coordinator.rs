@@ -1806,6 +1806,7 @@ mod tests {
             snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
             snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),
             snapshot_emdb_path: "./data/test-snapshots.emdb".to_owned(),
+            snapshot_osmiumdb_path: "./data/test-snapshots.osmiumdb".to_owned(),
             snapshot_eight_path: "./data/test-snapshots.eight".to_owned(),
             snapshot_epoch_db_path: "./data/test-snapshots.epoch_db".to_owned(),
             snapshot_etchdb_path: "./data/test-snapshots.etchdb".to_owned(),

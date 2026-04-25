@@ -969,6 +969,7 @@ dependencies = [
  "nikidb",
  "nodb",
  "okofdb",
+ "osmiumdb",
  "parity-db",
  "persistent-kv",
  "persy",
@@ -6288,6 +6289,20 @@ dependencies = [
  "log",
  "serde 1.0.228",
  "winapi",
+]
+
+[[package]]
+name = "osmiumdb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c13241898b3eeec535b32c358529b3788ca413df29983dc26cf0404e33fb5016"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "crc32fast",
+ "parking_lot 0.12.5",
+ "thiserror 2.0.18",
+ "xxhash-rust",
 ]
 
 [[package]]
