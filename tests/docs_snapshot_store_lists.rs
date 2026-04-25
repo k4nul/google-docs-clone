@@ -71,6 +71,12 @@ fn readme_scope_section_references_snapshot_store_summary() {
     assert!(readme.contains(
         "그 외 상단 `SNAPSHOT_STORE` 항목의 embedded/local durability backend는 같은 `SnapshotStore` 경계를 통해 로컬 durable restart 복구를 제공한다."
     ));
+    assert!(readme.contains(
+        "반면 상단 `SNAPSHOT_STORE` 항목에서 `memory`를 제외한 durability backend와 managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다."
+    ));
+    assert!(readme.contains(
+        "다음 기준은 상단 `SNAPSHOT_STORE` 항목에서 `memory`, `sqlite`, `s3`, `managed`를 제외한 embedded/local durability backend 중 어떤 것을 운영 기본값으로 둘지 고를 때 사용한다."
+    ));
 }
 
 #[test]
