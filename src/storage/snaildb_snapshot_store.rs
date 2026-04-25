@@ -2,6 +2,8 @@ use std::{
     fs,
     path::PathBuf,
     sync::{Mutex, MutexGuard},
+    thread,
+    time::{Duration, Instant},
 };
 
 use snaildb::SnailDb;
@@ -13,6 +15,8 @@ use crate::{
 };
 
 const SNAPSHOT_CATALOG_KEY: &str = "__catalog__";
+const WAL_RESET_TIMEOUT: Duration = Duration::from_secs(2);
+const WAL_RESET_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 pub struct SnaildbSnapshotStore {
     path: PathBuf,
@@ -89,6 +93,31 @@ impl SnaildbSnapshotStore {
             .put(SNAPSHOT_CATALOG_KEY, bytes)
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
     }
+
+    fn wait_for_wal_reset(&self) -> Result<(), StorageError> {
+        let wal_path = self.path.join("wal.log");
+        let deadline = Instant::now() + WAL_RESET_TIMEOUT;
+
+        loop {
+            match fs::metadata(&wal_path) {
+                Ok(metadata) if metadata.len() == 0 => return Ok(()),
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+                Err(error) => {
+                    return Err(StorageError::Io(format!("{}: {error}", wal_path.display())));
+                }
+            }
+
+            if Instant::now() >= deadline {
+                return Err(StorageError::Io(format!(
+                    "{}: timed out waiting for snaildb WAL reset",
+                    wal_path.display()
+                )));
+            }
+
+            thread::sleep(WAL_RESET_POLL_INTERVAL);
+        }
+    }
 }
 
 impl SnapshotStore for SnaildbSnapshotStore {
@@ -128,7 +157,10 @@ impl SnapshotStore for SnaildbSnapshotStore {
         self.save_catalog(&mut database, &catalog)?;
         database
             .flush_memtable()
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
+            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        drop(database);
+
+        self.wait_for_wal_reset()
     }
 
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
@@ -144,7 +176,10 @@ impl SnapshotStore for SnaildbSnapshotStore {
         self.save_catalog(&mut database, &catalog)?;
         database
             .flush_memtable()
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
+            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        drop(database);
+
+        self.wait_for_wal_reset()
     }
 
     fn list_documents(&self) -> Result<Vec<Document>, StorageError> {

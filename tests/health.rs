@@ -16518,6 +16518,41 @@ fn snaildb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+fn snaildb_snapshot_store_survives_immediate_reopen_cycles() {
+    let snapshot_dir = temp_snapshot_dir("snaildb-store-immediate-reopen");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.snaildb");
+
+    for cycle in 0..5 {
+        let document_id = Uuid::new_v4();
+        let document = backend::models::document::Document::new(
+            document_id,
+            Some(format!("SnailDb cycle {cycle}")),
+        );
+        let snapshot = DocumentSnapshot::new(document.clone(), vec![cycle as u8, 9, 8, 7]);
+
+        let store = SnaildbSnapshotStore::new(&snapshot_path)
+            .expect("snaildb snapshot store should initialize");
+        store
+            .save_snapshot(snapshot)
+            .expect("snapshot should save to snaildb");
+        drop(store);
+
+        let reopened_store = SnaildbSnapshotStore::new(&snapshot_path)
+            .expect("snaildb snapshot store should reopen immediately");
+        let loaded_snapshot = reopened_store
+            .load_snapshot(&document_id)
+            .expect("reopened snapshot lookup should succeed")
+            .expect("reopened snapshot should exist");
+        assert_eq!(loaded_snapshot.document, document);
+        assert_eq!(loaded_snapshot.update, vec![cycle as u8, 9, 8, 7]);
+        drop(reopened_store);
+    }
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn docdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("docdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
