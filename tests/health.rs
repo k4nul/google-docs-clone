@@ -28,24 +28,24 @@ use backend::{
         ColonDbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
         DataPileSnapshotStore, DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
         DbliteSnapshotStore, DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore,
-        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EpochDbSnapshotStore,
-        EtchdbSnapshotStore, FastKvSnapshotStore, FeoxdbSnapshotStore, FerrumdbSnapshotStore,
-        FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore, FsDbSnapshotStore,
-        GhaladbSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore, GrumpydbSnapshotStore,
-        HeedSnapshotStore, HighlandcowsIsamSnapshotStore, HightowerKvSnapshotStore,
-        HmdbSnapshotStore, HurrahdbSnapshotStore, IcefalldbSnapshotStore, InMemorySnapshotStore,
-        InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore, JanqlSnapshotStore,
-        JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore, JoydbSnapshotStore,
-        JsonDbRsSnapshotStore, JsonMutexDbSnapshotStore, JsonStoreSnapshotStore,
-        JsondbSnapshotStore, KafiSnapshotStore, KagiSnapshotStore, KoitSnapshotStore,
-        KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore, LedgerKvSnapshotStore,
-        LiteDbSnapshotStore, LmdbRsCoreSnapshotStore, LogKvSnapshotStore, LoroKvSnapshotStore,
-        LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore, LsmTreeSnapshotStore,
-        LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore, ManagedSnapshotStore,
-        MarbleSnapshotStore, MhdbSnapshotStore, MicroKvSnapshotStore, MindbSnapshotStore,
-        MmdbSnapshotStore, MuDbSnapshotStore, NanodbSnapshotStore, NativeDbSnapshotStore,
-        NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore, OkofdbSnapshotStore,
-        ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
+        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EmdbSnapshotStore,
+        EpochDbSnapshotStore, EtchdbSnapshotStore, FastKvSnapshotStore, FeoxdbSnapshotStore,
+        FerrumdbSnapshotStore, FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore,
+        FsDbSnapshotStore, GhaladbSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore,
+        GrumpydbSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
+        HightowerKvSnapshotStore, HmdbSnapshotStore, HurrahdbSnapshotStore, IcefalldbSnapshotStore,
+        InMemorySnapshotStore, InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore,
+        JanqlSnapshotStore, JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore,
+        JoydbSnapshotStore, JsonDbRsSnapshotStore, JsonMutexDbSnapshotStore,
+        JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore, KagiSnapshotStore,
+        KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore,
+        LedgerKvSnapshotStore, LiteDbSnapshotStore, LmdbRsCoreSnapshotStore, LogKvSnapshotStore,
+        LoroKvSnapshotStore, LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore,
+        LsmTreeSnapshotStore, LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore,
+        ManagedSnapshotStore, MarbleSnapshotStore, MhdbSnapshotStore, MicroKvSnapshotStore,
+        MindbSnapshotStore, MmdbSnapshotStore, MuDbSnapshotStore, NanodbSnapshotStore,
+        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
+        OkofdbSnapshotStore, ParityDbSnapshotStore, PersistentKvSnapshotStore, PersySnapshotStore,
         PickleDbSnapshotStore, PngDbSnapshotStore, RaindbSnapshotStore, RcaskSnapshotStore,
         ReadbSnapshotStore, RedbSnapshotStore, RoughdbSnapshotStore, RskeySnapshotStore,
         RubinSnapshotStore, RumDbSnapshotStore, RustbreakSnapshotStore, RustcaskSnapshotStore,
@@ -100,6 +100,7 @@ fn test_config() -> Config {
         snapshot_highlandcows_isam_path: "./data/test-snapshots.highlandcows_isam".to_owned(),
         snapshot_simple_db_path: "./data/test-snapshots.simple_db".to_owned(),
         snapshot_docdb_path: "./data/test-snapshots.docdb.json".to_owned(),
+        snapshot_emdb_path: "./data/test-snapshots.emdb".to_owned(),
         snapshot_eight_path: "./data/test-snapshots.eight".to_owned(),
         snapshot_epoch_db_path: "./data/test-snapshots.epoch_db".to_owned(),
         snapshot_etchdb_path: "./data/test-snapshots.etchdb".to_owned(),
@@ -526,6 +527,11 @@ fn configure_assystem_snapshot_store(config: &mut Config, root: &std::path::Path
         .join("snapshots.assystem")
         .to_string_lossy()
         .into_owned();
+}
+
+fn configure_emdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
+    config.snapshot_store = "emdb".to_owned();
+    config.snapshot_emdb_path = root.join("snapshots.emdb").to_string_lossy().into_owned();
 }
 
 fn configure_colon_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
@@ -8004,6 +8010,52 @@ fn app_state_uses_append_log_snapshot_store_from_config() {
         .expect("persisted room should hydrate on startup");
 
     assert_eq!(restored_room.document().title, document.title);
+    assert!(snapshot_path.exists());
+
+    drop(restored_room);
+    drop(reloaded_state);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn app_state_uses_emdb_snapshot_store_from_config() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("emdb-store-config");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.emdb");
+    configure_emdb_snapshot_store(&mut config, &snapshot_dir);
+
+    let state = AppState::from_config(&config).expect("state should initialize with emdb store");
+
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted to emdb".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    assert_eq!(room.start_session(), 1);
+    let teardown = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("snapshot should persist to emdb on eviction");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload persisted emdb snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("persisted room should hydrate on startup");
+
+    assert_eq!(restored_room.document().id, document.id);
     assert!(snapshot_path.exists());
 
     drop(restored_room);
@@ -16492,6 +16544,124 @@ fn docdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
         final_store
             .list_documents()
             .expect("document catalog should contain replacement docdb snapshot"),
+        vec![replacement_document.clone()]
+    );
+
+    let loaded_snapshot = final_store
+        .load_snapshot(&document_id)
+        .expect("replacement snapshot lookup should succeed")
+        .expect("replacement snapshot should exist");
+    assert_eq!(loaded_snapshot.document, replacement_document);
+    assert_eq!(loaded_snapshot.update, vec![4, 5, 6, 7]);
+
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn emdb_snapshot_store_round_trips_document_catalog() {
+    let snapshot_dir = temp_snapshot_dir("emdb-store-roundtrip");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.emdb");
+    let store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should initialize");
+    let document =
+        backend::models::document::Document::new(Uuid::new_v4(), Some("Emdb".to_owned()));
+    let snapshot = DocumentSnapshot::new(document.clone(), vec![1, 2, 3]);
+
+    store
+        .save_snapshot(snapshot)
+        .expect("snapshot should save to emdb");
+
+    let listed_documents = store
+        .list_documents()
+        .expect("document catalog should load from emdb");
+    let loaded_snapshot = store
+        .load_snapshot(&document.id)
+        .expect("snapshot should load from emdb")
+        .expect("snapshot should exist");
+
+    assert_eq!(listed_documents, vec![document.clone()]);
+    assert_eq!(loaded_snapshot.document, document.clone());
+    assert_eq!(loaded_snapshot.update, vec![1, 2, 3]);
+
+    drop(store);
+
+    let reopened_store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should reopen");
+    assert_eq!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reload from emdb"),
+        vec![document.clone()]
+    );
+
+    let reopened_snapshot = reopened_store
+        .load_snapshot(&document.id)
+        .expect("snapshot should reload from emdb")
+        .expect("snapshot should exist after reopen");
+    assert_eq!(reopened_snapshot.document, document);
+    assert_eq!(reopened_snapshot.update, vec![1, 2, 3]);
+
+    drop(reopened_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
+fn emdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
+    let snapshot_dir = temp_snapshot_dir("emdb-store-migration");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.emdb");
+    let document_id = Uuid::new_v4();
+    let original_document =
+        backend::models::document::Document::new(document_id, Some("Original Emdb".to_owned()));
+    let original_snapshot = DocumentSnapshot::new(original_document.clone(), vec![1, 2, 3]);
+
+    let store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should initialize");
+    store
+        .save_snapshot(original_snapshot)
+        .expect("initial snapshot should save to emdb");
+    drop(store);
+
+    let reopened_store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should reopen");
+    reopened_store
+        .delete_snapshot(&document_id)
+        .expect("snapshot should delete from emdb after reopen");
+    assert!(
+        reopened_store
+            .load_snapshot(&document_id)
+            .expect("deleted snapshot lookup should succeed")
+            .is_none()
+    );
+    assert!(
+        reopened_store
+            .list_documents()
+            .expect("document catalog should reflect emdb deletion")
+            .is_empty()
+    );
+    drop(reopened_store);
+
+    let replacement_document =
+        backend::models::document::Document::new(document_id, Some("Replacement Emdb".to_owned()));
+    let replacement_snapshot =
+        DocumentSnapshot::new(replacement_document.clone(), vec![4, 5, 6, 7]);
+    let replacement_store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should reopen");
+    replacement_store
+        .save_snapshot(replacement_snapshot)
+        .expect("replacement snapshot should save after reopen");
+    drop(replacement_store);
+
+    let final_store =
+        EmdbSnapshotStore::new(&snapshot_path).expect("emdb snapshot store should reopen");
+    assert_eq!(
+        final_store
+            .list_documents()
+            .expect("document catalog should contain replacement emdb snapshot"),
         vec![replacement_document.clone()]
     );
 
