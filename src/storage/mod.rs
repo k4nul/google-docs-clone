@@ -384,6 +384,169 @@ pub trait SnapshotStore: Send + Sync {
     fn list_documents(&self) -> Result<Vec<Document>, StorageError>;
 }
 
+const SUPPORTED_SNAPSHOT_STORES: &[&str] = &[
+    "memory",
+    "file",
+    "agdb",
+    "amandine",
+    "append_log",
+    "apex_store",
+    "armdb",
+    "assystem",
+    "colon_db",
+    "flash_kv",
+    "ghaladb",
+    "blockbucket",
+    "grebedb",
+    "grumpydb",
+    "graus_db",
+    "highlandcows_isam",
+    "simple_db",
+    "docdb",
+    "emdb",
+    "osmiumdb",
+    "eight",
+    "epoch_db",
+    "etchdb",
+    "fastkv",
+    "ferrumdb",
+    "rumdb",
+    "rubin",
+    "shorterdb",
+    "sqlite",
+    "heed",
+    "hightower_kv",
+    "hmdb",
+    "hurrahdb",
+    "fs_db",
+    "sqjson",
+    "icefalldb",
+    "bitask",
+    "bitkv_rs",
+    "bitcask_engine",
+    "blazeup",
+    "candystore",
+    "celerix_store",
+    "citadeldb",
+    "cuendillar",
+    "data_pile",
+    "datastack",
+    "jammdb",
+    "mace",
+    "janql",
+    "jasondb",
+    "jasonisnthappy",
+    "jfs",
+    "json_store",
+    "json_db_rs",
+    "cdb64",
+    "json_mutex_db",
+    "toiletdb",
+    "feoxdb",
+    "jsondb",
+    "kopperdb",
+    "kv",
+    "koit",
+    "lite_db",
+    "lmdb_rs_core",
+    "log_kv",
+    "append_kv",
+    "mhdb",
+    "marble",
+    "loro_kv",
+    "luckdb",
+    "ipjdb",
+    "kagi",
+    "deeb",
+    "lsm_engine",
+    "lsm_storage_engine",
+    "lsmdb",
+    "lsm_tree",
+    "mindb",
+    "mmdb",
+    "mu_db",
+    "nanodb",
+    "fjall",
+    "persy",
+    "persistent_kv",
+    "native_db",
+    "nebari",
+    "nikidb",
+    "nodb",
+    "okofdb",
+    "parity_db",
+    "pickledb",
+    "rcask",
+    "microkv",
+    "redb",
+    "rskey",
+    "readb",
+    "rustlite",
+    "canopydb",
+    "caves",
+    "ckydb",
+    "crepedb",
+    "crystal",
+    "scdb",
+    "skv",
+    "surrealkv",
+    "sled",
+    "rustbreak",
+    "rustcask",
+    "rusty_leveldb",
+    "yedb",
+    "btree_store",
+    "cacache",
+    "siamesedb",
+    "structsy",
+    "abyssiniandb",
+    "aeternusdb",
+    "thunderdb",
+    "thetadb",
+    "tinybase",
+    "tinydb",
+    "dblite",
+    "dbless",
+    "db_rs",
+    "dharmadb",
+    "dir_cache",
+    "sanakirja",
+    "saturn",
+    "snaildb",
+    "tinykv",
+    "vsdb",
+    "yakv",
+    "yakvdb",
+    "saberdb",
+    "smolldb",
+    "kstone",
+    "roughdb",
+    "raindb",
+    "infusedb",
+    "kafi",
+    "tinkv",
+    "ledger_kv",
+    "joydb",
+    "png_db",
+    "s3",
+    "managed",
+];
+
+fn invalid_snapshot_store_error(other: &str) -> StorageError {
+    let (last, supported) = SUPPORTED_SNAPSHOT_STORES
+        .split_last()
+        .expect("supported snapshot store list should not be empty");
+    let supported = supported
+        .iter()
+        .map(|store| format!("`{store}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    StorageError::Config(format!(
+        "SNAPSHOT_STORE must be {supported}, or `{last}`, received `{other}`"
+    ))
+}
+
 #[derive(Default)]
 pub struct InMemorySnapshotStore {
     snapshots: DashMap<Uuid, DocumentSnapshot>,
@@ -894,13 +1057,46 @@ pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotSto
             config.snapshot_managed_auth_token.clone(),
             Duration::from_secs(config.snapshot_managed_timeout_secs),
         )?)),
-        other => Err(StorageError::Config(format!(
-            "SNAPSHOT_STORE must be `memory`, `file`, `agdb`, `amandine`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `feoxdb`, `jsondb`, `joydb`, `png_db`, `kopperdb`, `kagi`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `kv`, `koit`, `lite_db`, `log_kv`, `mhdb`, `loro_kv`, `luckdb`, `ipjdb`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `rustcask`, `rusty_leveldb`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `saberdb`, `smolldb`, `s3`, or `managed`, received `{other}`"
-        ))),
+        other => Err(invalid_snapshot_store_error(other)),
     }
 }
 
 pub(crate) fn ensure_snapshot_dir(path: &Path) -> Result<(), StorageError> {
     fs::create_dir_all(path)
         .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::invalid_snapshot_store_error;
+    use crate::storage::StorageError;
+
+    #[test]
+    fn invalid_snapshot_store_error_lists_recently_added_backends() {
+        let StorageError::Config(message) = invalid_snapshot_store_error("unsupported") else {
+            panic!("invalid snapshot store should yield a config error");
+        };
+
+        for store in [
+            "append_kv",
+            "append_log",
+            "dir_cache",
+            "lmdb_rs_core",
+            "marble",
+            "mu_db",
+            "png_db",
+            "toiletdb",
+            "yakvdb",
+        ] {
+            assert!(
+                message.contains(&format!("`{store}`")),
+                "config error should mention `{store}`"
+            );
+        }
+
+        assert!(
+            message.ends_with("received `unsupported`"),
+            "config error should include the rejected store value"
+        );
+    }
 }
