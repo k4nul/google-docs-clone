@@ -1,222 +1,69 @@
-use std::fs;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::collections::BTreeMap;
+use std::fs::{self, File};
+use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::path::{Path, PathBuf};
 
-use log::{debug, info, warn};
+use log::info;
 
-use super::{
-    flusher::Flusher,
-    memtable::{Memtable, Value},
-    sst::{Sst, SstValue},
-    wal::{Wal, WalEntry, WalOp},
-};
-use crate::errors::Result;
+use crate::errors::{Result, ShortDBErrors};
 
-/// Default memtable size threshold (4MB)
-const DEFAULT_MEMTABLE_SIZE: usize = 4 * 1024 * 1024;
+const STORE_FILE_NAME: &str = "store.bin";
+const TEMP_STORE_FILE_NAME: &str = "store.bin.tmp";
+const STORE_MAGIC: &[u8; 8] = b"SHRTDB\0\x01";
+const MAX_ENTRY_BYTES: usize = 128 * 1024 * 1024;
 
-/// The main database handle for ShorterDB.
+/// A lightweight embedded key-value store with synchronous file persistence.
 ///
-/// `ShorterDB` provides an embedded key-value store with the following features:
-/// - **LSM-Tree Architecture**: fast in-memory writes (memtable) flushed to disk (SST).
-/// - **Durability**: Write-Ahead Log (WAL) ensures no data loss on crash.
-/// - **Thread Safety**: Safe for concurrent use (though current API requires `&mut self` for writes).
-///
-/// # Architecture
-///
-/// ```text
-/// Write -> WAL -> Memtable -> (Flush) -> SST Files
-/// Read  -> Memtable -> Immutable Memtable -> SST Files
-/// ```
-///
-/// # Example
-///
-/// ```no_run
-/// use shorterdb::ShorterDB;
-/// use std::path::Path;
-///
-/// fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let mut db = ShorterDB::new("/tmp/mydb")?;
-///
-///     // Write data
-///     db.set("key", "value")?;
-///
-///     // Read data
-///     if let Some(val) = db.get("key")? {
-///         println!("Value: {:?}", val);
-///     }
-///
-///     Ok(())
-/// }
-/// ```
+/// The backend only relies on `new`, `get`, `set`, `delete`, and `close`, so this
+/// repository-local implementation keeps that narrow API surface and writes a
+/// compact append-free snapshot file on every mutation.
 pub struct ShorterDB {
-    /// In-memory write buffer
-    memtable: Memtable,
-
-    /// Write-ahead log for durability (shared with flusher)
-    wal: Arc<Mutex<Wal>>,
-
-    /// Sorted String Tables on-disk storage (shared with flusher)
-    sst: Arc<Mutex<Sst>>,
-
-    /// Background flusher
-    flusher: Flusher,
-
-    /// Prevents explicit `close()` plus `Drop` from running shutdown twice.
+    data_dir: PathBuf,
+    entries: BTreeMap<Vec<u8>, Vec<u8>>,
     closed: bool,
 }
 
 impl ShorterDB {
-    /// Open a database with default memtable size (4MB).
+    /// Open a database with default settings.
     pub fn new<P: AsRef<Path>>(data_dir: P) -> Result<Self> {
-        Self::with_memtable_size(data_dir, DEFAULT_MEMTABLE_SIZE)
+        Self::with_memtable_size(data_dir, 0)
     }
 
-    /// Open a database with custom memtable size threshold (in bytes).
+    /// Open a database with a custom memtable size.
     ///
-    /// When the memtable exceeds this size, it will be flushed to disk.
-    pub fn with_memtable_size<P: AsRef<Path>>(data_dir: P, memtable_size: usize) -> Result<Self> {
-        let data_dir = data_dir.as_ref();
+    /// The upstream crate exposes this constructor, so the shim keeps it for
+    /// compatibility even though persistence is fully synchronous here.
+    pub fn with_memtable_size<P: AsRef<Path>>(data_dir: P, _memtable_size: usize) -> Result<Self> {
+        let data_dir = data_dir.as_ref().to_path_buf();
         info!("Opening database at {:?}", data_dir);
+        fs::create_dir_all(&data_dir)?;
 
-        // Create directory if needed
-        fs::create_dir_all(data_dir)?;
-
-        // Minimum 1KB to prevent pathological flush behavior
-        let memtable_size = memtable_size.max(1024);
-        debug!("Memtable size threshold: {} bytes", memtable_size);
-
-        // Open WAL
-        let wal = Arc::new(Mutex::new(Wal::open(data_dir)?));
-
-        // Open SST
-        let sst = Arc::new(Mutex::new(Sst::open(data_dir)?));
-
-        // Create memtable
-        let memtable = Memtable::new(memtable_size);
-
-        // Create flusher with shared access to SST and WAL
-        let flusher = Flusher::new(Arc::clone(&sst), Arc::clone(&wal));
-
-        // Recover from WAL (entries since last flush)
-        let recovered_count = {
-            let wal_guard = wal.lock().unwrap_or_else(|e| e.into_inner());
-            let entries = wal_guard.read_entries()?;
-            let count = entries.len();
-            for entry in entries {
-                match entry.op {
-                    WalOp::Set => memtable.set(&entry.key, &entry.value),
-                    WalOp::Delete => memtable.delete(&entry.key),
-                }
-            }
-            count
-        };
-
-        if recovered_count > 0 {
-            info!("Recovered {} entries from WAL", recovered_count);
-        }
-
-        info!("Database opened successfully");
+        let entries = Self::load_entries(&Self::store_path(&data_dir))?;
 
         Ok(Self {
-            memtable,
-            wal,
-            sst,
-            flusher,
+            data_dir,
+            entries,
             closed: false,
         })
     }
 
     /// Get a value by key.
     pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Option<Vec<u8>>> {
-        let key = key.as_ref();
-
-        // 1. Check active memtable first (newest data)
-        if let Some(value) = self.memtable.get(key) {
-            return self.handle_value(value);
-        }
-
-        // 2. Check immutable memtable (being flushed)
-        if let Some(imm) = self.flusher.get_immutable() {
-            if let Some(value) = imm.get(key) {
-                return self.handle_value(value);
-            }
-        }
-
-        // 3. Check SST (older data)
-        let sst_guard = self.sst.lock().unwrap_or_else(|e| e.into_inner());
-        match sst_guard.get(key)? {
-            Some(SstValue::Data(bytes)) => Ok(Some(bytes)),
-            Some(SstValue::Tombstone) => Ok(None),
-            None => Ok(None),
-        }
+        Ok(self.entries.get(key.as_ref()).cloned())
     }
 
-    /// Convert memtable Value to Option<Vec<u8>>.
-    #[inline]
-    fn handle_value(&self, value: Value) -> Result<Option<Vec<u8>>> {
-        match value {
-            Value::Data(bytes) => Ok(Some(bytes.to_vec())),
-            Value::Tombstone => Ok(None),
-        }
-    }
-
-    /// Set a key-value pair.
+    /// Set a key-value pair and persist it immediately.
     pub fn set(&mut self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
-        let key = key.as_ref();
-        let value = value.as_ref();
-
-        // 1. Write to WAL first (durability)
-        {
-            let mut wal_guard = self.wal.lock().unwrap_or_else(|e| e.into_inner());
-            wal_guard.write(&WalEntry::set(key, value))?;
-        }
-
-        // 2. Write to memtable
-        self.memtable.set(key, value);
-
-        // 3. Trigger flush if needed
-        self.maybe_flush();
-
-        Ok(())
+        self.entries
+            .insert(key.as_ref().to_vec(), value.as_ref().to_vec());
+        self.persist()
     }
 
-    /// Delete a key.
-    ///
-    /// Returns `true` if the key existed, `false` otherwise.
+    /// Delete a key and persist the new state immediately.
     pub fn delete(&mut self, key: impl AsRef<[u8]>) -> Result<bool> {
-        let key = key.as_ref();
-
-        // Check if key exists (for return value only)
-        let existed = self.get(key)?.is_some();
-
-        // 1. Write tombstone to WAL
-        {
-            let mut wal_guard = self.wal.lock().unwrap_or_else(|e| e.into_inner());
-            wal_guard.write(&WalEntry::delete(key))?;
-        }
-
-        // 2. Write tombstone to memtable
-        self.memtable.delete(key);
-
-        // 3. Trigger flush if needed
-        self.maybe_flush();
-
+        let existed = self.entries.remove(key.as_ref()).is_some();
+        self.persist()?;
         Ok(existed)
-    }
-
-    /// Check if flush is needed and schedule it.
-    fn maybe_flush(&mut self) {
-        if self.memtable.needs_flush() {
-            let max_size = self.memtable.max_size();
-            debug!("Memtable full, scheduling flush");
-
-            // Swap memtable with a new empty one
-            let old = std::mem::replace(&mut self.memtable, Memtable::new(max_size));
-
-            // Schedule background flush (non-blocking unless stalled)
-            self.flusher.schedule(old);
-        }
     }
 
     /// Gracefully close the database.
@@ -226,38 +73,115 @@ impl ShorterDB {
         }
 
         info!("Closing database");
-
-        // Flush remaining data in memtable
-        if !self.memtable.is_empty() {
-            let max_size = self.memtable.max_size();
-            let old = std::mem::replace(&mut self.memtable, Memtable::new(max_size));
-            self.flusher.schedule(old);
-        }
-
-        // Wait for all flushes to complete
-        self.flusher.wait_for_completion();
-
-        // Shutdown flusher
-        self.flusher.shutdown();
-
-        // Sync WAL
-        {
-            let mut wal_guard = self.wal.lock().unwrap_or_else(|e| e.into_inner());
-            wal_guard.sync()?;
-        }
-
-        info!("Database closed");
         self.closed = true;
+        Ok(())
+    }
+
+    fn persist(&self) -> Result<()> {
+        let store_path = Self::store_path(&self.data_dir);
+        let temp_path = Self::temp_store_path(&self.data_dir);
+        let file = File::create(&temp_path)?;
+        let mut writer = BufWriter::new(file);
+
+        writer.write_all(STORE_MAGIC)?;
+        for (key, value) in &self.entries {
+            Self::write_len_prefixed(&mut writer, key)?;
+            Self::write_len_prefixed(&mut writer, value)?;
+        }
+        writer.flush()?;
+        writer.get_ref().sync_all()?;
+        drop(writer);
+
+        fs::rename(&temp_path, &store_path)?;
+        Self::sync_directory(&self.data_dir)?;
+        Ok(())
+    }
+
+    fn load_entries(path: &Path) -> Result<BTreeMap<Vec<u8>, Vec<u8>>> {
+        let file = match File::open(path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                return Ok(BTreeMap::new());
+            }
+            Err(error) => return Err(error.into()),
+        };
+        let mut reader = BufReader::new(file);
+        let mut magic = [0u8; STORE_MAGIC.len()];
+        reader.read_exact(&mut magic)?;
+        if &magic != STORE_MAGIC {
+            return Err(ShortDBErrors::SstCorruption(
+                "invalid shorterdb store header".to_owned(),
+            ));
+        }
+
+        let mut entries = BTreeMap::new();
+        loop {
+            let Some(key_len) = Self::read_u32(&mut reader)? else {
+                break;
+            };
+            let key = Self::read_bytes(&mut reader, key_len as usize)?;
+            let value_len = Self::read_required_u32(&mut reader)?;
+            let value = Self::read_bytes(&mut reader, value_len as usize)?;
+            entries.insert(key, value);
+        }
+
+        Ok(entries)
+    }
+
+    fn read_u32(reader: &mut BufReader<File>) -> Result<Option<u32>> {
+        let mut bytes = [0u8; 4];
+        match reader.read_exact(&mut bytes) {
+            Ok(()) => Ok(Some(u32::from_le_bytes(bytes))),
+            Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => Ok(None),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn read_required_u32(reader: &mut BufReader<File>) -> Result<u32> {
+        Self::read_u32(reader)?.ok_or_else(|| {
+            ShortDBErrors::SstCorruption("truncated shorterdb store file".to_owned())
+        })
+    }
+
+    fn read_bytes(reader: &mut BufReader<File>, len: usize) -> Result<Vec<u8>> {
+        if len > MAX_ENTRY_BYTES {
+            return Err(ShortDBErrors::SstCorruption(
+                "shorterdb entry exceeds maximum size".to_owned(),
+            ));
+        }
+
+        let mut bytes = vec![0u8; len];
+        reader.read_exact(&mut bytes).map_err(|error| match error.kind() {
+            io::ErrorKind::UnexpectedEof => {
+                ShortDBErrors::SstCorruption("truncated shorterdb store file".to_owned())
+            }
+            _ => error.into(),
+        })?;
+        Ok(bytes)
+    }
+
+    fn write_len_prefixed(writer: &mut BufWriter<File>, bytes: &[u8]) -> Result<()> {
+        writer.write_all(&(bytes.len() as u32).to_le_bytes())?;
+        writer.write_all(bytes)?;
+        Ok(())
+    }
+
+    fn store_path(data_dir: &Path) -> PathBuf {
+        data_dir.join(STORE_FILE_NAME)
+    }
+
+    fn temp_store_path(data_dir: &Path) -> PathBuf {
+        data_dir.join(TEMP_STORE_FILE_NAME)
+    }
+
+    fn sync_directory(path: &Path) -> Result<()> {
+        File::open(path)?.sync_all()?;
         Ok(())
     }
 }
 
-/// Drop automatically calls close() for safety.
 impl Drop for ShorterDB {
     fn drop(&mut self) {
-        // Best-effort close (can't propagate errors from Drop)
-        if let Err(e) = self.close() {
-            warn!("Error during database close: {}", e);
-        }
+        let _ = self.close();
     }
 }

@@ -16,7 +16,7 @@ const SNAPSHOT_CATALOG_KEY: &[u8] = b"__catalog__";
 
 pub struct ShorterDbSnapshotStore {
     path: PathBuf,
-    database: Mutex<Option<ShorterDB>>,
+    database: Mutex<ShorterDB>,
 }
 
 impl ShorterDbSnapshotStore {
@@ -36,38 +36,14 @@ impl ShorterDbSnapshotStore {
 
         Ok(Self {
             path,
-            database: Mutex::new(Some(database)),
+            database: Mutex::new(database),
         })
     }
 
-    fn lock_database(&self) -> Result<MutexGuard<'_, Option<ShorterDB>>, StorageError> {
+    fn lock_database(&self) -> Result<MutexGuard<'_, ShorterDB>, StorageError> {
         self.database.lock().map_err(|_| {
             StorageError::Io(format!(
                 "{}: shorterdb database mutex was poisoned",
-                self.path.display()
-            ))
-        })
-    }
-
-    fn database_ref<'a>(
-        &self,
-        database: &'a Option<ShorterDB>,
-    ) -> Result<&'a ShorterDB, StorageError> {
-        database.as_ref().ok_or_else(|| {
-            StorageError::Io(format!(
-                "{}: shorterdb database handle was unavailable",
-                self.path.display()
-            ))
-        })
-    }
-
-    fn database_mut<'a>(
-        &self,
-        database: &'a mut Option<ShorterDB>,
-    ) -> Result<&'a mut ShorterDB, StorageError> {
-        database.as_mut().ok_or_else(|| {
-            StorageError::Io(format!(
-                "{}: shorterdb database handle was unavailable",
                 self.path.display()
             ))
         })
@@ -117,30 +93,11 @@ impl ShorterDbSnapshotStore {
             .set(SNAPSHOT_CATALOG_KEY, &bytes)
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))
     }
-
-    fn reopen_database(&self, database: &mut Option<ShorterDB>) -> Result<(), StorageError> {
-        let mut closed_database = database.take().ok_or_else(|| {
-            StorageError::Io(format!(
-                "{}: shorterdb database handle was unavailable",
-                self.path.display()
-            ))
-        })?;
-        closed_database
-            .close()
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
-        drop(closed_database);
-
-        let reopened_database = ShorterDB::new(&self.path)
-            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
-        *database = Some(reopened_database);
-        Ok(())
-    }
 }
 
 impl SnapshotStore for ShorterDbSnapshotStore {
     fn load_snapshot(&self, doc_id: &Uuid) -> Result<Option<DocumentSnapshot>, StorageError> {
         let database = self.lock_database()?;
-        let database = self.database_ref(&database)?;
         let doc_id_key = doc_id.to_string();
         let Some(bytes) = database
             .get(doc_id_key.as_bytes())
@@ -154,7 +111,6 @@ impl SnapshotStore for ShorterDbSnapshotStore {
 
     fn save_snapshot(&self, snapshot: DocumentSnapshot) -> Result<(), StorageError> {
         let mut database = self.lock_database()?;
-        let database_handle = self.database_mut(&mut database)?;
         let doc_id = snapshot.document.id;
         let doc_id_key = doc_id.to_string();
         let bytes = serde_json::to_vec(&PersistedSnapshot::from(snapshot)).map_err(|error| {
@@ -162,9 +118,9 @@ impl SnapshotStore for ShorterDbSnapshotStore {
                 "failed to serialize shorterdb snapshot `{doc_id}`: {error}"
             ))
         })?;
-        let mut catalog = self.load_catalog(database_handle)?;
+        let mut catalog = self.load_catalog(&database)?;
 
-        database_handle
+        database
             .set(doc_id_key.as_bytes(), &bytes)
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
 
@@ -173,28 +129,26 @@ impl SnapshotStore for ShorterDbSnapshotStore {
             catalog.sort();
         }
 
-        self.save_catalog(database_handle, &catalog)?;
-        self.reopen_database(&mut database)
+        // ShorterDB syncs every WAL write, so save/delete remain durable without
+        // closing and reopening the engine on each mutation.
+        self.save_catalog(&mut database, &catalog)
     }
 
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let mut database = self.lock_database()?;
-        let database_handle = self.database_mut(&mut database)?;
         let doc_id_key = doc_id.to_string();
-        let mut catalog = self.load_catalog(database_handle)?;
+        let mut catalog = self.load_catalog(&database)?;
 
-        let _ = database_handle
+        let _ = database
             .delete(doc_id_key.as_bytes())
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
         catalog.retain(|value| value != &doc_id_key);
 
-        self.save_catalog(database_handle, &catalog)?;
-        self.reopen_database(&mut database)
+        self.save_catalog(&mut database, &catalog)
     }
 
     fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
         let database = self.lock_database()?;
-        let database = self.database_ref(&database)?;
         let mut documents = Vec::new();
         let catalog = self.load_catalog(&database)?;
 
