@@ -2,13 +2,11 @@ use std::fs::File;
 
 use binary_heap_plus::*;
 
-use std::fs::OpenOptions;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::time::Instant;
 
 use std::io;
-#[macro_use]
 use thiserror::Error;
 
 use std::cmp::Ordering;
@@ -73,7 +71,7 @@ impl PartialEq for MetaKey {
 
 impl PartialOrd for MetaKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        return Some(self.cmp(self));
+        return Some(self.cmp(other));
     }
 }
 
@@ -186,27 +184,9 @@ pub fn merge<F: FnMut(usize, u64, String) -> ()>(
 }
 
 impl Segment {
-    pub fn new(path: &str) -> Segment {
-        return Segment {
-            fd: OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .open(path)
-                .unwrap(),
-            size: 0,
-            previous_key: None,
-            created_at: Instant::now(),
-        };
-    }
-
     pub fn temp() -> Segment {
         let temp = tempfile::tempfile().unwrap();
         return Segment::with_file(temp);
-    }
-
-    pub fn timestamp(&self) -> Instant {
-        return self.created_at;
     }
 
     pub fn with_file(f: File) -> Segment {
@@ -245,6 +225,7 @@ impl Segment {
         return self.size;
     }
 
+    #[cfg(test)]
     pub fn at(&mut self, pos: u64) -> Result<Option<String>> {
         let current = self.tell()?;
         self.seek(pos)?;

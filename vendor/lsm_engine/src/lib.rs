@@ -269,7 +269,7 @@ impl LSMEngine {
             return Ok(None);
         }
 
-        let (closest_key, (key_offset, segment_index)) = maybe_closest_key.unwrap();
+        let (_, (key_offset, segment_index)) = maybe_closest_key.unwrap();
 
         for index in *segment_index..self.segments.len() {
             let segment = &mut self.segments[index];

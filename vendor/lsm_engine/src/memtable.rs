@@ -30,12 +30,6 @@ impl<K: PartialOrd + Hash + Ord, T> Memtable<K, T> {
         self.kv_table.get(key)
     }
 
-
-    pub fn clear(&mut self) {
-        self.kv_table.clear();
-    }
-
-
     pub fn drain(&mut self) -> IntoIter<K, T> {
         std::mem::replace(&mut self.kv_table, BTreeMap::new()).into_iter()
     }

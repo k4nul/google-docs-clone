@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-#[macro_use]
 use thiserror::Error;
 use std::fs::File;
 use std::convert::TryFrom;
@@ -56,14 +55,6 @@ pub trait KVFileIterator {
 }
 
 pub trait KVFileReader: KVFileIterator {
-    fn read(&mut self) -> Box<dyn Iterator<Item=Result<KVPair>> + '_> {
-        let reader = BufReader::new(self.file_as_mut());
-
-        return Box::new(reader.lines().map(|string| {
-            KVPair::try_from(string?)
-        }));
-    }
-
     fn read_from_start(&mut self) -> Result<Box<dyn Iterator<Item=Result<KVPair>> + '_>> {
         self.seek(0)?;
         let reader = BufReader::new(self.file_as_mut());
