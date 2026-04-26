@@ -99,7 +99,7 @@ parity-db = "0.5.4"
 persy = "1.7.1"
 persistent-kv = "1.0.2"
 pickledb = "0.5.1"
-microkv = "0.2.9"
+microkv = { version = "0.2.9", path = "vendor/microkv" }
 redb = "2"
 readb = { version = "0.4.1", features = ["write"] }
 rcask = "0.1.0"

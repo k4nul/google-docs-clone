@@ -1,0 +1,16 @@
+[package]
+name = "microkv"
+version = "0.2.9"
+edition = "2018"
+authors = ["ex0dus-0x"]
+description = "a minimal and persistent key-value store designed with security in mind."
+homepage = "https://github.com/ex0dus-0x/microkv"
+documentation = "https://docs.rs/microkv"
+license = "MIT"
+repository = "https://github.com/ex0dus-0x/microkv"
+
+[dependencies]
+bincode = "1.3.3"
+dirs = "3"
+indexmap = { version = "1.9.3", features = ["serde-1"] }
+serde = { version = "1", features = ["derive", "rc"] }
