@@ -264,7 +264,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `epoch_db` | 디렉터리 + repository-local JSON map shim | 낮음 | `doc_id` key와 explicit `__catalog__` key를 JSON string으로 저장한다. payload inspection보다는 engine 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rumdb` | 디렉터리 + append-only Bitcask-style log set | 낮음 | `doc_id` key와 explicit `__catalog__` key를 append-only log에 저장하고 startup 전체 log replay로 keydir를 복구한다. directory 전체 백업/restore와 replay 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rustlite` | 디렉터리 + WAL/SSTable engine | 낮음 | `__catalog__` key와 engine 디렉터리를 함께 백업해야 catalog 복구 경로가 유지된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
-| `canopydb` | 디렉터리 + transactional tree/WAL | 낮음 | `snapshots` tree iter scan으로 catalog를 복구하므로 engine 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `canopydb` | 디렉터리 + repository-local `store.json` named tree shim | 낮음 | `snapshots` tree iter scan으로 catalog를 복구하므로 shim 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `caves` | 디렉터리 + key-per-file | 높음 | key마다 별도 파일이라 payload 확인은 쉽지만, crate caveat상 `set/delete` 뒤 매번 sync를 보장하지 않으므로 crash-consistency는 운영 백업/복구 절차로 보완해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `ckydb` | 디렉터리 + index/log/data files | 낮음 | `__catalog__` key와 ckydb 디렉터리 전체를 함께 백업해야 한다. payload는 base64 문자열이라 수동 수정보다 entry skip 기반 대응이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `crepedb` | 단일 redb 파일 | 낮음 | CrepeDB basic table에 `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 저장한다. redb 파일 단위 백업/restore와 회귀 테스트 기반 검증이 기본 절차다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -370,7 +370,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `readb`는 directory-backed embedded durability 기준선이다.
 - `kv`는 sled tree bucket 기반 directory-backed embedded durability 기준선이다.
 - `rustlite`는 directory-backed embedded durability 기준선이다.
-- `canopydb`는 directory-backed embedded durability 기준선이다.
+- `canopydb`는 directory-backed embedded durability 기준선이며, 현재 build 그래프에서는 repository-local `store.json` named tree shim으로 유지된다.
 - `caves`는 key-per-file directory-backed embedded durability 기준선이다.
 - `ckydb`는 directory-backed embedded durability 기준선이다.
 - `scdb`는 directory-backed embedded durability 기준선이다.
@@ -471,8 +471,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 rumdb keyspace의 `doc_id` key에 저장되고, document catalog는 explicit `__catalog__` key와 startup log replay 결과로 복구된다.
 - `SNAPSHOT_STORE=rusty_leveldb`는 `SNAPSHOT_RUSTY_LEVELDB_PATH` rusty-leveldb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 rusty-leveldb keyspace에 `doc_id -> persisted snapshot JSON` key-value로 저장되고, `GET /api/documents` catalog는 same keyspace full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
-- `SNAPSHOT_STORE=canopydb`는 `SNAPSHOT_CANOPYDB_PATH` canopydb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 canopydb `snapshots` tree에 `doc_id -> persisted snapshot JSON` key-value로 저장된다.
+- `SNAPSHOT_STORE=canopydb`는 `SNAPSHOT_CANOPYDB_PATH` 디렉터리 아래 `store.json` canopydb shim을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 canopydb shim `snapshots` tree에 `doc_id -> persisted snapshot JSON` key-value로 저장된다.
 - `SNAPSHOT_STORE=ckydb`는 `SNAPSHOT_CKYDB_PATH` ckydb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 ckydb key-value 엔트리에 `doc_id -> base64(persisted snapshot JSON)`로 저장되고, document catalog는 별도 `__catalog__` key로 유지된다.
 - `SNAPSHOT_STORE=crepedb`는 `SNAPSHOT_CREPEDB_PATH` 단일 CrepeDB redb 파일을 통해 vendor-specific embedded database durability를 사용한다.

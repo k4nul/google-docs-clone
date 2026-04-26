@@ -284,7 +284,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_RUSTY_LEVELDB_PATH`다.
 - rusty-leveldb keyspace는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 same keyspace full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_CANOPYDB_PATH`다.
-- canopydb `snapshots` tree는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 tree iter scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- canopydb shim `snapshots` tree는 `SNAPSHOT_CANOPYDB_PATH/store.json` 안에 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 같은 named tree iter scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_CKYDB_PATH`다.
 - ckydb key-value store는 `doc_id -> base64(persisted snapshot JSON)` 문자열 엔트리를 저장하고, `GET /api/documents` catalog는 별도 `__catalog__` key를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_CREPEDB_PATH`다.

@@ -24,7 +24,7 @@ btree-store = "0.1.4"
 bytes = "1"
 cacache = { version = "13.1.0", default-features = false, features = ["mmap", "tokio-runtime"] }
 candystore = "1.0.0"
-canopydb = "0.2.5"
+canopydb = { version = "0.2.5", path = "vendor/canopydb" }
 caves = "0.2.1"
 celerix-store = "0.1.2"
 cdb64 = "0.2.0"

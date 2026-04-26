@@ -551,7 +551,7 @@ dependencies = [
  "crepedb",
  "crystal",
  "cuendillar",
- "dashmap 6.1.0",
+ "dashmap",
  "data-pile",
  "datastack",
  "db-rs",
@@ -1177,31 +1177,9 @@ dependencies = [
 [[package]]
 name = "canopydb"
 version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b02013bec0ece7ca2d7f56f1faa1b2632def4717cff049d388c41ef426734f00"
 dependencies = [
- "bitflags 2.11.1",
- "dashmap 7.0.0-rc2",
- "derive_more",
- "fail",
- "foldhash 0.2.0",
- "fslock 0.2.1",
- "hashbrown 0.15.5",
- "libc",
- "lock_api 0.4.14",
- "log",
- "lz4_flex 0.12.1",
- "nix 0.30.1",
- "parking_lot 0.12.5",
- "quick_cache",
- "rand 0.9.4",
  "serde 1.0.228",
  "serde_json",
- "smallvec 2.0.0-alpha.12",
- "tempfile",
- "triomphe",
- "xxhash-rust",
- "zerocopy",
 ]
 
 [[package]]
@@ -1650,15 +1628,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "convert_case"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,20 +2001,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dashmap"
-version = "7.0.0-rc2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4a1e35a65fe0538a60167f0ada6e195ad5d477f6ddae273943596d4a1a5730b"
-dependencies = [
- "cfg-if",
- "crossbeam-utils",
- "equivalent",
- "hashbrown 0.15.5",
- "lock_api 0.4.14",
- "parking_lot_core 0.9.12",
-]
-
-[[package]]
 name = "data-encoding"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2151,29 +2106,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "derive_more"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
-dependencies = [
- "derive_more-impl",
-]
-
-[[package]]
-name = "derive_more-impl"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
-dependencies = [
- "convert_case",
- "proc-macro2",
- "quote",
- "rustc_version 0.4.1",
- "syn 2.0.117",
- "unicode-xid",
 ]
 
 [[package]]
@@ -2574,17 +2506,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fail"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe5e43d0f78a42ad591453aedb1d7ae631ce7ee445c7643691055a9ed8d3b01c"
-dependencies = [
- "log",
- "once_cell",
- "rand 0.8.6",
-]
-
-[[package]]
 name = "fastkv"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2711,7 +2632,7 @@ checksum = "b62b25b4d815ae178d7d9e4aa32ee59f072efd5431c736abede1e6ee13c8c453"
 dependencies = [
  "byteorder-lite",
  "byteview",
- "dashmap 6.1.0",
+ "dashmap",
  "flume 0.12.0",
  "log",
  "lsm-tree",
@@ -4451,7 +4372,7 @@ dependencies = [
  "btree-store",
  "crc32c",
  "crossbeam-epoch",
- "dashmap 6.1.0",
+ "dashmap",
  "libc",
  "log",
  "parking_lot 0.12.5",
@@ -6919,12 +6840,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "smallvec"
-version = "2.0.0-alpha.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef784004ca8777809dcdad6ac37629f0a97caee4c685fcea805278d81dd8b857"
-
-[[package]]
 name = "smolldb"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7730,12 +7645,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
 ]
-
-[[package]]
-name = "triomphe"
-version = "0.1.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd69c5aa8f924c7519d6372789a74eac5b94fb0f8fcf0d4a97eb0bfc3e785f39"
 
 [[package]]
 name = "try-lock"

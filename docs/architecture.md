@@ -78,6 +78,7 @@
 - 문서 삭제 시 `FileSnapshotStore`는 본 snapshot과 같은 문서 ID를 가진 stale `.tmp` 파일도 함께 제거해 temp artifact가 누적되지 않게 한다.
 - `SqliteSnapshotStore`는 `SNAPSHOT_SQLITE_PATH` repository-local sqlite shim 파일의 logical `snapshots` table에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same catalog를 그대로 사용한다. write/read는 `<path>.lock` sidecar 아래 whole-file JSON rewrite로 serialize된다.
 - `HeedSnapshotStore`는 `SNAPSHOT_HEED_PATH/store.json` repository-local shim의 `snapshots` named database에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 이 named database catalog를 그대로 사용한다.
+- `CanopydbSnapshotStore`는 `SNAPSHOT_CANOPYDB_PATH/store.json` repository-local canopydb shim의 `snapshots` named tree에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 같은 tree iteration을 그대로 사용한다. commit은 temp-write + rename 뒤 optional file/dir sync로 확정된다.
 - `HightowerKvSnapshotStore`는 `SNAPSHOT_HIGHTOWER_KV_PATH` 디렉터리의 `snapshot:<doc_id>` key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, save/delete 뒤 explicit flush를 수행하며 startup hydrate/list 경로는 same prefix scan을 그대로 사용한다.
 - `HighlandcowsIsamSnapshotStore`는 `SNAPSHOT_HIGHLANDCOWS_ISAM_PATH` path prefix의 `.idb`/`.idx` 파일 세트에 append-only data record와 on-disk B-tree index를 유지하고, 문서 catalog는 explicit `__catalog__` key로 고정해 startup hydrate/list 경로를 그대로 사용한다.
 - `FjallSnapshotStore`는 `SNAPSHOT_FJALL_PATH` DB 디렉터리의 `snapshots` keyspace에 문서 metadata와 Yrs full-state update를 함께 저장하고, save/delete 뒤 `PersistMode::SyncAll`로 journal을 동기화하며 startup hydrate/list 경로는 keyspace catalog를 그대로 사용한다.
