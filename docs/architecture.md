@@ -89,7 +89,7 @@
 - `NebariSnapshotStore`는 `SNAPSHOT_NEBARI_PATH` 디렉터리의 `snapshots` tree에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same tree range scan을 그대로 사용한다.
 - `NikidbSnapshotStore`는 `SNAPSHOT_NIKIDB_PATH` 단일 nikidb 파일의 `snapshots` bucket과 explicit `__catalog__` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same bucket catalog를 그대로 사용한다.
 - `NodbSnapshotStore`는 `SNAPSHOT_NODB_PATH` 단일 nodb 파일의 key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same key scan을 그대로 사용한다.
-- `ParityDbSnapshotStore`는 `SNAPSHOT_PARITY_DB_PATH` parity-db 디렉터리의 ordered `snapshots` column에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same BTree catalog iteration을 그대로 사용한다.
+- `ParityDbSnapshotStore`는 `SNAPSHOT_PARITY_DB_PATH` parity-db shim 디렉터리의 repository-local `store.json` column map에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same persisted catalog iteration을 그대로 사용한다.
 - `PickleDbSnapshotStore`는 `SNAPSHOT_PICKLEDB_PATH` PickleDB 파일의 key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same catalog scan을 그대로 사용한다.
 - `RcaskSnapshotStore`는 `SNAPSHOT_RCASK_PATH` RCask append-only segment 디렉터리의 `doc_id` key와 explicit `__catalog__` key에 문서 metadata와 Yrs full-state update를 JSON string으로 함께 저장하고, 공개 delete API가 없어 tombstone string으로 삭제를 가리며 startup hydrate/list 경로는 보조 catalog를 그대로 사용한다.
 - `MicroKvSnapshotStore`는 `SNAPSHOT_MICROKV_PATH` base path에 대응하는 MicroKV 파일 `<path>.kv`의 key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, auto-commit으로 저장을 확정하며 startup hydrate/list 경로는 same catalog scan을 그대로 사용한다.
