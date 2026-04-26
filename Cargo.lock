@@ -8487,8 +8487,6 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 [[package]]
 name = "shorterDB"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca2aeb564cf2293eee7776e3fdbf9693042c4618870cdc6aa8b361483e1b0edc"
 dependencies = [
  "bytes",
  "crossbeam-skiplist",

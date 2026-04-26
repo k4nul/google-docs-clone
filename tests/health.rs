@@ -17037,6 +17037,69 @@ fn shorterdb_snapshot_store_survives_immediate_reopen_cycles() {
 }
 
 #[test]
+fn shorterdb_snapshot_store_reuses_doc_id_across_repeated_reopen_cycles() {
+    let snapshot_dir = temp_snapshot_dir("shorterdb-store-reuse-cycles");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.shorterdb");
+    let document_id = Uuid::new_v4();
+
+    for cycle in 0..16u8 {
+        let document = backend::models::document::Document::new(
+            document_id,
+            Some(format!("ShorterDB cycle {cycle}")),
+        );
+        let expected_update = vec![cycle, cycle.wrapping_add(1), cycle.wrapping_add(2)];
+
+        let store = ShorterDbSnapshotStore::new(&snapshot_path)
+            .expect("shorterdb snapshot store should initialize");
+        store
+            .save_snapshot(DocumentSnapshot::new(
+                document.clone(),
+                expected_update.clone(),
+            ))
+            .expect("snapshot should save before repeated reopen");
+        drop(store);
+
+        let reopened_store = ShorterDbSnapshotStore::new(&snapshot_path)
+            .expect("shorterdb snapshot store should reopen");
+        assert_eq!(
+            reopened_store
+                .list_documents()
+                .expect("document catalog should contain the latest repeated reopen snapshot"),
+            vec![document.clone()]
+        );
+        let restored_snapshot = reopened_store
+            .load_snapshot(&document_id)
+            .expect("snapshot lookup should succeed after repeated reopen")
+            .expect("snapshot should exist after repeated reopen");
+        assert_eq!(restored_snapshot.document, document);
+        assert_eq!(restored_snapshot.update, expected_update);
+        reopened_store
+            .delete_snapshot(&document_id)
+            .expect("snapshot should delete during repeated reopen cycle");
+        assert!(
+            reopened_store
+                .load_snapshot(&document_id)
+                .expect("deleted snapshot lookup should succeed after repeated reopen")
+                .is_none()
+        );
+        drop(reopened_store);
+    }
+
+    let final_store =
+        ShorterDbSnapshotStore::new(&snapshot_path).expect("shorterdb snapshot store should open");
+    assert!(
+        final_store
+            .list_documents()
+            .expect("document catalog should be empty after repeated reopen cycles")
+            .is_empty()
+    );
+    drop(final_store);
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn tinykv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinykv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
