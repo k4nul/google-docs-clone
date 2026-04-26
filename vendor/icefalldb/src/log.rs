@@ -218,8 +218,15 @@ impl IOBufs {
                 // attempt seal once, then start over
                 // NB we also bump writers here to simplify write() logic
                 let sealed = ops::mk_sealed(hv);
-                if header.compare_and_swap(hv as usize, sealed as usize, Ordering::SeqCst) ==
-                   hv as usize {
+                if header
+                    .compare_exchange(
+                        hv as usize,
+                        sealed as usize,
+                        Ordering::SeqCst,
+                        Ordering::SeqCst,
+                    )
+                    .is_ok()
+                {
                     // println!("- buf {} sealed with {} writers", idx, ops::n_writers(sealed));
                     // We succeeded in setting seal,
                     // so we get to bump cur and log_offset.
@@ -249,8 +256,15 @@ impl IOBufs {
             } else {
                 // attempt to claim
                 let claimed = ops::incr_writers(ops::bump_offset(hv, len));
-                if header.compare_and_swap(hv as usize, claimed as usize, Ordering::SeqCst) !=
-                   hv as usize {
+                if header
+                    .compare_exchange(
+                        hv as usize,
+                        claimed as usize,
+                        Ordering::SeqCst,
+                        Ordering::SeqCst,
+                    )
+                    .is_err()
+                {
                     // CAS failed, start over
                     continue;
                 }
@@ -316,7 +330,7 @@ impl Reservation {
     }
 
     fn write(self, buf: Vec<u8>, valid: bool) -> LogID {
-        let mut out_buf = unsafe { (*self.buf.get()).as_mut_slice() };
+        let out_buf = unsafe { (*self.buf.get()).as_mut_slice() };
 
         let size_bytes = ops::usize_to_array(self.len() - HEADER_LEN).to_vec();
         let (valid_bytes, crc16_bytes) = if valid {
@@ -360,8 +374,16 @@ impl Reservation {
         // decr writer count, retrying
         loop {
             let hv2 = ops::decr_writers(hv);
-            if self.header.compare_and_swap(hv as usize, hv2 as usize, Ordering::SeqCst) ==
-               hv as usize {
+            if self
+                .header
+                .compare_exchange(
+                    hv as usize,
+                    hv2 as usize,
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                )
+                .is_ok()
+            {
                 if ops::is_sealed(hv2) {
                     // println!("- decr worked on sealed buf {}, n_writers: {}", self.idx, ops::n_writers(hv2));
                 }
