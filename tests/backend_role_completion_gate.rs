@@ -6,6 +6,7 @@ use std::{
 
 const NESTED_GATE_ENV: &str = "BACKEND_ROLE_COMPLETION_NESTED";
 const GATE_COMMAND: &str = "cargo test --test backend_role_completion_gate -- --nocapture";
+const FINAL_STATUS_MARKER: &str = "역할 종료 확인";
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -27,6 +28,70 @@ fn combined_output(output: &Output) -> String {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     )
+}
+
+fn latest_current_status_entry(checklist: &str) -> &str {
+    let mut in_current_status_section = false;
+
+    for line in checklist.lines() {
+        let trimmed = line.trim();
+
+        if trimmed == "## Current Status" {
+            in_current_status_section = true;
+            continue;
+        }
+
+        if !in_current_status_section {
+            continue;
+        }
+
+        if trimmed.starts_with("## ") {
+            break;
+        }
+
+        if trimmed.starts_with("- ") {
+            return trimmed;
+        }
+    }
+
+    panic!("checklist current status section should include a status bullet")
+}
+
+fn latest_status_entry_marks_completion(status_entry: &str) -> bool {
+    status_entry
+        .split_once(": ")
+        .map(|(_, headline)| headline.starts_with(FINAL_STATUS_MARKER))
+        .unwrap_or(false)
+}
+
+#[test]
+fn backend_role_completion_gate_uses_first_current_status_bullet() {
+    let checklist = r#"# Checklist
+
+## Current Status
+
+종료 판정 규칙: 최상단 항목만 본다.
+- 2026-04-26: 역할 종료 확인. completion gate 통과, 추가 작업 없음.
+- 2026-04-25: 미완료 다음 작업 1건으로 후속 작업을 진행했다.
+"#;
+
+    assert_eq!(
+        latest_current_status_entry(checklist),
+        "- 2026-04-26: 역할 종료 확인. completion gate 통과, 추가 작업 없음."
+    );
+}
+
+#[test]
+fn backend_role_completion_gate_requires_explicit_completion_marker() {
+    assert!(latest_status_entry_marks_completion(
+        "- 2026-04-26: 역할 종료 확인. completion gate 통과, 추가 작업 없음."
+    ));
+    assert!(!latest_status_entry_marks_completion(
+        "- 2026-04-26: 미완료 다음 작업 1건으로 후속 작업을 진행했다."
+    ));
+    assert!(!latest_status_entry_marks_completion(
+        "- 2026-04-26: 미완료 다음 작업 1건으로 이전 역할 종료 확인 entry를 무효화했다."
+    ));
 }
 
 #[test]
@@ -54,7 +119,8 @@ fn backend_role_completion_gate() {
     );
     assert!(
         prompt.contains("추가 구현, 커밋, 푸시, `cargo clean`을 수행하지 말고")
-            && prompt.contains("즉시 종료하라"),
+            && prompt.contains("즉시 종료하라")
+            && prompt.contains(FINAL_STATUS_MARKER),
         "cron prompt must stop immediately when the completion gate passes:\n{prompt}"
     );
 
@@ -75,6 +141,15 @@ fn backend_role_completion_gate() {
     assert!(
         checklist.contains("- bootstrap 범위의 백엔드 구현 작업은 모두 완료됐다."),
         "checklist must explicitly declare the backend bootstrap scope complete"
+    );
+    let latest_status_entry = latest_current_status_entry(checklist);
+    assert!(
+        latest_status_entry_marks_completion(latest_status_entry),
+        "latest checklist status entry must explicitly mark completion before the gate can pass.\nlatest entry: {latest_status_entry}"
+    );
+    assert!(
+        !latest_status_entry.contains("미완료 다음 작업"),
+        "latest checklist status entry still advertises unfinished work.\nlatest entry: {latest_status_entry}"
     );
     for needle in [
         "- shared SQLite snapshot/lease 조합의 실제 owner handoff는 두 노드 앱을 동시에 띄운 end-to-end 테스트로 검증됐다.",

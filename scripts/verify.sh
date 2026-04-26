@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LANE="${1:-core}"
 
 CORE_SKIP_FILTERS=(
+    "--skip" "backend_role_completion_gate"
     "--skip" "delete_document_endpoint_rejects_documents_with_active_websocket_sessions"
     "--skip" "delete_document_endpoint_allows_delete_after_websocket_session_closes"
     "--skip" "websocket_endpoint_"
