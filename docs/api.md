@@ -433,7 +433,7 @@ Response: `204 No Content`
 ### `SNAPSHOT_STORE=loro_kv`
 
 - 필수 env는 `SNAPSHOT_LORO_KV_PATH`다.
-- loro_kv catalog는 단일 binary SSTable 파일의 `doc_id -> persisted snapshot JSON bytes` key-value를 저장하고, save/delete마다 `MemKvStore::export_all` 결과를 temp+rename으로 확정한다. `GET /api/documents` catalog는 full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- loro_kv catalog는 단일 export 파일의 `doc_id -> persisted snapshot JSON bytes` key-value를 저장하고, save/delete마다 repository-local `loro-kv-store` shim의 whole-store export를 temp+rename으로 확정한다. `GET /api/documents` catalog는 full scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 
 ### `SNAPSHOT_STORE=luckdb`
 

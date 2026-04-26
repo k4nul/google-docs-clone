@@ -157,7 +157,7 @@ cargo run
 - `SNAPSHOT_APPEND_KV_PATH`: append_kv snapshot store append-only 단일 파일 경로
 - `SNAPSHOT_APPEND_LOG_PATH`: append-log snapshot store append-only 단일 파일 경로
 - `SNAPSHOT_MHDB_PATH`: mhdb snapshot store DB path prefix. 실제 저장 파일은 `<path>.pag`, `<path>.dir`
-- `SNAPSHOT_LORO_KV_PATH`: loro-kv-store snapshot store binary SSTable 파일 경로
+- `SNAPSHOT_LORO_KV_PATH`: loro_kv snapshot store single-file export 경로
 - `SNAPSHOT_LUCKDB_PATH`: luckdb snapshot store JSON document 파일 경로
 - `SNAPSHOT_IPJDB_PATH`: ipjdb snapshot store collection 디렉터리 경로
 - `SNAPSHOT_DEEB_PATH`: Deeb snapshot store JSON database 파일 경로
@@ -646,8 +646,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 per-document object로 저장되고, document catalog는 fixed catalog object의 `doc_id -> object_id` mapping으로 복구된다. save/delete는 Marble atomic write batch와 `fsync_each_batch=true`로 확정한다.
 - `SNAPSHOT_STORE=lmdb_rs_core`는 `SNAPSHOT_LMDB_RS_CORE_PATH` 디렉터리의 lmdb-rs-core environment를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장되고, save/delete commit 뒤 forced sync로 document catalog와 재시작 복구 경계를 고정한다.
-- `SNAPSHOT_STORE=loro_kv`는 `SNAPSHOT_LORO_KV_PATH` 단일 binary SSTable 파일을 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 loro-kv-store `MemKvStore`의 `doc_id -> persisted snapshot JSON bytes` key-value로 저장되고, save/delete마다 whole-store export를 temp+rename으로 확정해 document catalog를 복구한다.
+- `SNAPSHOT_STORE=loro_kv`는 `SNAPSHOT_LORO_KV_PATH` 단일 export 파일을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 repository-local `loro-kv-store` shim의 `doc_id -> persisted snapshot JSON bytes` key-value로 저장되고, save/delete마다 whole-store export를 temp+rename으로 확정해 document catalog를 복구한다.
 - `SNAPSHOT_STORE=hmdb`는 `SNAPSHOT_HMDB_PATH` 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 hmdb schema 로그의 `doc_id -> persisted snapshot` key-value로 저장되고, document catalog는 append-only 로그 replay로 복구된다.
 - `SNAPSHOT_STORE=hurrahdb`는 `SNAPSHOT_HURRAHDB_PATH` 단일 AOF 파일을 통해 vendor-specific embedded database durability를 사용한다.

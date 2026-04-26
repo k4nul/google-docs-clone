@@ -232,7 +232,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_APPEND_KV_PATH`: `SNAPSHOT_STORE=append_kv`일 때 snapshot append_kv append-only 단일 파일 경로
 - `SNAPSHOT_APPEND_LOG_PATH`: `SNAPSHOT_STORE=append_log`일 때 snapshot append-log append-only 단일 파일 경로
 - `SNAPSHOT_MHDB_PATH`: `SNAPSHOT_STORE=mhdb`일 때 snapshot MHdb DB path prefix. 실제 저장 파일은 `<path>.pag`, `<path>.dir`
-- `SNAPSHOT_LORO_KV_PATH`: `SNAPSHOT_STORE=loro_kv`일 때 snapshot loro-kv-store binary SSTable 파일 경로
+- `SNAPSHOT_LORO_KV_PATH`: `SNAPSHOT_STORE=loro_kv`일 때 snapshot loro_kv single-file export 경로
 - `SNAPSHOT_LUCKDB_PATH`: `SNAPSHOT_STORE=luckdb`일 때 snapshot LuckDB JSON document 파일 경로
 - `SNAPSHOT_IPJDB_PATH`: `SNAPSHOT_STORE=ipjdb`일 때 snapshot ipjdb collection 디렉터리 경로
 - `SNAPSHOT_KAGI_PATH`: `SNAPSHOT_STORE=kagi`일 때 snapshot kagi whole-file store 경로
@@ -437,7 +437,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - `SNAPSHOT_STORE=append_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_APPEND_KV_PATH` append_kv append-only 단일 파일의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 JSON string으로 저장된다. delete는 append_kv tombstone record로 가리고, 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=append_log`이면 snapshot과 문서 토큰이 `SNAPSHOT_APPEND_LOG_PATH` append-log append-only 단일 파일에 save/delete JSON event로 저장된다. adapter는 startup 때 event log를 replay해 최신 snapshot map과 문서 catalog를 복구하고, save/delete 뒤 log 파일을 flush/sync한다.
 - `SNAPSHOT_STORE=mhdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_MHDB_PATH` path prefix가 만드는 `<path>.pag`/`<path>.dir` DBM 파일 쌍에 chunked blob으로 저장된다. MHdb의 pair size 제한 때문에 adapter가 snapshot payload와 catalog를 작은 chunk key로 나눠 저장하고, 기본 local ownership 모드에서는 catalog blob을 읽어 room을 eager hydrate한다.
-- `SNAPSHOT_STORE=loro_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_LORO_KV_PATH` 단일 binary SSTable 파일의 `doc_id -> persisted snapshot JSON bytes` entry로 저장된다. save/delete마다 `MemKvStore::export_all` 결과를 temp 파일에 쓰고 rename해 재시작 복구 경계를 고정한다.
+- `SNAPSHOT_STORE=loro_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_LORO_KV_PATH` 단일 export 파일의 `doc_id -> persisted snapshot JSON bytes` entry로 저장된다. save/delete마다 repository-local `loro-kv-store` shim의 whole-store export를 temp 파일에 쓰고 rename해 재시작 복구 경계를 고정한다.
 - `SNAPSHOT_STORE=luckdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_LUCKDB_PATH` LuckDB JSON document 파일의 `backend.snapshots` collection에 `doc_id` field와 persisted snapshot JSON payload로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 collection query로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=ipjdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_IPJDB_PATH/snapshots/<item_id>` JSON item 파일에 `doc_id` field와 persisted snapshot JSON payload로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 collection full scan으로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=kagi`이면 snapshot과 문서 토큰이 `SNAPSHOT_KAGI_PATH` 단일 kagi bincode hashmap 파일의 `doc_id -> persisted snapshot JSON string` entry로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 whole-file map load로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
