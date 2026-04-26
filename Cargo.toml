@@ -149,7 +149,7 @@ yedb = "0.5.1"
 yrs = "=0.18.2"
 yrs-axum = "0.8.2"
 shorterDB = "0.2.0"
-okofdb = "0.1.3"
+okofdb = { version = "0.1.3", path = "vendor/okofdb" }
 feoxdb = { version = "0.5.0", default-features = false, features = ["system-alloc"] }
 mindb = "0.1.2"
 log_kv = "0.1.0"
