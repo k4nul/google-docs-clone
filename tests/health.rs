@@ -17,48 +17,7 @@ use backend::{
     config::Config,
     errors::AppError,
     state::AppState,
-    storage::{
-        AbyssiniandbSnapshotStore, AeternusdbSnapshotStore, AgdbSnapshotStore,
-        AmandineSnapshotStore, ApexStoreSnapshotStore, AppendKvSnapshotStore,
-        AppendLogSnapshotStore, ArmdbSnapshotStore, AssystemSnapshotStore, BitaskSnapshotStore,
-        BitcaskEngineSnapshotStore, BitkvRsSnapshotStore, BlazeupSnapshotStore,
-        BlockbucketSnapshotStore, BtreeStoreSnapshotStore, CacacheSnapshotStore,
-        CandystoreSnapshotStore, CanopydbSnapshotStore, CavesSnapshotStore, Cdb64SnapshotStore,
-        CelerixStoreSnapshotStore, CitadeldbSnapshotStore, CkydbSnapshotStore,
-        ColonDbSnapshotStore, CrepeDbSnapshotStore, CrystalSnapshotStore, CuendillarSnapshotStore,
-        DataPileSnapshotStore, DatastackSnapshotStore, DbRsSnapshotStore, DblessSnapshotStore,
-        DbliteSnapshotStore, DeebSnapshotStore, DharmadbSnapshotStore, DirCacheSnapshotStore,
-        DocDbSnapshotStore, DocumentSnapshot, EightSnapshotStore, EmdbSnapshotStore,
-        EpochDbSnapshotStore, EtchdbSnapshotStore, FastKvSnapshotStore, FeoxdbSnapshotStore,
-        FerrumdbSnapshotStore, FileSnapshotStore, FjallSnapshotStore, FlashKvSnapshotStore,
-        FsDbSnapshotStore, GhaladbSnapshotStore, GrausDbSnapshotStore, GrebedbSnapshotStore,
-        GrumpydbSnapshotStore, HeedSnapshotStore, HighlandcowsIsamSnapshotStore,
-        HightowerKvSnapshotStore, HmdbSnapshotStore, HurrahdbSnapshotStore, IcefalldbSnapshotStore,
-        InMemorySnapshotStore, InfusedbSnapshotStore, IpjdbSnapshotStore, JammdbSnapshotStore,
-        JanqlSnapshotStore, JasondbSnapshotStore, JasonisnthappySnapshotStore, JfsSnapshotStore,
-        JoydbSnapshotStore, JsonDbRsSnapshotStore, JsonMutexDbSnapshotStore,
-        JsonStoreSnapshotStore, JsondbSnapshotStore, KafiSnapshotStore, KagiSnapshotStore,
-        KoitSnapshotStore, KopperdbSnapshotStore, KstoneSnapshotStore, KvSnapshotStore,
-        LedgerKvSnapshotStore, LiteDbSnapshotStore, LmdbRsCoreSnapshotStore, LogKvSnapshotStore,
-        LoroKvSnapshotStore, LsmEngineSnapshotStore, LsmStorageEngineSnapshotStore,
-        LsmTreeSnapshotStore, LsmdbSnapshotStore, LuckdbSnapshotStore, MaceSnapshotStore,
-        ManagedSnapshotStore, MarbleSnapshotStore, MhdbSnapshotStore, MicroKvSnapshotStore,
-        MindbSnapshotStore, MmdbSnapshotStore, MuDbSnapshotStore, NanodbSnapshotStore,
-        NativeDbSnapshotStore, NebariSnapshotStore, NikidbSnapshotStore, NodbSnapshotStore,
-        OkofdbSnapshotStore, OsmiumdbSnapshotStore, ParityDbSnapshotStore,
-        PersistentKvSnapshotStore, PersySnapshotStore, PickleDbSnapshotStore, PngDbSnapshotStore,
-        RaindbSnapshotStore, RcaskSnapshotStore, ReadbSnapshotStore, RedbSnapshotStore,
-        RoughdbSnapshotStore, RskeySnapshotStore, RubinSnapshotStore, RumDbSnapshotStore,
-        RustbreakSnapshotStore, RustcaskSnapshotStore, RustliteSnapshotStore,
-        RustyLeveldbSnapshotStore, S3SnapshotStore, SaberdbSnapshotStore, SanakirjaSnapshotStore,
-        SaturnSnapshotStore, ScdbSnapshotStore, ShorterDbSnapshotStore, SiamesedbSnapshotStore,
-        SimpleDbSnapshotStore, SkvSnapshotStore, SledSnapshotStore, SmolldbSnapshotStore,
-        SnaildbSnapshotStore, SnapshotStore, SqjsonSnapshotStore, SqliteSnapshotStore,
-        StructsySnapshotStore, SurrealkvSnapshotStore, ThetadbSnapshotStore,
-        ThunderdbSnapshotStore, TinkvSnapshotStore, TinybaseSnapshotStore, TinydbSnapshotStore,
-        TinykvSnapshotStore, ToiletdbSnapshotStore, VsdbSnapshotStore, YakvSnapshotStore,
-        YakvdbSnapshotStore, YedbSnapshotStore,
-    },
+    storage::*,
 };
 use chrono::{Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
@@ -310,16 +269,19 @@ fn configure_s3_snapshot_store(
     config.snapshot_s3_path_style = true;
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_redb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "redb".to_owned();
     config.snapshot_redb_path = root.join("snapshots.redb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_agdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "agdb".to_owned();
     config.snapshot_agdb_path = root.join("snapshots.agdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_amandine_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "amandine".to_owned();
     config.snapshot_amandine_path = root
@@ -328,6 +290,7 @@ fn configure_amandine_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_flash_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "flash_kv".to_owned();
     config.snapshot_flash_kv_path = root
@@ -336,6 +299,7 @@ fn configure_flash_kv_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_blockbucket_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "blockbucket".to_owned();
     config.snapshot_blockbucket_path = root
@@ -344,6 +308,7 @@ fn configure_blockbucket_snapshot_store(config: &mut Config, root: &std::path::P
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_grebedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "grebedb".to_owned();
     config.snapshot_grebedb_path = root
@@ -352,6 +317,7 @@ fn configure_grebedb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_grumpydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "grumpydb".to_owned();
     config.snapshot_grumpydb_path = root
@@ -360,6 +326,7 @@ fn configure_grumpydb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_highlandcows_isam_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "highlandcows_isam".to_owned();
     config.snapshot_highlandcows_isam_path = root
@@ -368,11 +335,13 @@ fn configure_highlandcows_isam_snapshot_store(config: &mut Config, root: &std::p
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_eight_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "eight".to_owned();
     config.snapshot_eight_path = root.join("snapshots.eight").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_epoch_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "epoch_db".to_owned();
     config.snapshot_epoch_db_path = root
@@ -381,11 +350,13 @@ fn configure_epoch_db_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rumdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rumdb".to_owned();
     config.snapshot_rumdb_path = root.join("snapshots.rumdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_simple_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "simple_db".to_owned();
     config.snapshot_simple_db_path = root
@@ -394,6 +365,7 @@ fn configure_simple_db_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_docdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "docdb".to_owned();
     config.snapshot_docdb_path = root
@@ -402,6 +374,7 @@ fn configure_docdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_shorterdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "shorterdb".to_owned();
     config.snapshot_shorterdb_path = root
@@ -410,16 +383,19 @@ fn configure_shorterdb_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_fjall_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "fjall".to_owned();
     config.snapshot_fjall_path = root.join("snapshots.fjall").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_persy_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "persy".to_owned();
     config.snapshot_persy_path = root.join("snapshots.persy").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_persistent_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "persistent_kv".to_owned();
     config.snapshot_persistent_kv_path = root
@@ -428,6 +404,7 @@ fn configure_persistent_kv_snapshot_store(config: &mut Config, root: &std::path:
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_native_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "native_db".to_owned();
     config.snapshot_native_db_path = root
@@ -436,21 +413,25 @@ fn configure_native_db_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_nebari_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "nebari".to_owned();
     config.snapshot_nebari_path = root.join("snapshots.nebari").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_nodb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "nodb".to_owned();
     config.snapshot_nodb_path = root.join("snapshots.nodb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_okofdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "okofdb".to_owned();
     config.snapshot_okofdb_path = root.join("snapshots.okofdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_celerix_store_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "celerix_store".to_owned();
     config.snapshot_celerix_store_path = root
@@ -459,6 +440,7 @@ fn configure_celerix_store_snapshot_store(config: &mut Config, root: &std::path:
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_citadeldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "citadeldb".to_owned();
     config.snapshot_citadeldb_path = root
@@ -468,11 +450,13 @@ fn configure_citadeldb_snapshot_store(config: &mut Config, root: &std::path::Pat
     config.snapshot_citadeldb_passphrase = "test-citadel-snapshot-passphrase".to_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_nikidb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "nikidb".to_owned();
     config.snapshot_nikidb_path = root.join("snapshots.nikidb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_parity_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "parity_db".to_owned();
     config.snapshot_parity_db_path = root
@@ -481,16 +465,19 @@ fn configure_parity_db_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_jammdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jammdb".to_owned();
     config.snapshot_jammdb_path = root.join("snapshots.jammdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_janql_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "janql".to_owned();
     config.snapshot_janql_path = root.join("snapshots.janql").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_jasondb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jasondb".to_owned();
     config.snapshot_jasondb_path = root
@@ -499,6 +486,7 @@ fn configure_jasondb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_jasonisnthappy_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jasonisnthappy".to_owned();
     config.snapshot_jasonisnthappy_path = root
@@ -507,6 +495,7 @@ fn configure_jasonisnthappy_snapshot_store(config: &mut Config, root: &std::path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_datastack_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "datastack".to_owned();
     config.snapshot_datastack_path = root
@@ -515,6 +504,7 @@ fn configure_datastack_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_crystal_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "crystal".to_owned();
     config.snapshot_crystal_path = root
@@ -523,6 +513,7 @@ fn configure_crystal_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_assystem_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "assystem".to_owned();
     config.snapshot_assystem_path = root
@@ -531,11 +522,13 @@ fn configure_assystem_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_emdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "emdb".to_owned();
     config.snapshot_emdb_path = root.join("snapshots.emdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_osmiumdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "osmiumdb".to_owned();
     config.snapshot_osmiumdb_path = root
@@ -544,6 +537,7 @@ fn configure_osmiumdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_colon_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "colon_db".to_owned();
     config.snapshot_colon_db_path = root
@@ -552,16 +546,19 @@ fn configure_colon_db_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_mace_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mace".to_owned();
     config.snapshot_mace_path = root.join("snapshots.mace").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_heed_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "heed".to_owned();
     config.snapshot_heed_path = root.join("snapshots.heed").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_hightower_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "hightower_kv".to_owned();
     config.snapshot_hightower_kv_path = root
@@ -570,21 +567,25 @@ fn configure_hightower_kv_snapshot_store(config: &mut Config, root: &std::path::
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_sled_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "sled".to_owned();
     config.snapshot_sled_path = root.join("snapshots.sled").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_readb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "readb".to_owned();
     config.snapshot_readb_path = root.join("snapshots.readb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rskey_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rskey".to_owned();
     config.snapshot_rskey_path = root.join("snapshots.rskey").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rustlite_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rustlite".to_owned();
     config.snapshot_rustlite_path = root
@@ -593,6 +594,7 @@ fn configure_rustlite_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rusty_leveldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rusty_leveldb".to_owned();
     config.snapshot_rusty_leveldb_path = root
@@ -601,6 +603,7 @@ fn configure_rusty_leveldb_snapshot_store(config: &mut Config, root: &std::path:
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_canopydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "canopydb".to_owned();
     config.snapshot_canopydb_path = root
@@ -609,16 +612,19 @@ fn configure_canopydb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_caves_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "caves".to_owned();
     config.snapshot_caves_path = root.join("snapshots.caves").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_ckydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "ckydb".to_owned();
     config.snapshot_ckydb_path = root.join("snapshots.ckydb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_crepedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "crepedb".to_owned();
     config.snapshot_crepedb_path = root
@@ -627,16 +633,19 @@ fn configure_crepedb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_scdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "scdb".to_owned();
     config.snapshot_scdb_path = root.join("snapshots.scdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_skv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "skv".to_owned();
     config.snapshot_skv_path = root.join("snapshots.skv").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_surrealkv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "surrealkv".to_owned();
     config.snapshot_surrealkv_path = root
@@ -645,6 +654,7 @@ fn configure_surrealkv_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_pickledb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "pickledb".to_owned();
     config.snapshot_pickledb_path = root
@@ -653,6 +663,7 @@ fn configure_pickledb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_microkv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "microkv".to_owned();
     config.snapshot_microkv_path = root
@@ -661,6 +672,7 @@ fn configure_microkv_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rustbreak_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rustbreak".to_owned();
     config.snapshot_rustbreak_path = root
@@ -669,6 +681,7 @@ fn configure_rustbreak_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rustcask_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rustcask".to_owned();
     config.snapshot_rustcask_path = root
@@ -677,11 +690,13 @@ fn configure_rustcask_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_yedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "yedb".to_owned();
     config.snapshot_yedb_path = root.join("snapshots.yedb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_btree_store_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "btree_store".to_owned();
     config.snapshot_btree_store_path = root
@@ -690,6 +705,7 @@ fn configure_btree_store_snapshot_store(config: &mut Config, root: &std::path::P
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_cacache_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "cacache".to_owned();
     config.snapshot_cacache_path = root
@@ -698,6 +714,7 @@ fn configure_cacache_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_siamesedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "siamesedb".to_owned();
     config.snapshot_siamesedb_path = root
@@ -706,6 +723,7 @@ fn configure_siamesedb_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_structsy_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "structsy".to_owned();
     config.snapshot_structsy_path = root
@@ -714,6 +732,7 @@ fn configure_structsy_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_abyssiniandb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "abyssiniandb".to_owned();
     config.snapshot_abyssiniandb_path = root
@@ -722,6 +741,7 @@ fn configure_abyssiniandb_snapshot_store(config: &mut Config, root: &std::path::
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_thunderdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "thunderdb".to_owned();
     config.snapshot_thunderdb_path = root
@@ -730,6 +750,7 @@ fn configure_thunderdb_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_tinybase_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "tinybase".to_owned();
     config.snapshot_tinybase_path = root
@@ -738,16 +759,19 @@ fn configure_tinybase_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_tinydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "tinydb".to_owned();
     config.snapshot_tinydb_path = root.join("snapshots.tinydb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_vsdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "vsdb".to_owned();
     config.snapshot_vsdb_path = root.join("snapshots.vsdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_thetadb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "thetadb".to_owned();
     config.snapshot_thetadb_path = root
@@ -756,16 +780,19 @@ fn configure_thetadb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_dblite_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "dblite".to_owned();
     config.snapshot_dblite_path = root.join("snapshots.dblite").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_dbless_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "dbless".to_owned();
     config.snapshot_dbless_path = root.join("snapshots.dbless").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_aeternusdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "aeternusdb".to_owned();
     config.snapshot_aeternusdb_path = root
@@ -774,6 +801,7 @@ fn configure_aeternusdb_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_sanakirja_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "sanakirja".to_owned();
     config.snapshot_sanakirja_path = root
@@ -782,6 +810,7 @@ fn configure_sanakirja_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_snaildb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "snaildb".to_owned();
     config.snapshot_snaildb_path = root
@@ -790,6 +819,7 @@ fn configure_snaildb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_tinykv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "tinykv".to_owned();
     config.snapshot_tinykv_path = root
@@ -798,16 +828,19 @@ fn configure_tinykv_snapshot_store(config: &mut Config, root: &std::path::Path) 
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_yakv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "yakv".to_owned();
     config.snapshot_yakv_path = root.join("snapshots.yakv").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_yakvdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "yakvdb".to_owned();
     config.snapshot_yakvdb_path = root.join("snapshots.yakvdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_saberdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "saberdb".to_owned();
     config.snapshot_saberdb_path = root
@@ -816,6 +849,7 @@ fn configure_saberdb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_smolldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "smolldb".to_owned();
     config.snapshot_smolldb_path = root
@@ -824,6 +858,7 @@ fn configure_smolldb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_ghaladb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "ghaladb".to_owned();
     config.snapshot_ghaladb_path = root
@@ -832,6 +867,7 @@ fn configure_ghaladb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_apex_store_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "apex_store".to_owned();
     config.snapshot_apex_store_path = root
@@ -840,11 +876,13 @@ fn configure_apex_store_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_kstone_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "kstone".to_owned();
     config.snapshot_kstone_path = root.join("snapshots.kstone").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_roughdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "roughdb".to_owned();
     config.snapshot_roughdb_path = root
@@ -853,11 +891,13 @@ fn configure_roughdb_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_raindb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "raindb".to_owned();
     config.snapshot_raindb_path = root.join("snapshots.raindb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_infusedb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "infusedb".to_owned();
     config.snapshot_infusedb_path = root
@@ -866,11 +906,13 @@ fn configure_infusedb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_kafi_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "kafi".to_owned();
     config.snapshot_kafi_path = root.join("snapshots.kafi").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_tinkv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "tinkv".to_owned();
     config.snapshot_tinkv_path = root.join("snapshots.tinkv").to_string_lossy().into_owned();
@@ -880,6 +922,7 @@ fn configure_tinkv_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_ledger_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "ledger_kv".to_owned();
     config.snapshot_ledger_kv_path = root
@@ -888,6 +931,7 @@ fn configure_ledger_kv_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_joydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "joydb".to_owned();
     config.snapshot_joydb_path = root
@@ -896,11 +940,13 @@ fn configure_joydb_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_png_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "png_db".to_owned();
     config.snapshot_png_db_path = root.join("snapshots.png").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_bitcask_engine_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "bitcask_engine".to_owned();
     config.snapshot_bitcask_engine_path = root
@@ -909,6 +955,7 @@ fn configure_bitcask_engine_snapshot_store(config: &mut Config, root: &std::path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_blazeup_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "blazeup".to_owned();
     config.snapshot_blazeup_path = root
@@ -917,16 +964,19 @@ fn configure_blazeup_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_feoxdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "feoxdb".to_owned();
     config.snapshot_feoxdb_path = root.join("snapshots.feoxdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_db_rs_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "db_rs".to_owned();
     config.snapshot_db_rs_path = root.join("snapshots.db_rs").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_dharmadb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "dharmadb".to_owned();
     config.snapshot_dharmadb_path = root
@@ -935,6 +985,7 @@ fn configure_dharmadb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_dir_cache_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "dir_cache".to_owned();
     config.snapshot_dir_cache_path = root
@@ -943,6 +994,7 @@ fn configure_dir_cache_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_jsondb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jsondb".to_owned();
     config.snapshot_jsondb_path = root
@@ -951,6 +1003,7 @@ fn configure_jsondb_snapshot_store(config: &mut Config, root: &std::path::Path) 
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_kopperdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "kopperdb".to_owned();
     config.snapshot_kopperdb_path = root
@@ -959,11 +1012,13 @@ fn configure_kopperdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rcask_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rcask".to_owned();
     config.snapshot_rcask_path = root.join("snapshots.rcask").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_jfs_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "jfs".to_owned();
     config.snapshot_jfs_path = root
@@ -972,6 +1027,7 @@ fn configure_jfs_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_koit_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "koit".to_owned();
     config.snapshot_koit_path = root
@@ -980,6 +1036,7 @@ fn configure_koit_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lite_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lite_db".to_owned();
     config.snapshot_lite_db_path = root
@@ -988,6 +1045,7 @@ fn configure_lite_db_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lmdb_rs_core_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lmdb_rs_core".to_owned();
     config.snapshot_lmdb_rs_core_path = root
@@ -996,6 +1054,7 @@ fn configure_lmdb_rs_core_snapshot_store(config: &mut Config, root: &std::path::
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_data_pile_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "data_pile".to_owned();
     config.snapshot_data_pile_path = root
@@ -1004,11 +1063,13 @@ fn configure_data_pile_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_log_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "log_kv".to_owned();
     config.snapshot_log_kv_path = root.join("snapshots.log_kv").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_append_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "append_kv".to_owned();
     config.snapshot_append_kv_path = root
@@ -1017,6 +1078,7 @@ fn configure_append_kv_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_append_log_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "append_log".to_owned();
     config.snapshot_append_log_path = root
@@ -1025,16 +1087,19 @@ fn configure_append_log_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_mhdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mhdb".to_owned();
     config.snapshot_mhdb_path = root.join("snapshots.mhdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_marble_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "marble".to_owned();
     config.snapshot_marble_path = root.join("snapshots.marble").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_loro_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "loro_kv".to_owned();
     config.snapshot_loro_kv_path = root
@@ -1043,6 +1108,7 @@ fn configure_loro_kv_snapshot_store(config: &mut Config, root: &std::path::Path)
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_luckdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "luckdb".to_owned();
     config.snapshot_luckdb_path = root
@@ -1051,16 +1117,19 @@ fn configure_luckdb_snapshot_store(config: &mut Config, root: &std::path::Path) 
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_ipjdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "ipjdb".to_owned();
     config.snapshot_ipjdb_path = root.join("snapshots.ipjdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_kagi_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "kagi".to_owned();
     config.snapshot_kagi_path = root.join("snapshots.kagi").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_deeb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "deeb".to_owned();
     config.snapshot_deeb_path = root
@@ -1069,6 +1138,7 @@ fn configure_deeb_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_rubin_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "rubin".to_owned();
     config.snapshot_rubin_path = root
@@ -1077,6 +1147,7 @@ fn configure_rubin_snapshot_store(config: &mut Config, root: &std::path::Path) {
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lsm_engine_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lsm_engine".to_owned();
     config.snapshot_lsm_engine_path = root
@@ -1085,16 +1156,19 @@ fn configure_lsm_engine_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_etchdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "etchdb".to_owned();
     config.snapshot_etchdb_path = root.join("snapshots.etchdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_fastkv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "fastkv".to_owned();
     config.snapshot_fastkv_path = root.join("snapshots.fastkv").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lsm_storage_engine_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lsm_storage_engine".to_owned();
     config.snapshot_lsm_storage_engine_path = root
@@ -1103,11 +1177,13 @@ fn configure_lsm_storage_engine_snapshot_store(config: &mut Config, root: &std::
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lsmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lsmdb".to_owned();
     config.snapshot_lsmdb_path = root.join("snapshots.lsmdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_lsm_tree_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "lsm_tree".to_owned();
     config.snapshot_lsm_tree_path = root
@@ -1116,6 +1192,7 @@ fn configure_lsm_tree_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_ferrumdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "ferrumdb".to_owned();
     config.snapshot_ferrumdb_path = root
@@ -1124,21 +1201,25 @@ fn configure_ferrumdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_mindb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mindb".to_owned();
     config.snapshot_mindb_path = root.join("snapshots.mindb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_mmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mmdb".to_owned();
     config.snapshot_mmdb_path = root.join("snapshots.mmdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_mu_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "mu_db".to_owned();
     config.snapshot_mu_db_path = root.join("snapshots.mu_db").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_nanodb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "nanodb".to_owned();
     config.snapshot_nanodb_path = root
@@ -1147,6 +1228,7 @@ fn configure_nanodb_snapshot_store(config: &mut Config, root: &std::path::Path) 
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_graus_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "graus_db".to_owned();
     config.snapshot_graus_db_path = root
@@ -1155,11 +1237,13 @@ fn configure_graus_db_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_kv_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "kv".to_owned();
     config.snapshot_kv_path = root.join("snapshots.kv").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_json_store_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "json_store".to_owned();
     config.snapshot_json_store_path = root
@@ -1168,6 +1252,7 @@ fn configure_json_store_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_json_db_rs_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "json_db_rs".to_owned();
     config.snapshot_json_db_rs_path = root
@@ -1176,11 +1261,13 @@ fn configure_json_db_rs_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_cdb64_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "cdb64".to_owned();
     config.snapshot_cdb64_path = root.join("snapshots.cdb64").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_json_mutex_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "json_mutex_db".to_owned();
     config.snapshot_json_mutex_db_path = root
@@ -1189,6 +1276,7 @@ fn configure_json_mutex_db_snapshot_store(config: &mut Config, root: &std::path:
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_toiletdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "toiletdb".to_owned();
     config.snapshot_toiletdb_path = root
@@ -1197,11 +1285,13 @@ fn configure_toiletdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_hmdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "hmdb".to_owned();
     config.snapshot_hmdb_path = root.join("snapshots.hmdb").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_hurrahdb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "hurrahdb".to_owned();
     config.snapshot_hurrahdb_path = root
@@ -1210,21 +1300,25 @@ fn configure_hurrahdb_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_fs_db_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "fs_db".to_owned();
     config.snapshot_fs_db_path = root.join("snapshots.fs_db").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_sqjson_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "sqjson".to_owned();
     config.snapshot_sqjson_path = root.join("snapshots.sqjson").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_saturn_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "saturn".to_owned();
     config.snapshot_saturn_path = root.join("snapshots.saturn").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_icefalldb_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "icefalldb".to_owned();
     config.snapshot_icefalldb_path = root
@@ -1233,11 +1327,13 @@ fn configure_icefalldb_snapshot_store(config: &mut Config, root: &std::path::Pat
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_bitask_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "bitask".to_owned();
     config.snapshot_bitask_path = root.join("snapshots.bitask").to_string_lossy().into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_bitkv_rs_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "bitkv_rs".to_owned();
     config.snapshot_bitkv_rs_path = root
@@ -1246,6 +1342,7 @@ fn configure_bitkv_rs_snapshot_store(config: &mut Config, root: &std::path::Path
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_candystore_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "candystore".to_owned();
     config.snapshot_candystore_path = root
@@ -1254,6 +1351,7 @@ fn configure_candystore_snapshot_store(config: &mut Config, root: &std::path::Pa
         .into_owned();
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_cuendillar_snapshot_store(config: &mut Config, root: &std::path::Path) {
     config.snapshot_store = "cuendillar".to_owned();
     config.snapshot_cuendillar_path = root
@@ -3818,6 +3916,7 @@ async fn app_state_hydrates_snapshot_backed_rooms_on_startup() {
 }
 
 #[tokio::test]
+#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_file_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("file-store");
@@ -3856,6 +3955,7 @@ async fn app_state_uses_file_snapshot_store_from_config() {
 }
 
 #[tokio::test]
+#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_sqlite_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("sqlite-store-config");
@@ -3896,6 +3996,7 @@ async fn app_state_uses_sqlite_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_jammdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jammdb-store-config");
@@ -3939,6 +4040,7 @@ fn app_state_uses_jammdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_janql_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("janql-store-config");
@@ -3985,6 +4087,7 @@ fn app_state_uses_janql_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_jasondb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jasondb-store-config");
@@ -4031,6 +4134,7 @@ fn app_state_uses_jasondb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_jasonisnthappy_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jasonisnthappy-store-config");
@@ -4078,6 +4182,7 @@ fn app_state_uses_jasonisnthappy_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_datastack_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("datastack-store-config");
@@ -4125,6 +4230,7 @@ fn app_state_uses_datastack_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_crystal_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("crystal-store-config");
@@ -4171,6 +4277,7 @@ fn app_state_uses_crystal_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_assystem_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("assystem-store-config");
@@ -4218,6 +4325,7 @@ fn app_state_uses_assystem_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_colon_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("colon-db-store-config");
@@ -4265,6 +4373,7 @@ fn app_state_uses_colon_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_mace_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("mace-store-config");
@@ -4311,6 +4420,7 @@ fn app_state_uses_mace_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_heed_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("heed-store-config");
@@ -4354,6 +4464,7 @@ fn app_state_uses_heed_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_hightower_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("hightower-kv-store-config");
@@ -4401,6 +4512,7 @@ fn app_state_uses_hightower_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_fjall_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("fjall-store-config");
@@ -4444,6 +4556,7 @@ fn app_state_uses_fjall_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_persy_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("persy-store-config");
@@ -4487,6 +4600,7 @@ fn app_state_uses_persy_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_rejects_managed_snapshot_store_without_base_url() {
     let mut config = test_config();
     config.snapshot_store = "managed".to_owned();
@@ -4505,6 +4619,7 @@ fn app_state_rejects_managed_snapshot_store_without_base_url() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_agdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("agdb-store-config");
@@ -4548,6 +4663,7 @@ fn app_state_uses_agdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_amandine_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("amandine-store-config");
@@ -4595,6 +4711,7 @@ fn app_state_uses_amandine_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_armdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("armdb-store-config");
@@ -4638,6 +4755,7 @@ fn app_state_uses_armdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_redb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("redb-store-config");
@@ -4681,6 +4799,7 @@ fn app_state_uses_redb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_sled_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("sled-store-config");
@@ -4724,6 +4843,7 @@ fn app_state_uses_sled_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_pickledb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("pickledb-store-config");
@@ -4771,6 +4891,7 @@ fn app_state_uses_pickledb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_microkv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("microkv-store-config");
@@ -4817,6 +4938,7 @@ fn app_state_uses_microkv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rustbreak_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rustbreak-store-config");
@@ -4864,6 +4986,7 @@ fn app_state_uses_rustbreak_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_yedb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("yedb-store-config");
@@ -4910,6 +5033,7 @@ fn app_state_uses_yedb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_btree_store_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("btree-store-config");
@@ -4957,6 +5081,7 @@ fn app_state_uses_btree_store_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_cacache_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("cacache-store-config");
@@ -5004,6 +5129,7 @@ fn app_state_uses_cacache_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_siamesedb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("siamesedb-store-config");
@@ -5051,6 +5177,7 @@ fn app_state_uses_siamesedb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_readb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("readb-store-config");
@@ -5097,6 +5224,7 @@ fn app_state_uses_readb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rskey_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rskey-store-config");
@@ -5143,6 +5271,7 @@ fn app_state_uses_rskey_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rustlite_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rustlite-store-config");
@@ -5190,6 +5319,7 @@ fn app_state_uses_rustlite_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_canopydb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("canopydb-store-config");
@@ -5237,6 +5367,7 @@ fn app_state_uses_canopydb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_structsy_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("structsy-store-config");
@@ -5284,6 +5415,7 @@ fn app_state_uses_structsy_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_abyssiniandb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("abyssiniandb-store-config");
@@ -5331,6 +5463,7 @@ fn app_state_uses_abyssiniandb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_ckydb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("ckydb-store-config");
@@ -5377,6 +5510,7 @@ fn app_state_uses_ckydb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_crepedb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("crepedb-store-config");
@@ -5423,6 +5557,7 @@ fn app_state_uses_crepedb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_scdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("scdb-store-config");
@@ -5469,6 +5604,7 @@ fn app_state_uses_scdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_skv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("skv-store-config");
@@ -5515,6 +5651,7 @@ fn app_state_uses_skv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_surrealkv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("surrealkv-store-config");
@@ -5562,6 +5699,7 @@ fn app_state_uses_surrealkv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_thunderdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("thunderdb-store-config");
@@ -5609,6 +5747,7 @@ fn app_state_uses_thunderdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_tinybase_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("tinybase-store-config");
@@ -5656,6 +5795,7 @@ fn app_state_uses_tinybase_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_tinydb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("tinydb-store-config");
@@ -5702,6 +5842,7 @@ fn app_state_uses_tinydb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_dblite_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("dblite-store-config");
@@ -5748,6 +5889,7 @@ fn app_state_uses_dblite_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_aeternusdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("aeternusdb-store-config");
@@ -5795,6 +5937,7 @@ fn app_state_uses_aeternusdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_dbless_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("dbless-store-config");
@@ -5841,6 +5984,7 @@ fn app_state_uses_dbless_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_sanakirja_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("sanakirja-store-config");
@@ -5888,6 +6032,7 @@ fn app_state_uses_sanakirja_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_flash_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("flash-kv-store-config");
@@ -5935,6 +6080,7 @@ fn app_state_uses_flash_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_highlandcows_isam_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("highlandcows-isam-store-config");
@@ -5982,6 +6128,7 @@ fn app_state_uses_highlandcows_isam_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_simple_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("simple-db-store-config");
@@ -6029,6 +6176,7 @@ fn app_state_uses_simple_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_snaildb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("snaildb-store-config");
@@ -6075,6 +6223,7 @@ fn app_state_uses_snaildb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_docdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("docdb-store-config");
@@ -6121,6 +6270,7 @@ fn app_state_uses_docdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_shorterdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("shorterdb-store-config");
@@ -6168,6 +6318,7 @@ fn app_state_uses_shorterdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_tinykv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("tinykv-store-config");
@@ -6214,6 +6365,7 @@ fn app_state_uses_tinykv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_yakv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("yakv-store-config");
@@ -6260,6 +6412,7 @@ fn app_state_uses_yakv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_yakvdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("yakvdb-store-config");
@@ -6306,6 +6459,7 @@ fn app_state_uses_yakvdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rustcask_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rustcask-store-config");
@@ -6353,6 +6507,7 @@ fn app_state_uses_rustcask_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rusty_leveldb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rusty-leveldb-store-config");
@@ -6400,6 +6555,7 @@ fn app_state_uses_rusty_leveldb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_saberdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("saberdb-store-config");
@@ -6443,6 +6599,7 @@ fn app_state_uses_saberdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_smolldb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("smolldb-store-config");
@@ -6489,6 +6646,7 @@ fn app_state_uses_smolldb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_kstone_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kstone-store-config");
@@ -6535,6 +6693,7 @@ fn app_state_uses_kstone_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_ghaladb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("ghaladb-store-config");
@@ -6581,6 +6740,7 @@ fn app_state_uses_ghaladb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_apex_store_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("apex-store-config");
@@ -6628,6 +6788,7 @@ fn app_state_uses_apex_store_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_roughdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("roughdb-store-config");
@@ -6674,6 +6835,7 @@ fn app_state_uses_roughdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_raindb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("raindb-store-config");
@@ -6720,6 +6882,7 @@ fn app_state_uses_raindb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_infusedb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("infusedb-store-config");
@@ -6767,6 +6930,7 @@ fn app_state_uses_infusedb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_kafi_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kafi-store-config");
@@ -6813,6 +6977,7 @@ fn app_state_uses_kafi_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_tinkv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("tinkv-store-config");
@@ -6857,6 +7022,7 @@ fn app_state_uses_tinkv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_ledger_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("ledger-kv-store-config");
@@ -6914,6 +7080,7 @@ fn app_state_uses_ledger_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_joydb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("joydb-store-config");
@@ -6959,6 +7126,7 @@ fn app_state_uses_joydb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_png_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("png-db-store-config");
@@ -7004,6 +7172,7 @@ fn app_state_uses_png_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_bitcask_engine_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("bitcask-engine-store-config");
@@ -7051,6 +7220,7 @@ fn app_state_uses_bitcask_engine_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_blazeup_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("blazeup-store-config");
@@ -7097,6 +7267,7 @@ fn app_state_uses_blazeup_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_feoxdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("feoxdb-store-config");
@@ -7143,6 +7314,7 @@ fn app_state_uses_feoxdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_db_rs_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("db-rs-store-config");
@@ -7189,6 +7361,7 @@ fn app_state_uses_db_rs_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_dharmadb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("dharmadb-store-config");
@@ -7236,6 +7409,7 @@ fn app_state_uses_dharmadb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_dir_cache_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("dir-cache-store-config");
@@ -7283,6 +7457,7 @@ fn app_state_uses_dir_cache_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_jsondb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jsondb-store-config");
@@ -7329,6 +7504,7 @@ fn app_state_uses_jsondb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_kopperdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kopperdb-store-config");
@@ -7376,6 +7552,7 @@ fn app_state_uses_kopperdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rcask_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rcask-store-config");
@@ -7422,6 +7599,7 @@ fn app_state_uses_rcask_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_jfs_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("jfs-store-config");
@@ -7468,6 +7646,7 @@ fn app_state_uses_jfs_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_json_store_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("json-store-config");
@@ -7515,6 +7694,7 @@ fn app_state_uses_json_store_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_json_db_rs_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("json-db-rs-store-config");
@@ -7562,6 +7742,7 @@ fn app_state_uses_json_db_rs_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_cdb64_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("cdb64-store-config");
@@ -7608,6 +7789,7 @@ fn app_state_uses_cdb64_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_json_mutex_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("json-mutex-db-store-config");
@@ -7655,6 +7837,7 @@ fn app_state_uses_json_mutex_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_toiletdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("toiletdb-store-config");
@@ -7702,6 +7885,7 @@ fn app_state_uses_toiletdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_koit_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("koit-store-config");
@@ -7748,6 +7932,7 @@ fn app_state_uses_koit_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lite_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lite-db-store-config");
@@ -7794,6 +7979,7 @@ fn app_state_uses_lite_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lmdb_rs_core_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lmdb-rs-core-store-config");
@@ -7841,6 +8027,7 @@ fn app_state_uses_lmdb_rs_core_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_data_pile_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("data-pile-store-config");
@@ -7889,6 +8076,7 @@ fn app_state_uses_data_pile_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_log_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("log-kv-store-config");
@@ -7935,6 +8123,7 @@ fn app_state_uses_log_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_append_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("append-kv-store-config");
@@ -7982,6 +8171,7 @@ fn app_state_uses_append_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_append_log_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("append-log-store-config");
@@ -8029,6 +8219,7 @@ fn app_state_uses_append_log_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_emdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("emdb-store-config");
@@ -8075,6 +8266,7 @@ fn app_state_uses_emdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_osmiumdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("osmiumdb-store-config");
@@ -8123,6 +8315,7 @@ fn app_state_uses_osmiumdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_mhdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("mhdb-store-config");
@@ -8170,6 +8363,7 @@ fn app_state_uses_mhdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_marble_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("marble-store-config");
@@ -8216,6 +8410,7 @@ fn app_state_uses_marble_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_loro_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("loro-kv-store-config");
@@ -8262,6 +8457,7 @@ fn app_state_uses_loro_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_luckdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("luckdb-store-config");
@@ -8308,6 +8504,7 @@ fn app_state_uses_luckdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_ipjdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("ipjdb-store-config");
@@ -8354,6 +8551,7 @@ fn app_state_uses_ipjdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_kagi_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kagi-store-config");
@@ -8400,6 +8598,7 @@ fn app_state_uses_kagi_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_deeb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("deeb-store-config");
@@ -8446,6 +8645,7 @@ fn app_state_uses_deeb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rubin_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rubin-store-config");
@@ -8492,6 +8692,7 @@ fn app_state_uses_rubin_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lsm_storage_engine_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lsm-storage-engine-store-config");
@@ -8539,6 +8740,7 @@ fn app_state_uses_lsm_storage_engine_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_etchdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("etchdb-store-config");
@@ -8585,6 +8787,7 @@ fn app_state_uses_etchdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_fastkv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("fastkv-store-config");
@@ -8631,6 +8834,7 @@ fn app_state_uses_fastkv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lsm_engine_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lsm-engine-store-config");
@@ -8678,6 +8882,7 @@ fn app_state_uses_lsm_engine_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lsmdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lsmdb-store-config");
@@ -8724,6 +8929,7 @@ fn app_state_uses_lsmdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_lsm_tree_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("lsm-tree-store-config");
@@ -8771,6 +8977,7 @@ fn app_state_uses_lsm_tree_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_ferrumdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("ferrumdb-store-config");
@@ -8818,6 +9025,7 @@ fn app_state_uses_ferrumdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_mindb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("mindb-store-config");
@@ -8864,6 +9072,7 @@ fn app_state_uses_mindb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_mmdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("mmdb-store-config");
@@ -8910,6 +9119,7 @@ fn app_state_uses_mmdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_mu_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("mu-db-store-config");
@@ -8958,6 +9168,7 @@ fn app_state_uses_mu_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_nanodb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nanodb-store-config");
@@ -9004,6 +9215,7 @@ fn app_state_uses_nanodb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_graus_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("graus_db-store-config");
@@ -9051,6 +9263,7 @@ fn app_state_uses_graus_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("kv-store-config");
@@ -9097,6 +9310,7 @@ fn app_state_uses_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_eight_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("eight-store-config");
@@ -9143,6 +9357,7 @@ fn app_state_uses_eight_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_epoch_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("epoch-db-store-config");
@@ -9190,6 +9405,7 @@ fn app_state_uses_epoch_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_rumdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("rumdb-store-config");
@@ -9236,6 +9452,7 @@ fn app_state_uses_rumdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_hmdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("hmdb-store-config");
@@ -9286,6 +9503,7 @@ fn app_state_uses_hmdb_snapshot_store_from_config() {
 }
 
 #[tokio::test]
+#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_hurrahdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("hurrahdb-store-config");
@@ -9333,6 +9551,7 @@ async fn app_state_uses_hurrahdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_fs_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("fs-db-store-config");
@@ -9385,6 +9604,7 @@ fn app_state_uses_fs_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_sqjson_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("sqjson-store-config");
@@ -9431,6 +9651,7 @@ fn app_state_uses_sqjson_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_saturn_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("saturn-store-config");
@@ -9477,6 +9698,7 @@ fn app_state_uses_saturn_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_icefalldb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("icefalldb-store-config");
@@ -9524,6 +9746,7 @@ fn app_state_uses_icefalldb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_bitask_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("bitask-store-config");
@@ -9570,6 +9793,7 @@ fn app_state_uses_bitask_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_bitkv_rs_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("bitkv-rs-store-config");
@@ -9617,6 +9841,7 @@ fn app_state_uses_bitkv_rs_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_candystore_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("candystore-store-config");
@@ -9664,6 +9889,7 @@ fn app_state_uses_candystore_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_cuendillar_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("cuendillar-store-config");
@@ -9713,6 +9939,7 @@ fn app_state_uses_cuendillar_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_caves_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("caves-store-config");
@@ -9759,6 +9986,7 @@ fn app_state_uses_caves_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_persistent_kv_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("persistent-kv-store-config");
@@ -9806,6 +10034,7 @@ fn app_state_uses_persistent_kv_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_native_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("native-db-store-config");
@@ -9850,6 +10079,7 @@ fn app_state_uses_native_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_nebari_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nebari-store-config");
@@ -9896,6 +10126,7 @@ fn app_state_uses_nebari_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_nodb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nodb-store-config");
@@ -9942,6 +10173,7 @@ fn app_state_uses_nodb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_okofdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("okofdb-store-config");
@@ -9988,6 +10220,7 @@ fn app_state_uses_okofdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_celerix_store_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("celerix-store-config");
@@ -10035,6 +10268,7 @@ fn app_state_uses_celerix_store_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_citadeldb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("citadeldb-store-config");
@@ -10087,6 +10321,7 @@ fn app_state_uses_citadeldb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_thetadb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("thetadb-store-config");
@@ -10133,6 +10368,7 @@ fn app_state_uses_thetadb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_vsdb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("vsdb-store-config");
@@ -10179,6 +10415,7 @@ fn app_state_uses_vsdb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_grebedb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("grebedb-store-config");
@@ -10225,6 +10462,7 @@ fn app_state_uses_grebedb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_grumpydb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("grumpydb-store-config");
@@ -10272,6 +10510,7 @@ fn app_state_uses_grumpydb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_blockbucket_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("blockbucket-store-config");
@@ -10319,6 +10558,7 @@ fn app_state_uses_blockbucket_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_nikidb_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("nikidb-store-config");
@@ -10365,6 +10605,7 @@ fn app_state_uses_nikidb_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_uses_parity_db_snapshot_store_from_config() {
     let mut config = test_config();
     let snapshot_dir = temp_snapshot_dir("parity-db-store-config");
@@ -10412,6 +10653,7 @@ fn app_state_uses_parity_db_snapshot_store_from_config() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn app_state_rejects_s3_snapshot_store_without_endpoint() {
     let mut config = test_config();
     config.snapshot_store = "s3".to_owned();
@@ -10430,6 +10672,7 @@ fn app_state_rejects_s3_snapshot_store_without_endpoint() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_managed_snapshot_store_from_config() {
     let harness = spawn_mock_managed_coordination_service(Some("snapshot-secret")).await;
 
@@ -10476,6 +10719,7 @@ async fn app_state_uses_managed_snapshot_store_from_config() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_s3_snapshot_store_from_config() {
     let harness = spawn_mock_s3_snapshot_service().await;
 
@@ -11106,6 +11350,7 @@ fn sqlite_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jammdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("jammdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11136,6 +11381,7 @@ fn jammdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jammdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("jammdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11206,6 +11452,7 @@ fn jammdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn janql_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("janql-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11254,6 +11501,7 @@ fn janql_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn janql_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("janql-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11322,6 +11570,7 @@ fn janql_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jasondb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("jasondb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11387,6 +11636,7 @@ fn jasondb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jasondb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("jasondb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11457,6 +11707,7 @@ fn jasondb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jasonisnthappy_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("jasonisnthappy-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11522,6 +11773,7 @@ fn jasonisnthappy_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jasonisnthappy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("jasonisnthappy-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11594,6 +11846,7 @@ fn jasonisnthappy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn datastack_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("datastack-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11659,6 +11912,7 @@ fn datastack_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn datastack_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("datastack-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11731,6 +11985,7 @@ fn datastack_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mace_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("mace-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11779,6 +12034,7 @@ fn mace_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mace_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("mace-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11847,6 +12103,7 @@ fn mace_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn heed_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("heed-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11877,6 +12134,7 @@ fn heed_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn heed_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("heed-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11945,6 +12203,7 @@ fn heed_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn hightower_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("hightower-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -11977,6 +12236,7 @@ fn hightower_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn hightower_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("hightower-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12049,6 +12309,7 @@ fn hightower_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fjall_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("fjall-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12079,6 +12340,7 @@ fn fjall_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fjall_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("fjall-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12147,6 +12409,7 @@ fn fjall_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn persy_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("persy-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12177,6 +12440,7 @@ fn persy_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn persy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("persy-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12370,6 +12634,7 @@ async fn managed_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn redb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("redb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12400,6 +12665,7 @@ fn redb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn redb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("redb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12468,6 +12734,7 @@ fn redb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sled_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("sled-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12498,6 +12765,7 @@ fn sled_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sled_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("sled-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12566,6 +12834,7 @@ fn sled_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn pickledb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("pickledb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12596,6 +12865,7 @@ fn pickledb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn pickledb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("pickledb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12666,6 +12936,7 @@ fn pickledb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn microkv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("microkv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12698,6 +12969,7 @@ fn microkv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn microkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("microkv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12768,6 +13040,7 @@ fn microkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustbreak_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rustbreak-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12800,6 +13073,7 @@ fn rustbreak_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustbreak_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rustbreak-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12866,6 +13140,7 @@ fn rustbreak_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yedb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("yedb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12898,6 +13173,7 @@ fn yedb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("yedb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12966,6 +13242,7 @@ fn yedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn btree_store_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("btree-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -12998,6 +13275,7 @@ fn btree_store_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn btree_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("btree-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13070,6 +13348,7 @@ fn btree_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cacache_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("cacache-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13135,6 +13414,7 @@ fn cacache_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cacache_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("cacache-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13205,6 +13485,7 @@ fn cacache_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn siamesedb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("siamesedb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13237,6 +13518,7 @@ fn siamesedb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn siamesedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("siamesedb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13309,6 +13591,7 @@ fn siamesedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn readb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("readb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13341,6 +13624,7 @@ fn readb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn readb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("readb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13409,6 +13693,7 @@ fn readb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustlite_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rustlite-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13441,6 +13726,7 @@ fn rustlite_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustlite_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rustlite-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13515,6 +13801,7 @@ fn rustlite_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn canopydb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("canopydb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13547,6 +13834,7 @@ fn canopydb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn canopydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("canopydb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13621,6 +13909,7 @@ fn canopydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn caves_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("caves-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13653,6 +13942,7 @@ fn caves_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn caves_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("caves-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13715,6 +14005,7 @@ fn caves_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn structsy_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("structsy-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13747,6 +14038,7 @@ fn structsy_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn structsy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("structsy-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13817,6 +14109,7 @@ fn structsy_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn abyssiniandb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("abyssiniandb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13849,6 +14142,7 @@ fn abyssiniandb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn abyssiniandb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("abyssiniandb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13921,6 +14215,7 @@ fn abyssiniandb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ckydb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("ckydb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -13953,6 +14248,7 @@ fn ckydb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ckydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("ckydb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14021,6 +14317,7 @@ fn ckydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn crepedb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("crepedb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14064,6 +14361,7 @@ fn crepedb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn crepedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("crepedb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14134,6 +14432,7 @@ fn crepedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn crystal_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("crystal-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14198,6 +14497,7 @@ fn crystal_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn crystal_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("crystal-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14261,6 +14561,7 @@ fn crystal_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn assystem_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("assystem-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14326,6 +14627,7 @@ fn assystem_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn assystem_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("assystem-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14390,6 +14692,7 @@ fn assystem_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn colon_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("colon-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14455,6 +14758,7 @@ fn colon_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn colon_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("colon-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14525,6 +14829,7 @@ fn colon_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rskey_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rskey-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14557,6 +14862,7 @@ fn rskey_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rskey_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rskey-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14624,6 +14930,7 @@ fn rskey_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn scdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("scdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14656,6 +14963,7 @@ fn scdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn scdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("scdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14723,6 +15031,7 @@ fn scdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn skv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("skv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14754,6 +15063,7 @@ fn skv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn skv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("skv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14821,6 +15131,7 @@ fn skv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn surrealkv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("surrealkv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14853,6 +15164,7 @@ fn surrealkv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn surrealkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("surrealkv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14925,6 +15237,7 @@ fn surrealkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn thunderdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("thunderdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -14957,6 +15270,7 @@ fn thunderdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn thunderdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("thunderdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15029,6 +15343,7 @@ fn thunderdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn thetadb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("thetadb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15061,6 +15376,7 @@ fn thetadb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn thetadb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("thetadb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15131,6 +15447,7 @@ fn thetadb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn vsdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("vsdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15164,6 +15481,7 @@ fn vsdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn vsdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("vsdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15233,6 +15551,7 @@ fn vsdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinybase_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinybase-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15265,6 +15584,7 @@ fn tinybase_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinybase_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("tinybase-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15335,6 +15655,7 @@ fn tinybase_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinydb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinydb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15368,6 +15689,7 @@ fn tinydb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("tinydb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15438,6 +15760,7 @@ fn tinydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dblite_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("dblite-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15470,6 +15793,7 @@ fn dblite_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dblite_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("dblite-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15540,6 +15864,7 @@ fn dblite_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn aeternusdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("aeternusdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15572,6 +15897,7 @@ fn aeternusdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn aeternusdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("aeternusdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15638,6 +15964,7 @@ fn aeternusdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dbless_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("dbless-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15670,6 +15997,7 @@ fn dbless_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dbless_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("dbless-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15734,6 +16062,7 @@ fn dbless_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sanakirja_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("sanakirja-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15766,6 +16095,7 @@ fn sanakirja_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sanakirja_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("sanakirja-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15838,6 +16168,7 @@ fn sanakirja_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn flash_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("flash-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15870,6 +16201,7 @@ fn flash_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn flash_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("flash-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15940,6 +16272,7 @@ fn flash_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn grebedb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("grebedb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -15972,6 +16305,7 @@ fn grebedb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn grebedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("grebedb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16042,6 +16376,7 @@ fn grebedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn grumpydb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("grumpydb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16110,6 +16445,7 @@ fn grumpydb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn grumpydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("grumpydb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16174,6 +16510,7 @@ fn grumpydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn highlandcows_isam_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("highlandcows-isam-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16243,6 +16580,7 @@ fn highlandcows_isam_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn highlandcows_isam_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("highlandcows-isam-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16315,6 +16653,7 @@ fn highlandcows_isam_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn simple_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("simple-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16347,6 +16686,7 @@ fn simple_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn simple_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("simple-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16417,6 +16757,7 @@ fn simple_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn snaildb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("snaildb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16449,6 +16790,7 @@ fn snaildb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn snaildb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("snaildb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16519,6 +16861,7 @@ fn snaildb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn snaildb_snapshot_store_survives_immediate_reopen_cycles() {
     let snapshot_dir = temp_snapshot_dir("snaildb-store-immediate-reopen");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16554,6 +16897,7 @@ fn snaildb_snapshot_store_survives_immediate_reopen_cycles() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn docdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("docdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16586,6 +16930,7 @@ fn docdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn docdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("docdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16654,6 +16999,7 @@ fn docdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn emdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("emdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16704,6 +17050,7 @@ fn emdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn emdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("emdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16772,6 +17119,7 @@ fn emdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn osmiumdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("osmiumdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16822,6 +17170,7 @@ fn osmiumdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn osmiumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("osmiumdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16892,6 +17241,7 @@ fn osmiumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn shorterdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("shorterdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16924,6 +17274,7 @@ fn shorterdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn shorterdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("shorterdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -16996,6 +17347,7 @@ fn shorterdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn shorterdb_snapshot_store_survives_immediate_reopen_cycles() {
     let snapshot_dir = temp_snapshot_dir("shorterdb-store-reopen-cycles");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17038,6 +17390,7 @@ fn shorterdb_snapshot_store_survives_immediate_reopen_cycles() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn shorterdb_snapshot_store_reuses_doc_id_across_repeated_reopen_cycles() {
     let snapshot_dir = temp_snapshot_dir("shorterdb-store-reuse-cycles");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17101,6 +17454,7 @@ fn shorterdb_snapshot_store_reuses_doc_id_across_repeated_reopen_cycles() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinykv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinykv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17133,6 +17487,7 @@ fn tinykv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinykv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("tinykv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17203,6 +17558,7 @@ fn tinykv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn saberdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("saberdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17235,6 +17591,7 @@ fn saberdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn saberdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("saberdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17305,6 +17662,7 @@ fn saberdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn smolldb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("smolldb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17348,6 +17706,7 @@ fn smolldb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn smolldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("smolldb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17412,6 +17771,7 @@ fn smolldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kstone_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("kstone-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17477,6 +17837,7 @@ fn kstone_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kstone_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("kstone-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17547,6 +17908,7 @@ fn kstone_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ghaladb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("ghaladb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17612,6 +17974,7 @@ fn ghaladb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ghaladb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("ghaladb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17682,6 +18045,7 @@ fn ghaladb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn roughdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("roughdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17747,6 +18111,7 @@ fn roughdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn roughdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("roughdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17817,6 +18182,7 @@ fn roughdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn raindb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("raindb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17882,6 +18248,7 @@ fn raindb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn raindb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("raindb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -17952,6 +18319,7 @@ fn raindb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn infusedb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("infusedb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18017,6 +18385,7 @@ fn infusedb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn infusedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("infusedb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18087,6 +18456,7 @@ fn infusedb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kafi_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("kafi-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18152,6 +18522,7 @@ fn kafi_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kafi_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("kafi-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18220,6 +18591,7 @@ fn kafi_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinkv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("tinkv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18285,6 +18657,7 @@ fn tinkv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn tinkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("tinkv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18353,6 +18726,7 @@ fn tinkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ledger_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("ledger-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18417,6 +18791,7 @@ fn ledger_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ledger_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("ledger-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18486,6 +18861,7 @@ fn ledger_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn joydb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("joydb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18551,6 +18927,7 @@ fn joydb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn joydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("joydb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18619,6 +18996,7 @@ fn joydb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn png_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("png-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18684,6 +19062,7 @@ fn png_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn png_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("png-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18754,6 +19133,7 @@ fn png_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_tree_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lsm-tree-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18819,6 +19199,7 @@ fn lsm_tree_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_tree_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lsm-tree-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18889,6 +19270,7 @@ fn lsm_tree_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitcask_engine_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("bitcask-engine-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -18954,6 +19336,7 @@ fn bitcask_engine_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitcask_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("bitcask-engine-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19026,6 +19409,7 @@ fn bitcask_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn feoxdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("feoxdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19069,6 +19453,7 @@ fn feoxdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn feoxdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("feoxdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19139,6 +19524,7 @@ fn feoxdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn agdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("agdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19182,6 +19568,7 @@ fn agdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn agdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("agdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19250,6 +19637,7 @@ fn agdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn amandine_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("amandine-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19308,6 +19696,7 @@ fn amandine_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn amandine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("amandine-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19378,6 +19767,7 @@ fn amandine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn armdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("armdb-store-roundtrip");
     let snapshot_path = snapshot_dir.join("snapshots.armdb");
@@ -19436,6 +19826,7 @@ fn armdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn armdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("armdb-store-migration");
     let snapshot_path = snapshot_dir.join("snapshots.armdb");
@@ -19497,6 +19888,7 @@ fn armdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn db_rs_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("db-rs-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19529,6 +19921,7 @@ fn db_rs_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn db_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("db-rs-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19597,6 +19990,7 @@ fn db_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dharmadb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("dharmadb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19629,6 +20023,7 @@ fn dharmadb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dharmadb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("dharmadb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19699,6 +20094,7 @@ fn dharmadb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dharmadb_snapshot_store_survives_immediate_reopen_cycles() {
     let snapshot_dir = temp_snapshot_dir("dharmadb-store-reopen-cycles");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19742,6 +20138,7 @@ fn dharmadb_snapshot_store_survives_immediate_reopen_cycles() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dir_cache_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("dir-cache-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19790,6 +20187,7 @@ fn dir_cache_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn dir_cache_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("dir-cache-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19860,6 +20258,7 @@ fn dir_cache_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jsondb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("jsondb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19892,6 +20291,7 @@ fn jsondb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jsondb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("jsondb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -19956,6 +20356,7 @@ fn jsondb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kopperdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("kopperdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20004,6 +20405,7 @@ fn kopperdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kopperdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("kopperdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20068,6 +20470,7 @@ fn kopperdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rcask_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rcask-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20116,6 +20519,7 @@ fn rcask_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rcask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rcask-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20178,6 +20582,7 @@ fn rcask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jfs_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("jfs-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20259,6 +20664,7 @@ fn jfs_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn jfs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("jfs-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20321,6 +20727,7 @@ fn jfs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_store_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("json-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20353,6 +20760,7 @@ fn json_store_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("json-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20419,6 +20827,7 @@ fn json_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_db_rs_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("json-db-rs-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20462,6 +20871,7 @@ fn json_db_rs_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_db_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("json-db-rs-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20526,6 +20936,7 @@ fn json_db_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cdb64_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("cdb64-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20607,6 +21018,7 @@ fn cdb64_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cdb64_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("cdb64-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20669,6 +21081,7 @@ fn cdb64_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_mutex_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("json-mutex-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20717,6 +21130,7 @@ fn json_mutex_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn json_mutex_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("json-mutex-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20783,6 +21197,7 @@ fn json_mutex_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn toiletdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("toiletdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20841,6 +21256,7 @@ fn toiletdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn toiletdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("toiletdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20905,6 +21321,7 @@ fn toiletdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn koit_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("koit-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20937,6 +21354,7 @@ fn koit_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn koit_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("koit-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -20999,6 +21417,7 @@ fn koit_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lite_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lite-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21042,6 +21461,7 @@ fn lite_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lite_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lite-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21106,6 +21526,7 @@ fn lite_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lmdb_rs_core_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lmdb-rs-core-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21171,6 +21592,7 @@ fn lmdb_rs_core_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lmdb_rs_core_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lmdb-rs-core-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21237,6 +21659,7 @@ fn lmdb_rs_core_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn data_pile_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("data-pile-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21302,6 +21725,7 @@ fn data_pile_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn data_pile_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("data-pile-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21366,6 +21790,7 @@ fn data_pile_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn log_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("log-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21431,6 +21856,7 @@ fn log_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn log_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("log-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21493,6 +21919,7 @@ fn log_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn append_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("append-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21558,6 +21985,7 @@ fn append_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn append_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("append-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21622,6 +22050,7 @@ fn append_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn append_log_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("append-log-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21704,6 +22133,7 @@ fn append_log_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn append_log_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("append-log-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21770,6 +22200,7 @@ fn append_log_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mhdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("mhdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21835,6 +22266,7 @@ fn mhdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mhdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("mhdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21903,6 +22335,7 @@ fn mhdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn marble_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("marble-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -21973,6 +22406,7 @@ fn marble_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn marble_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("marble-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22038,6 +22472,7 @@ fn marble_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn loro_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("loro-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22103,6 +22538,7 @@ fn loro_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn loro_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("loro-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22173,6 +22609,7 @@ fn loro_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn luckdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("luckdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22238,6 +22675,7 @@ fn luckdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn luckdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("luckdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22308,6 +22746,7 @@ fn luckdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ipjdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("ipjdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22373,6 +22812,7 @@ fn ipjdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ipjdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("ipjdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22441,6 +22881,7 @@ fn ipjdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kagi_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("kagi-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22523,6 +22964,7 @@ fn kagi_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kagi_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("kagi-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22591,6 +23033,7 @@ fn kagi_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn deeb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("deeb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22656,6 +23099,7 @@ fn deeb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn deeb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("deeb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22724,6 +23168,7 @@ fn deeb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rubin_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rubin-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22789,6 +23234,7 @@ fn rubin_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rubin_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rubin-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22857,6 +23303,7 @@ fn rubin_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_storage_engine_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lsm-storage-engine-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22902,6 +23349,7 @@ fn lsm_storage_engine_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_storage_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lsm-storage-engine-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -22974,6 +23422,7 @@ fn lsm_storage_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_engine_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lsm-engine-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23039,6 +23488,7 @@ fn lsm_engine_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsm_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lsm-engine-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23111,6 +23561,7 @@ fn lsm_engine_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn etchdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("etchdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23176,6 +23627,7 @@ fn etchdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn etchdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("etchdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23246,6 +23698,7 @@ fn etchdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fastkv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("fastkv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23311,6 +23764,7 @@ fn fastkv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fastkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("fastkv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23381,6 +23835,7 @@ fn fastkv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn apex_store_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("apex-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23446,6 +23901,7 @@ fn apex_store_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn apex_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("apex-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23518,6 +23974,7 @@ fn apex_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsmdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("lsmdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23583,6 +24040,7 @@ fn lsmdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn lsmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("lsmdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23651,6 +24109,7 @@ fn lsmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ferrumdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("ferrumdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23704,6 +24163,7 @@ fn ferrumdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn ferrumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("ferrumdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23774,6 +24234,7 @@ fn ferrumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mmdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("mmdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23827,6 +24288,7 @@ fn mmdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("mmdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23895,6 +24357,7 @@ fn mmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mu_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("mu-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -23960,6 +24423,7 @@ fn mu_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mu_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("mu-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24028,6 +24492,7 @@ fn mu_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mindb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("mindb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24081,6 +24546,7 @@ fn mindb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn mindb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("mindb-store-reuse");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24149,6 +24615,7 @@ fn mindb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nanodb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("nanodb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24202,6 +24669,7 @@ fn nanodb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nanodb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("nanodb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24272,6 +24740,7 @@ fn nanodb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn graus_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("graus_db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24325,6 +24794,7 @@ fn graus_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn graus_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("graus_db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24395,6 +24865,7 @@ fn graus_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yakv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("yakv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24427,6 +24898,7 @@ fn yakv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yakv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("yakv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24495,6 +24967,7 @@ fn yakv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yakvdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("yakvdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24548,6 +25021,7 @@ fn yakvdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn yakvdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("yakvdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24618,6 +25092,7 @@ fn yakvdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24648,6 +25123,7 @@ fn kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24715,6 +25191,7 @@ fn kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn eight_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("eight-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24747,6 +25224,7 @@ fn eight_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn eight_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("eight-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24815,6 +25293,7 @@ fn eight_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn epoch_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("epoch-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24847,6 +25326,7 @@ fn epoch_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn epoch_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("epoch-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24917,6 +25397,7 @@ fn epoch_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rumdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rumdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -24949,6 +25430,7 @@ fn rumdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rumdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25017,6 +25499,7 @@ fn rumdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustcask_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rustcask-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25049,6 +25532,7 @@ fn rustcask_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rustcask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rustcask-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25119,6 +25603,7 @@ fn rustcask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rusty_leveldb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("rusty-leveldb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25151,6 +25636,7 @@ fn rusty_leveldb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn rusty_leveldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("rusty-leveldb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25223,6 +25709,7 @@ fn rusty_leveldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn hmdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("hmdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25254,6 +25741,7 @@ fn hmdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn hmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("hmdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25321,6 +25809,7 @@ fn hmdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[tokio::test]
+#[cfg(feature = "full-snapshot-stores")]
 async fn hurrahdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("hurrahdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25369,6 +25858,7 @@ async fn hurrahdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[tokio::test]
+#[cfg(feature = "full-snapshot-stores")]
 async fn hurrahdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("hurrahdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25439,6 +25929,7 @@ async fn hurrahdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fs_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("fs-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25487,6 +25978,7 @@ fn fs_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn fs_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("fs-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25554,6 +26046,7 @@ fn fs_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sqjson_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("sqjson-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25605,6 +26098,7 @@ fn sqjson_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn sqjson_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("sqjson-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25681,6 +26175,7 @@ fn sqjson_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn saturn_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("saturn-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25729,6 +26224,7 @@ fn saturn_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn saturn_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("saturn-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25805,6 +26301,7 @@ fn saturn_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn icefalldb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("icefalldb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25853,6 +26350,7 @@ fn icefalldb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn icefalldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("icefalldb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25919,6 +26417,7 @@ fn icefalldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn blockbucket_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("blockbucket-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -25967,6 +26466,7 @@ fn blockbucket_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn blockbucket_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("blockbucket-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26039,6 +26539,7 @@ fn blockbucket_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn blazeup_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("blazeup-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26104,6 +26605,7 @@ fn blazeup_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn blazeup_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("blazeup-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26174,6 +26676,7 @@ fn blazeup_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitask_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("bitask-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26205,6 +26708,7 @@ fn bitask_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("bitask-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26274,6 +26778,7 @@ fn bitask_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitkv_rs_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("bitkv-rs-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26305,6 +26810,7 @@ fn bitkv_rs_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn bitkv_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("bitkv-rs-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26374,6 +26880,7 @@ fn bitkv_rs_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn candystore_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("candystore-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26406,6 +26913,7 @@ fn candystore_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn candystore_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("candystore-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26478,6 +26986,7 @@ fn candystore_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cuendillar_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("cuendillar-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26526,6 +27035,7 @@ fn cuendillar_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn cuendillar_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("cuendillar-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26598,6 +27108,7 @@ fn cuendillar_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn native_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("native-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26628,6 +27139,7 @@ fn native_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn native_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("native-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26700,6 +27212,7 @@ fn native_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nebari_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("nebari-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26732,6 +27245,7 @@ fn nebari_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nebari_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("nebari-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26802,6 +27316,7 @@ fn nebari_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn persistent_kv_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("persistent-kv-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26834,6 +27349,7 @@ fn persistent_kv_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn persistent_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("persistent-kv-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26906,6 +27422,7 @@ fn persistent_kv_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nodb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("nodb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -26938,6 +27455,7 @@ fn nodb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nodb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("nodb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27006,6 +27524,7 @@ fn nodb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn okofdb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("okofdb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27038,6 +27557,7 @@ fn okofdb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn okofdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("okofdb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27102,6 +27622,7 @@ fn okofdb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn celerix_store_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("celerix-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27144,6 +27665,7 @@ fn celerix_store_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn celerix_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("celerix-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27208,6 +27730,7 @@ fn celerix_store_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn citadeldb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("citadeldb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27279,6 +27802,7 @@ fn citadeldb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn citadeldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("citadeldb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27357,6 +27881,7 @@ fn citadeldb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nikidb_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("nikidb-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27389,6 +27914,7 @@ fn nikidb_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn nikidb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("nikidb-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27453,6 +27979,7 @@ fn nikidb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn parity_db_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("parity-db-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
@@ -27485,6 +28012,7 @@ fn parity_db_snapshot_store_round_trips_document_catalog() {
 }
 
 #[test]
+#[cfg(feature = "full-snapshot-stores")]
 fn parity_db_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
     let snapshot_dir = temp_snapshot_dir("parity-db-store-migration");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");

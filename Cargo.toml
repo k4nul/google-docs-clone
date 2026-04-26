@@ -3,174 +3,321 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+full-snapshot-stores = [
+    "dep:append-log",
+    "dep:append_kv",
+    "dep:assystem",
+    "dep:aeternusdb",
+    "dep:abyssiniandb",
+    "dep:agdb",
+    "dep:amandine",
+    "dep:apex-store-rs",
+    "dep:armdb",
+    "dep:bitkv-rs",
+    "dep:bitcask-engine-rs",
+    "dep:blockbucket",
+    "dep:bitask",
+    "dep:btree-store",
+    "dep:cacache",
+    "dep:candystore",
+    "dep:canopydb",
+    "dep:caves",
+    "dep:celerix-store",
+    "dep:cdb64",
+    "dep:citadeldb",
+    "dep:ckydb",
+    "dep:colon_db",
+    "dep:crepedb",
+    "dep:crystal",
+    "dep:cuendillar",
+    "dep:datastack",
+    "dep:data-pile",
+    "dep:db-rs",
+    "dep:db-rs-derive",
+    "dep:deeb_core",
+    "dep:dharmadb",
+    "dep:dir-cache",
+    "dep:dblite",
+    "dep:dbless",
+    "dep:docdb",
+    "dep:emdb",
+    "dep:osmiumdb",
+    "dep:eight",
+    "dep:epoch-db",
+    "dep:etchdb",
+    "dep:ferrumdb",
+    "dep:fastkv",
+    "dep:flash-kv",
+    "dep:fjall",
+    "dep:grebedb",
+    "dep:grumpydb",
+    "dep:graus-db",
+    "dep:ghaladb",
+    "dep:heed",
+    "dep:hightower-kv",
+    "dep:highlandcows-isam",
+    "dep:hmdb",
+    "dep:icefalldb",
+    "dep:jammdb",
+    "dep:janql",
+    "dep:jasondb",
+    "dep:jasonisnthappy",
+    "dep:jfs",
+    "dep:jsondb",
+    "dep:json_store",
+    "dep:json_db_rs",
+    "dep:json-mutex-db",
+    "dep:toiletdb",
+    "dep:kopperdb",
+    "dep:kagi",
+    "dep:kv",
+    "dep:koit",
+    "dep:lite_db",
+    "dep:lsm_storage_engine",
+    "dep:lsm_engine",
+    "dep:lsmdb",
+    "dep:mace-kv",
+    "dep:marble",
+    "dep:mhdb",
+    "dep:mmdb",
+    "dep:mu_db",
+    "dep:nanodb",
+    "dep:native_db",
+    "dep:native_model",
+    "dep:nebari",
+    "dep:nikidb",
+    "dep:nodb",
+    "dep:parity-db",
+    "dep:persy",
+    "dep:persistent-kv",
+    "dep:pickledb",
+    "dep:microkv",
+    "dep:redb",
+    "dep:readb",
+    "dep:rcask",
+    "dep:raindb",
+    "dep:rumdb",
+    "dep:rubin",
+    "dep:rskey",
+    "dep:rustlite",
+    "dep:rustbreak",
+    "dep:rustcask",
+    "dep:rusty-leveldb",
+    "dep:snaildb",
+    "dep:saberdb",
+    "dep:scdb",
+    "dep:sanakirja",
+    "dep:saturn",
+    "dep:skv",
+    "dep:siamesedb",
+    "dep:simple_db",
+    "dep:sled",
+    "dep:joydb",
+    "dep:smolldb",
+    "dep:sqjson",
+    "dep:structsy",
+    "dep:surrealkv",
+    "dep:thunderdb",
+    "dep:thetadb",
+    "dep:tinybase",
+    "dep:tinydb",
+    "dep:tinykv",
+    "dep:tinkv",
+    "dep:vsdb",
+    "dep:yakv",
+    "dep:yakvdb",
+    "dep:yedb",
+    "dep:shorterDB",
+    "dep:okofdb",
+    "dep:feoxdb",
+    "dep:mindb",
+    "dep:log_kv",
+    "dep:loro-kv-store",
+    "dep:lsm-tree",
+    "dep:kstone-core",
+    "dep:roughdb",
+    "dep:InfuseDB",
+    "dep:kafi",
+    "dep:ledger-kv",
+    "dep:blazeup",
+    "dep:luckdb",
+    "dep:ipjdb",
+    "dep:lmdb-rs-core",
+    "dep:hurrahdb",
+    "dep:fs-db",
+    "dep:png-db",
+]
+
 [dependencies]
 anyhow = "1"
-append-log = "0.1.4-dev"
-append_kv = { version = "0.1.0", path = "vendor/append_kv" }
-assystem = "1.0.0"
-aeternusdb = "1.0.1"
-abyssiniandb = "0.1.4"
-agdb = "0.12.10"
-amandine = "0.1.2"
-apex-store-rs = { version = "2.1.1", path = "vendor/apex-store-rs" }
-armdb = { version = "0.1.14", path = "vendor/armdb" }
+append-log = { version = "0.1.4-dev", optional = true }
+append_kv = { version = "0.1.0", path = "vendor/append_kv", optional = true }
+assystem = { version = "1.0.0", optional = true }
+aeternusdb = { version = "1.0.1", optional = true }
+abyssiniandb = { version = "0.1.4", optional = true }
+agdb = { version = "0.12.10", optional = true }
+amandine = { version = "0.1.2", optional = true }
+apex-store-rs = { version = "2.1.1", path = "vendor/apex-store-rs", optional = true }
+armdb = { version = "0.1.14", path = "vendor/armdb", optional = true }
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 base64 = "0.22.1"
-bitkv-rs = "0.2.1"
-bitcask-engine-rs = "0.1.0"
-blockbucket = "0.2.8"
-bitask = { version = "0.1.1", path = "vendor/bitask" }
-btree-store = "0.1.4"
+bitkv-rs = { version = "0.2.1", optional = true }
+bitcask-engine-rs = { version = "0.1.0", optional = true }
+blockbucket = { version = "0.2.8", optional = true }
+bitask = { version = "0.1.1", path = "vendor/bitask", optional = true }
+btree-store = { version = "0.1.4", optional = true }
 bytes = "1"
-cacache = { version = "13.1.0", default-features = false, features = ["mmap", "tokio-runtime"] }
-candystore = "1.0.0"
-canopydb = { version = "0.2.5", path = "vendor/canopydb" }
-caves = "0.2.1"
-celerix-store = "0.1.2"
-cdb64 = "0.2.0"
+cacache = { version = "13.1.0", default-features = false, features = ["mmap", "tokio-runtime"], optional = true }
+candystore = { version = "1.0.0", optional = true }
+canopydb = { version = "0.2.5", path = "vendor/canopydb", optional = true }
+caves = { version = "0.2.1", optional = true }
+celerix-store = { version = "0.1.2", optional = true }
+cdb64 = { version = "0.2.0", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
-citadeldb = { version = "0.8.0", default-features = false }
-ckydb = "0.0.5"
-colon_db = "0.1.2"
-crepedb = { version = "0.1.6", default-features = true }
-crystal = "0.0.1-alpha1"
-cuendillar = "0.1.0"
+citadeldb = { version = "0.8.0", default-features = false, optional = true }
+ckydb = { version = "0.0.5", optional = true }
+colon_db = { version = "0.1.2", optional = true }
+crepedb = { version = "0.1.6", default-features = true, optional = true }
+crystal = { version = "0.0.1-alpha1", optional = true }
+cuendillar = { version = "0.1.0", optional = true }
 dashmap = "6"
-datastack = "0.4.0"
-data-pile = "0.6.1"
-db-rs = "0.3.6"
-db-rs-derive = "0.3.6"
-deeb_core = "0.0.6"
-dharmadb = "0.1.1"
-dir-cache = "0.1.0"
-dblite = { version = "0.1.2", default-features = false }
-dbless = "0.2.0"
-docdb = "0.1.0"
+datastack = { version = "0.4.0", optional = true }
+data-pile = { version = "0.6.1", optional = true }
+db-rs = { version = "0.3.6", optional = true }
+db-rs-derive = { version = "0.3.6", optional = true }
+deeb_core = { version = "0.0.6", optional = true }
+dharmadb = { version = "0.1.1", optional = true }
+dir-cache = { version = "0.1.0", optional = true }
+dblite = { version = "0.1.2", default-features = false, optional = true }
+dbless = { version = "0.2.0", optional = true }
+docdb = { version = "0.1.0", optional = true }
 dotenvy = "0.15"
-emdb = "0.7.0"
-osmiumdb = "0.1.0"
-eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"] }
-epoch-db = { version = "0.2.9", path = "vendor/epoch-db" }
-etchdb = "0.3.3"
-ferrumdb = "0.1.2"
-fastkv = "0.1.2"
-flash-kv = "0.2.1"
-fjall = "3.1.4"
+emdb = { version = "0.7.0", optional = true }
+osmiumdb = { version = "0.1.0", optional = true }
+eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"], optional = true }
+epoch-db = { version = "0.2.9", path = "vendor/epoch-db", optional = true }
+etchdb = { version = "0.3.3", optional = true }
+ferrumdb = { version = "0.1.2", optional = true }
+fastkv = { version = "0.1.2", optional = true }
+flash-kv = { version = "0.2.1", optional = true }
+fjall = { version = "3.1.4", optional = true }
 futures-util = "0.3"
-grebedb = { version = "1.0.0", path = "vendor/grebedb", default-features = false, features = ["file_locking", "system"] }
-grumpydb = "1.0.0"
-graus-db = "0.2.2"
-ghaladb = { version = "0.1.4", path = "vendor/ghaladb" }
-heed = { version = "0.22.1", path = "vendor/heed" }
+grebedb = { version = "1.0.0", path = "vendor/grebedb", default-features = false, features = ["file_locking", "system"], optional = true }
+grumpydb = { version = "1.0.0", optional = true }
+graus-db = { version = "0.2.2", optional = true }
+ghaladb = { version = "0.1.4", path = "vendor/ghaladb", optional = true }
+heed = { version = "0.22.1", path = "vendor/heed", optional = true }
 hex = "0.4.3"
-hightower-kv = "0.1.5"
-highlandcows-isam = "0.2.0"
+hightower-kv = { version = "0.1.5", optional = true }
+highlandcows-isam = { version = "0.2.0", optional = true }
 hmac = "0.12"
-hmdb = "0.2.2"
-icefalldb = { version = "0.1.0", path = "vendor/icefalldb" }
-jammdb = "0.11"
-janql = "0.3.1"
-jasondb = "0.2.7"
-jasonisnthappy = { version = "0.1.1", default-features = false }
-jfs = "0.9.0"
-jsondb = "0.4.0"
-json_store = "0.1.5"
-json_db_rs = "0.1.0"
-json-mutex-db = "0.0.1"
-toiletdb = "0.1.2"
-kopperdb = "0.1.0"
-kagi = "0.1.1"
-kv = { version = "0.24.0", features = ["json-value"] }
-koit = "0.2.0"
-lite_db = "0.1.6"
-lsm_storage_engine = "0.1.0"
-lsm_engine = { version = "0.1.9", path = "vendor/lsm_engine" }
-lsmdb = "1.0.0"
-mace-kv = "0.0.29"
-marble = "16.0.2"
-mhdb = "1.0.3"
-mmdb = { version = "3.2.2", path = "vendor/mmdb" }
-mu_db = "0.0.1"
-nanodb = "0.4.5"
-native_db = "0.8.2"
-native_model = "=0.4.20"
-nebari = { version = "0.5.5", path = "vendor/nebari" }
-nikidb = "0.1.1"
-nodb = "0.2.2"
-parity-db = { version = "0.5.4", path = "vendor/parity-db" }
-persy = "1.7.1"
-persistent-kv = "1.0.2"
-pickledb = "0.5.1"
-microkv = { version = "0.2.9", path = "vendor/microkv" }
-redb = "2"
-readb = { version = "0.4.1", features = ["write"] }
-rcask = "0.1.0"
-raindb = "1.0.0"
-rumdb = "0.3.0"
-rubin = "0.4.0"
-rskey = "0.4.0"
-rustlite = "0.8.0"
+hmdb = { version = "0.2.2", optional = true }
+icefalldb = { version = "0.1.0", path = "vendor/icefalldb", optional = true }
+jammdb = { version = "0.11", optional = true }
+janql = { version = "0.3.1", optional = true }
+jasondb = { version = "0.2.7", optional = true }
+jasonisnthappy = { version = "0.1.1", default-features = false, optional = true }
+jfs = { version = "0.9.0", optional = true }
+jsondb = { version = "0.4.0", optional = true }
+json_store = { version = "0.1.5", optional = true }
+json_db_rs = { version = "0.1.0", optional = true }
+json-mutex-db = { version = "0.0.1", optional = true }
+toiletdb = { version = "0.1.2", optional = true }
+kopperdb = { version = "0.1.0", optional = true }
+kagi = { version = "0.1.1", optional = true }
+kv = { version = "0.24.0", features = ["json-value"], optional = true }
+koit = { version = "0.2.0", optional = true }
+lite_db = { version = "0.1.6", optional = true }
+lsm_storage_engine = { version = "0.1.0", optional = true }
+lsm_engine = { version = "0.1.9", path = "vendor/lsm_engine", optional = true }
+lsmdb = { version = "1.0.0", optional = true }
+mace-kv = { version = "0.0.29", optional = true }
+marble = { version = "16.0.2", optional = true }
+mhdb = { version = "1.0.3", optional = true }
+mmdb = { version = "3.2.2", path = "vendor/mmdb", optional = true }
+mu_db = { version = "0.0.1", optional = true }
+nanodb = { version = "0.4.5", optional = true }
+native_db = { version = "0.8.2", optional = true }
+native_model = { version = "=0.4.20", optional = true }
+nebari = { version = "0.5.5", path = "vendor/nebari", optional = true }
+nikidb = { version = "0.1.1", optional = true }
+nodb = { version = "0.2.2", optional = true }
+parity-db = { version = "0.5.4", path = "vendor/parity-db", optional = true }
+persy = { version = "1.7.1", optional = true }
+persistent-kv = { version = "1.0.2", optional = true }
+pickledb = { version = "0.5.1", optional = true }
+microkv = { version = "0.2.9", path = "vendor/microkv", optional = true }
+redb = { version = "2", optional = true }
+readb = { version = "0.4.1", features = ["write"], optional = true }
+rcask = { version = "0.1.0", optional = true }
+raindb = { version = "1.0.0", optional = true }
+rumdb = { version = "0.3.0", optional = true }
+rubin = { version = "0.4.0", optional = true }
+rskey = { version = "0.4.0", optional = true }
+rustlite = { version = "0.8.0", optional = true }
 rusqlite = { version = "0.37.0", path = "vendor/rusqlite" }
-rustbreak = { version = "2", features = ["bin_enc"] }
+rustbreak = { version = "2", features = ["bin_enc"], optional = true }
 rustls = "=0.21.12"
-rustcask = "0.1.0"
-rusty-leveldb = "4.0.1"
-snaildb = "0.2.2"
-saberdb = "1.1.0"
-scdb = "0.2.1"
-sanakirja = "2.0.0-beta"
-saturn = "0.0.1"
-skv = "0.1.2"
-siamesedb = "0.1.23"
+rustcask = { version = "0.1.0", optional = true }
+rusty-leveldb = { version = "4.0.1", optional = true }
+snaildb = { version = "0.2.2", optional = true }
+saberdb = { version = "1.1.0", optional = true }
+scdb = { version = "0.2.1", optional = true }
+sanakirja = { version = "2.0.0-beta", optional = true }
+saturn = { version = "0.0.1", optional = true }
+skv = { version = "0.1.2", optional = true }
+siamesedb = { version = "0.1.23", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
-simple_db = "0.1.2"
-sled = "0.34"
-joydb = { version = "0.1.0", features = ["json"] }
-smolldb = "0.4.2"
-sqjson = "0.1.9"
-structsy = { version = "0.5.2", features = ["derive"] }
-surrealkv = "0.21.0"
-thunderdb = "0.4.0"
-thetadb = "0.0.4"
+simple_db = { version = "0.1.2", optional = true }
+sled = { version = "0.34", optional = true }
+joydb = { version = "0.1.0", features = ["json"], optional = true }
+smolldb = { version = "0.4.2", optional = true }
+sqjson = { version = "0.1.9", optional = true }
+structsy = { version = "0.5.2", features = ["derive"], optional = true }
+surrealkv = { version = "0.21.0", optional = true }
+thunderdb = { version = "0.4.0", optional = true }
+thetadb = { version = "0.0.4", optional = true }
 thiserror = "2"
-tinybase = "0.1.5"
-tinydb = "1.0.0"
-tinykv = "0.4.0"
-tinkv = "0.10.0"
+tinybase = { version = "0.1.5", optional = true }
+tinydb = { version = "1.0.0", optional = true }
+tinykv = { version = "0.4.0", optional = true }
+tinkv = { version = "0.10.0", optional = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "sync"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 url = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
-vsdb = { version = "13.4.5", path = "vendor/vsdb" }
+vsdb = { version = "13.4.5", path = "vendor/vsdb", optional = true }
 webpki-roots = "0.25.4"
-yakv = "0.2.7"
-yakvdb = "0.6.2"
-yedb = { version = "0.5.1", path = "vendor/yedb" }
+yakv = { version = "0.2.7", optional = true }
+yakvdb = { version = "0.6.2", optional = true }
+yedb = { version = "0.5.1", path = "vendor/yedb", optional = true }
 yrs = "=0.18.2"
 yrs-axum = "0.8.2"
-shorterDB = { version = "0.2.0", path = "vendor/shorterdb" }
-okofdb = { version = "0.1.3", path = "vendor/okofdb" }
-feoxdb = { version = "0.5.0", default-features = false, features = ["system-alloc"] }
-mindb = { version = "0.1.2", path = "vendor/mindb" }
-log_kv = "0.1.0"
-loro-kv-store = { version = "1.11.1", path = "vendor/loro-kv-store" }
-lsm-tree = "3.1.4"
-kstone-core = { version = "0.1.0", path = "vendor/kstone-core" }
-roughdb = { version = "0.9.0", path = "vendor/roughdb" }
-InfuseDB = "0.2.1"
-kafi = "0.1.2"
-ledger-kv = "0.1.0"
-blazeup = "0.1.3"
-luckdb = "0.1.4"
-ipjdb = "0.16.1"
-lmdb-rs-core = "0.1.0"
-hurrahdb = "0.1.0"
-fs-db = "0.1.0"
-png-db = { version = "0.1.2", default-features = false }
+shorterDB = { version = "0.2.0", path = "vendor/shorterdb", optional = true }
+okofdb = { version = "0.1.3", path = "vendor/okofdb", optional = true }
+feoxdb = { version = "0.5.0", default-features = false, features = ["system-alloc"], optional = true }
+mindb = { version = "0.1.2", path = "vendor/mindb", optional = true }
+log_kv = { version = "0.1.0", optional = true }
+loro-kv-store = { version = "1.11.1", path = "vendor/loro-kv-store", optional = true }
+lsm-tree = { version = "3.1.4", optional = true }
+kstone-core = { version = "0.1.0", path = "vendor/kstone-core", optional = true }
+roughdb = { version = "0.9.0", path = "vendor/roughdb", optional = true }
+InfuseDB = { version = "0.2.1", optional = true }
+kafi = { version = "0.1.2", optional = true }
+ledger-kv = { version = "0.1.0", optional = true }
+blazeup = { version = "0.1.3", optional = true }
+luckdb = { version = "0.1.4", optional = true }
+ipjdb = { version = "0.16.1", optional = true }
+lmdb-rs-core = { version = "0.1.0", optional = true }
+hurrahdb = { version = "0.1.0", optional = true }
+fs-db = { version = "0.1.0", optional = true }
+png-db = { version = "0.1.2", default-features = false, optional = true }
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }

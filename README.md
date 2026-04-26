@@ -6,6 +6,8 @@ Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트�
 
 문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/agdb/amandine/apex_store/armdb/assystem/flash_kv/ghaladb/blockbucket/grebedb/grumpydb/graus_db/highlandcows_isam/simple_db/docdb/emdb/osmiumdb/eight/epoch_db/etchdb/fastkv/ferrumdb/rumdb/rubin/shorterdb/sqlite/heed/hightower_kv/hmdb/hurrahdb/fs_db/sqjson/bitask/bitkv_rs/bitcask_engine/blazeup/candystore/celerix_store/citadeldb/cuendillar/data_pile/jammdb/mace/janql/jasondb/jasonisnthappy/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/rcask/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/crepedb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/tinybase/tinydb/dblite/dbless/db_rs/dharmadb/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/smolldb/kstone/roughdb/raindb/infusedb/kafi/tinkv/ledger_kv/jsondb/kv/koit/lite_db/lmdb_rs_core/log_kv/mhdb/marble/loro_kv/luckdb/ipjdb/kagi/deeb/rubin/lsm_engine/lsm_storage_engine/lsmdb/lsm_tree/mindb/mmdb/mu_db/nanodb/jfs/json_store/json_db_rs/cdb64/json_mutex_db/toiletdb/dir_cache/feoxdb/s3/managed snapshot 저장 추상화를 포함합니다.
 
+기본 빌드는 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 컴파일합니다. 전체 adapter 인벤토리와 확장 회귀 테스트가 필요하면 `cargo check --features full-snapshot-stores` 또는 `cargo test --features full-snapshot-stores`를 사용합니다.
+
 ## 해결하려는 문제
 
 협업 편집 시스템은 HTTP API, WebSocket 세션, 문서별 상태 관리, CRDT 동기화 경계를 초기에 잘 나누지 않으면 빠르게 복잡해집니다. 이 레포는 그 복잡도를 초기에 제어하기 위해 compile-safe한 기본 골격과 문서화를 함께 제공합니다.
@@ -50,6 +52,7 @@ cargo run
 ./scripts/verify.sh core
 ./scripts/preflight.sh publish
 ./scripts/verify.sh websocket
+cargo check --features full-snapshot-stores
 ```
 
 - `./scripts/preflight.sh commit`는 `.git` 메타데이터 쓰기 가능 여부를 먼저 확인해 commit/stage 차단을 조기에 드러낸다.
@@ -57,6 +60,7 @@ cargo run
 - `./scripts/preflight.sh websocket`는 socket bind가 필요한 WebSocket 검증 레인이 현재 러너에서 실행 가능한지 probe test로 확인한다.
 - `./scripts/verify.sh core`는 `cargo fmt --check`, `cargo check --locked`, 그리고 socket bind가 필요 없는 테스트만 실행한다. commit/push 가능 여부와는 분리돼 있어 sandbox 환경에서도 core 검증을 막지 않는다.
 - `./scripts/verify.sh websocket`는 socket bind가 필요한 WebSocket/삭제 통합 테스트만 분리 실행한다.
+- 전체 snapshot adapter inventory를 다시 컴파일하거나 회귀를 돌릴 때는 `--features full-snapshot-stores`를 추가한다.
 - socket-required 테스트를 새로 추가하면 `scripts/verify.sh`의 core skip 목록과 websocket lane을 함께 갱신한다.
 
 ## API/WS 개요
@@ -100,6 +104,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, 또는 `managed`
+- 기본 feature 없는 빌드에서 바로 쓸 수 있는 값은 `memory`, `file`, `sqlite`, `s3`, `managed`다. 나머지 backend는 `--features full-snapshot-stores`를 켜야 registry와 adapter가 함께 활성화된다.
 - `SNAPSHOT_STORE=append_kv`: append_kv append-only 단일 파일 store도 지원한다.
 - `SNAPSHOT_STORE=append_log`: append-log append-only 단일 파일 event log store도 지원한다.
 - `SNAPSHOT_STORE=etchdb`: EtchDB WAL-backed 디렉터리 store도 지원한다.

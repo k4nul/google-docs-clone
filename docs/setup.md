@@ -4,7 +4,10 @@
 
 ```bash
 cargo check
+cargo check --features full-snapshot-stores
 ```
+
+기본 빌드는 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 컴파일한다. 전체 adapter inventory나 extended snapshot 회귀가 필요하면 `full-snapshot-stores` feature를 함께 켠다.
 
 ## Run
 
@@ -27,11 +30,13 @@ cargo run
 ./scripts/verify.sh core
 ./scripts/preflight.sh publish
 ./scripts/verify.sh websocket
+cargo test --features full-snapshot-stores
 ```
 
 - `preflight.sh commit`/`publish`는 stage/commit/push 차단을 점검한다.
 - `verify.sh core`는 socket bind나 `.git` 쓰기 가능 여부와 무관한 검증만 실행한다.
 - `verify.sh websocket`는 WebSocket/삭제 통합 테스트처럼 socket bind가 필요한 검증만 실행한다.
+- snapshot adapter 전체 inventory를 재컴파일하거나 저장소별 회귀를 재실행할 때는 `--features full-snapshot-stores`를 추가한다.
 
 ## Environment Variables
 
@@ -41,6 +46,7 @@ cargo run
 - `RUST_LOG`: tracing subscriber 필터
 - `API_TOKEN`: 문서 생성 및 목록 조회용 Bearer 토큰
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, 또는 `managed`
+- 기본 feature 없는 빌드에서 즉시 사용할 수 있는 값은 `memory`, `file`, `sqlite`, `s3`, `managed`다. 나머지 backend는 `--features full-snapshot-stores` 활성화가 필요하다.
 - `SNAPSHOT_STORE=append_kv`: append_kv append-only 단일 파일 store도 지원한다.
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_AGDB_PATH`: agdb snapshot store 단일 파일 경로

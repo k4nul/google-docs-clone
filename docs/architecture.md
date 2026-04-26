@@ -11,7 +11,7 @@
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
 - `src/models`: 문서 placeholder 모델
-- `src/storage`: snapshot store trait과 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 adapter
+- `src/storage`: snapshot store trait과 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 adapter. 기본 빌드는 `memory`/`file`/`sqlite`/`s3`/`managed`만 남기고, 나머지 adapter는 `full-snapshot-stores` feature 뒤에 둔다.
 
 ## Request Flow
 
@@ -62,6 +62,7 @@
 - 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
 - 문서 삭제는 active WebSocket session 수가 0일 때만 허용하며, 세션이 남아 있으면 `409 conflict`로 거절한다.
 - 현재는 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 in-tree `SnapshotStore` adapter가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
+- compile fan-out을 줄이기 위해 exhaustive snapshot adapter inventory와 저장소별 health regression은 `full-snapshot-stores` feature가 켜졌을 때만 기본 crate graph에 다시 합류한다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 active room이 없어도 snapshot store에서 문서를 복구한 뒤 처리할 수 있다.
 - `GET /api/documents`는 active room과 snapshot store catalog를 합쳐 eviction 이후에도 문서 메타데이터를 유지한다.
 - 기본 local ownership 모드에서는 앱 시작 시 snapshot catalog를 순회해 저장된 문서를 room registry로 eager hydrate한다.
