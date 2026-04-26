@@ -96,6 +96,6 @@ fn architecture_references_supported_snapshot_store_constant() {
         "`Config.snapshot_store`가 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록 전체에 대한 어댑터 선택을 담당한다."
     ));
     assert!(architecture.contains(
-        "`src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 snapshot adapter, shared SQLite lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로"
+        "`src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 snapshot adapter, shared sqlite shim lease 기반 owner coordination, 그리고 external managed lease coordination이 있으므로"
     ));
 }

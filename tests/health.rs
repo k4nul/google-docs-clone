@@ -10681,24 +10681,25 @@ async fn app_state_uses_sqlite_room_coordinator_from_config() {
         .room_activated(&document.id)
         .expect("sqlite coordinator should persist active room state");
     let connection = rusqlite::Connection::open(&sqlite_path).expect("sqlite file should open");
-    let persisted_state: Value = connection
+    let persisted_state = connection
         .query_row(
-            "SELECT json_object(
-                'doc_id', doc_id,
-                'node_id', node_id,
-                'base_url', base_url,
-                'lease_id', lease_id,
-                'epoch', epoch,
-                'activated_at', activated_at,
-                'renewed_at', renewed_at,
-                'expires_at', expires_at
-            )
+            "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
              FROM room_leases
              WHERE doc_id = ?1",
             [document.id.to_string()],
-            |row| row.get::<_, String>(0),
+            |row| {
+                Ok(serde_json::json!({
+                    "doc_id": row.get::<_, String>(0)?,
+                    "node_id": row.get::<_, String>(1)?,
+                    "base_url": row.get::<_, Option<String>>(2)?,
+                    "lease_id": row.get::<_, String>(3)?,
+                    "epoch": row.get::<_, i64>(4)?,
+                    "activated_at": row.get::<_, String>(5)?,
+                    "renewed_at": row.get::<_, String>(6)?,
+                    "expires_at": row.get::<_, String>(7)?,
+                }))
+            },
         )
-        .map(|json| serde_json::from_str(&json).expect("sqlite room lease json should parse"))
         .expect("sqlite coordinator should persist active room state");
     assert_eq!(persisted_state["base_url"], "http://node-a.internal:4200");
 

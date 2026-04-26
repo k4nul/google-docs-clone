@@ -134,7 +134,7 @@ Response: `201 Created`
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
 - `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 해당 state에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
-- `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 읽는다. 해당 row에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
+- `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 repository-local sqlite shim file 안 logical `room_leases` row를 읽는다. 해당 row에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - `ROOM_LOCATOR=managed`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id`를 읽는다. 해당 lease record에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - non-local owner conflict 응답은 `x-collab-owner-node-id` 헤더를 항상 포함한다.
 - `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함하고, redirect URL은 현재 요청의 path/query를 그대로 유지한다.
@@ -188,12 +188,12 @@ Response: `204 No Content`
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
 - `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active owner lease state를 읽는다. 해당 state에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
-- `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽는다. 해당 row에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
+- `ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 active owner lease row를 읽는다. 이 row는 repository-local sqlite shim file에 저장되며, `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - `ROOM_LOCATOR=managed`는 `ROOM_COORDINATION_MANAGED_BASE_URL`의 `GET /v1/leases/:doc_id` 응답을 읽는다. 해당 lease record에 `base_url`이 있으면 이 경로의 conflict 응답도 `owner.node_id`와 함께 canonical `owner.base_url`을 포함한다.
 - non-local owner conflict 응답은 `x-collab-owner-node-id` 헤더를 항상 포함한다.
 - `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함하고, redirect URL은 현재 요청의 path/query를 그대로 유지한다.
 - `ROOM_COORDINATOR=file`은 첫 active session에서 file-backed lease를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 compare-and-release로 lease를 정리한다.
-- `ROOM_COORDINATOR=sqlite`는 첫 active session에서 SQLite-backed lease row를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 `node_id + lease_id + epoch` compare-and-delete로 lease를 정리한다.
+- `ROOM_COORDINATOR=sqlite`는 첫 active session에서 repository-local sqlite shim file lease row를 acquire하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 `node_id + lease_id + epoch` compare-and-delete로 lease를 정리한다. read/write는 same `<path>.lock` sidecar lock으로 serialize된다.
 - `ROOM_COORDINATOR=managed`는 첫 active session에서 managed lease service `POST /v1/leases/:doc_id/acquire`를 호출하고, background heartbeat로 `POST /v1/leases/:doc_id/renew`를 반복하며, 마지막 session 종료 뒤 snapshot persist가 끝난 다음 `POST /v1/leases/:doc_id/release`로 compare-and-release를 요청한다.
 - `ROOM_LOCATOR=file|sqlite|managed`와 동등한 authoritative coordination resolver는 모두 lease 만료 전까지 기존 owner를 authoritative하게 취급하고, `expires_at` 경과 뒤에만 ownership handoff를 허용해야 한다.
 

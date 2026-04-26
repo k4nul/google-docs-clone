@@ -171,6 +171,67 @@ struct SqliteRoomCoordinatorRow {
     expires_at: String,
 }
 
+trait SqliteRoomLeaseReader {
+    fn load_room_lease_row(
+        &self,
+        doc_id: &Uuid,
+    ) -> rusqlite::Result<Option<SqliteRoomCoordinatorRow>>;
+}
+
+impl SqliteRoomLeaseReader for Connection {
+    fn load_room_lease_row(
+        &self,
+        doc_id: &Uuid,
+    ) -> rusqlite::Result<Option<SqliteRoomCoordinatorRow>> {
+        self.query_row(
+            "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
+             FROM room_leases
+             WHERE doc_id = ?1",
+            [doc_id.to_string()],
+            |row| {
+                Ok(SqliteRoomCoordinatorRow {
+                    doc_id: row.get(0)?,
+                    node_id: row.get(1)?,
+                    base_url: row.get(2)?,
+                    lease_id: row.get(3)?,
+                    epoch: row.get(4)?,
+                    activated_at: row.get(5)?,
+                    renewed_at: row.get(6)?,
+                    expires_at: row.get(7)?,
+                })
+            },
+        )
+        .optional()
+    }
+}
+
+impl SqliteRoomLeaseReader for rusqlite::Transaction<'_> {
+    fn load_room_lease_row(
+        &self,
+        doc_id: &Uuid,
+    ) -> rusqlite::Result<Option<SqliteRoomCoordinatorRow>> {
+        self.query_row(
+            "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
+             FROM room_leases
+             WHERE doc_id = ?1",
+            [doc_id.to_string()],
+            |row| {
+                Ok(SqliteRoomCoordinatorRow {
+                    doc_id: row.get(0)?,
+                    node_id: row.get(1)?,
+                    base_url: row.get(2)?,
+                    lease_id: row.get(3)?,
+                    epoch: row.get(4)?,
+                    activated_at: row.get(5)?,
+                    renewed_at: row.get(6)?,
+                    expires_at: row.get(7)?,
+                })
+            },
+        )
+        .optional()
+    }
+}
+
 fn parse_room_coordinator_timestamp(
     value: &str,
     doc_id: Uuid,
@@ -756,37 +817,20 @@ impl SqliteRoomCoordinator {
         Ok(())
     }
 
-    fn load_state_from_connection(
+    fn load_state_from_connection<C>(
         &self,
-        connection: &Connection,
+        connection: &C,
         doc_id: &Uuid,
-    ) -> Result<Option<PersistedRoomCoordinatorState>, RoomCoordinatorError> {
-        let row = connection
-            .query_row(
-                "SELECT doc_id, node_id, base_url, lease_id, epoch, activated_at, renewed_at, expires_at
-                 FROM room_leases
-                 WHERE doc_id = ?1",
-                [doc_id.to_string()],
-                |row| {
-                    Ok(SqliteRoomCoordinatorRow {
-                        doc_id: row.get(0)?,
-                        node_id: row.get(1)?,
-                        base_url: row.get(2)?,
-                        lease_id: row.get(3)?,
-                        epoch: row.get(4)?,
-                        activated_at: row.get(5)?,
-                        renewed_at: row.get(6)?,
-                        expires_at: row.get(7)?,
-                    })
-                },
-            )
-            .optional()
-            .map_err(|error| {
-                RoomCoordinatorError::Operation(format!(
-                    "failed to read sqlite room lease `{}` for document `{doc_id}`: {error}",
-                    self.path.display()
-                ))
-            })?;
+    ) -> Result<Option<PersistedRoomCoordinatorState>, RoomCoordinatorError>
+    where
+        C: SqliteRoomLeaseReader,
+    {
+        let row = connection.load_room_lease_row(doc_id).map_err(|error| {
+            RoomCoordinatorError::Operation(format!(
+                "failed to read sqlite room lease `{}` for document `{doc_id}`: {error}",
+                self.path.display()
+            ))
+        })?;
 
         row.map(sqlite_room_coordinator_state_from_row).transpose()
     }
@@ -813,9 +857,9 @@ impl SqliteRoomCoordinator {
         &self,
         doc_id: &Uuid,
     ) -> Result<PersistedRoomCoordinatorState, RoomCoordinatorError> {
-        let mut connection = self.open_connection()?;
+        let connection = self.open_connection()?;
         self.initialize_schema(&connection)?;
-        let transaction = connection
+        let mut transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(|error| {
                 RoomCoordinatorError::Operation(format!(
@@ -929,9 +973,9 @@ impl SqliteRoomCoordinator {
         lease_id: Uuid,
         epoch: u64,
     ) -> Result<bool, RoomCoordinatorError> {
-        let mut connection = self.open_connection()?;
+        let connection = self.open_connection()?;
         self.initialize_schema(&connection)?;
-        let transaction = connection
+        let mut transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(|error| {
                 RoomCoordinatorError::Operation(format!(
@@ -1010,9 +1054,9 @@ impl SqliteRoomCoordinator {
         lease_id: Uuid,
         epoch: u64,
     ) -> Result<bool, RoomCoordinatorError> {
-        let mut connection = self.open_connection()?;
+        let connection = self.open_connection()?;
         self.initialize_schema(&connection)?;
-        let transaction = connection
+        let mut transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(|error| {
                 RoomCoordinatorError::Operation(format!(

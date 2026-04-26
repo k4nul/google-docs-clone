@@ -136,7 +136,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_FERRUMDB_PATH`: `SNAPSHOT_STORE=ferrumdb`일 때 snapshot FerrumDB append-only log 파일 경로
 - `SNAPSHOT_RUMDB_PATH`: `SNAPSHOT_STORE=rumdb`일 때 snapshot rumdb append-only log 디렉터리 경로
 - `SNAPSHOT_SHORTERDB_PATH`: `SNAPSHOT_STORE=shorterdb`일 때 snapshot shorterdb 디렉터리 경로
-- `SNAPSHOT_SQLITE_PATH`: `SNAPSHOT_STORE=sqlite`일 때 snapshot SQLite DB 파일 경로
+- `SNAPSHOT_SQLITE_PATH`: `SNAPSHOT_STORE=sqlite`일 때 snapshot repository-local sqlite shim 파일 경로. adapter는 같은 경로의 logical `snapshots` table JSON payload와 `<path>.lock` sidecar lock을 사용한다
 - `SNAPSHOT_HEED_PATH`: `SNAPSHOT_STORE=heed`일 때 snapshot heed DB 디렉터리 경로
 - `SNAPSHOT_HIGHTOWER_KV_PATH`: `SNAPSHOT_STORE=hightower_kv`일 때 snapshot hightower-kv 데이터 디렉터리 경로
 - `SNAPSHOT_HMDB_PATH`: `SNAPSHOT_STORE=hmdb`일 때 snapshot hmdb append-only 로그 디렉터리 경로
@@ -269,7 +269,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `ROOM_LOCATOR`: `local`, `static`, `file`, `sqlite`, 또는 `managed`
 - `ROOM_COORDINATOR`: `noop`, `logging`, `file`, `sqlite`, 또는 `managed`
 - `ROOM_COORDINATOR_STATE_DIR`: `ROOM_COORDINATOR=file`일 때 active room state JSON 파일을 저장하는 디렉터리이며, `ROOM_LOCATOR=file`은 같은 디렉터리를 읽는다
-- `ROOM_COORDINATOR_SQLITE_PATH`: `ROOM_COORDINATOR=sqlite`일 때 lease row를 저장하는 SQLite DB 파일 경로이며, `ROOM_LOCATOR=sqlite`는 같은 DB를 읽는다
+- `ROOM_COORDINATOR_SQLITE_PATH`: `ROOM_COORDINATOR=sqlite`일 때 lease row를 저장하는 repository-local sqlite shim 파일 경로이며, `ROOM_LOCATOR=sqlite`는 같은 파일과 `<path>.lock` sidecar를 읽는다
 - `ROOM_COORDINATOR_HEARTBEAT_INTERVAL_SECS`: `ROOM_COORDINATOR=file|sqlite|managed`일 때 lease heartbeat 갱신 간격(초)
 - `ROOM_COORDINATOR_LEASE_TTL_SECS`: `ROOM_COORDINATOR=file|sqlite|managed`일 때 lease 만료 TTL(초)
 - `ROOM_COORDINATION_MANAGED_BASE_URL`: `ROOM_LOCATOR=managed` 또는 `ROOM_COORDINATOR=managed`일 때 외부 lease service base URL
@@ -295,7 +295,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - 문서 수정용 REST API
 - 추가 vendor-specific database durability backend
 
-현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared SQLite DB 경로에 맞추면, lock-capable storage 위에서는 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. 그 외 상단 `SNAPSHOT_STORE` 항목의 embedded/local durability backend는 같은 `SnapshotStore` 경계를 통해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=celerix_store`는 `SNAPSHOT_CELERIX_STORE_PATH/snapshots.json`의 Celerix Store persona/app map에 snapshot JSON value를 저장해 startup hydrate와 on-demand restore를 유지한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared SQLite 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
+현재 기본값은 여전히 단일 프로세스다. 다만 `SNAPSHOT_STORE=sqlite`와 `ROOM_LOCATOR=sqlite` / `ROOM_COORDINATOR=sqlite`를 같은 shared sqlite shim 파일 경로에 맞추면, lock-capable storage 위에서 `<path>.lock` sidecar serialize 경계로 lease compare-and-swap과 snapshot 내구성을 함께 가져갈 수 있다. 그 외 상단 `SNAPSHOT_STORE` 항목의 embedded/local durability backend는 같은 `SnapshotStore` 경계를 통해 로컬 durable restart 복구를 제공한다. `SNAPSHOT_STORE=celerix_store`는 `SNAPSHOT_CELERIX_STORE_PATH/snapshots.json`의 Celerix Store persona/app map에 snapshot JSON value를 저장해 startup hydrate와 on-demand restore를 유지한다. `SNAPSHOT_STORE=s3`는 object key 단위 durability를 제공하고, `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 external lease service에 연결하고 `SNAPSHOT_STORE=managed`를 external snapshot service에 연결하면 ownership coordination plane과 snapshot durability plane을 shared sqlite shim 밖으로도 분리할 수 있다. 현재 저장소는 managed coordination + managed snapshot durability 조합까지 실제 multi-host handoff 회귀 테스트로 검증한다.
 
 현재 `blocked` 상태는 실행 환경 차원의 commit/push/test 제한을 별도 관리하는 정도로 축소됐다. 반면 상단 `SNAPSHOT_STORE` 항목에서 `memory`를 제외한 durability backend와 managed-managed owner handoff rehearsal은 이제 회귀 테스트로 검증됐다.
 
@@ -317,7 +317,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 
 `ROOM_LOCATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`의 active room lease state를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `FileRoomCoordinator`가 같은 디렉터리에 남긴 state를 소비하는 best-effort resolver이며, `NODE_BASE_URL`이 설정돼 있으면 conflict 응답 body와 redirect/proxy 헤더 모두에 canonical `owner.base_url`을 실어 upstream 라우팅 결정을 도울 수 있다. stale owner 판단은 file mtime이 아니라 persisted `expires_at`만 기준으로 한다.
 
-`ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블에서 active lease row를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `SqliteRoomCoordinator`가 같은 DB에 기록한 lease를 그대로 소비하며, stale owner 판단도 persisted `expires_at`만 기준으로 수행한다. `NODE_BASE_URL`이 설정돼 있으면 conflict 응답 body와 redirect/proxy 헤더 모두에 canonical `owner.base_url`을 실어 실제 ingress redirect/proxy 결정을 도울 수 있다.
+`ROOM_LOCATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 repository-local sqlite shim 파일 안 logical `room_leases` row를 읽어 현재 노드 비소유 문서를 거절한다. 이 모드는 `SqliteRoomCoordinator`가 같은 파일에 기록한 lease를 그대로 소비하며, stale owner 판단도 persisted `expires_at`만 기준으로 수행한다. `NODE_BASE_URL`이 설정돼 있으면 conflict 응답 body와 redirect/proxy 헤더 모두에 canonical `owner.base_url`을 실어 실제 ingress redirect/proxy 결정을 도울 수 있다.
 
 `ROOM_LOCATOR=managed`는 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service에서 `GET /v1/leases/:doc_id`를 조회해 현재 노드 비소유 문서를 거절한다. 이 모드는 `ManagedRoomCoordinator`가 같은 service에 기록한 canonical lease record를 그대로 소비하며, stale owner 판단도 persisted `expires_at`만 기준으로 수행한다. `NODE_BASE_URL`이 설정돼 있으면 conflict 응답 body와 redirect/proxy 헤더 모두에 canonical `owner.base_url`을 실어 실제 ingress redirect/proxy 결정을 도울 수 있다.
 
@@ -348,7 +348,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - `SNAPSHOT_STORE=grebedb`이면 snapshot과 문서 토큰이 `SNAPSHOT_GREBEDB_PATH` 디렉터리의 `doc_id` key와 explicit `__catalog__` key에 저장된다. payload와 catalog는 같은 `flush()` 경계에서 함께 반영돼 기본 local ownership 모드에서는 앱 시작 시 grebedb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
 - `SNAPSHOT_STORE=grumpydb`이면 snapshot과 문서 토큰이 `SNAPSHOT_GRUMPYDB_PATH` 디렉터리의 GrumpyDB UUID key와 bytes payload로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 full range scan으로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
 - `SNAPSHOT_STORE=graus_db`이면 snapshot과 문서 토큰이 `SNAPSHOT_GRAUS_DB_PATH` 디렉터리의 GrausDb append-only log store에 `doc_id` key와 explicit `__catalog__` key로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 log replay catalog로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
-- `SNAPSHOT_STORE=sqlite`이면 snapshot과 문서 토큰이 `SNAPSHOT_SQLITE_PATH` SQLite DB의 `snapshots` 테이블에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 DB catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=sqlite`이면 snapshot과 문서 토큰이 `SNAPSHOT_SQLITE_PATH` repository-local sqlite shim 파일의 logical `snapshots` table에 저장된다. adapter는 `<path>.lock` sidecar lock 아래 whole-file JSON rewrite로 upsert/delete/list를 직렬화한다. 기본 local ownership 모드에서는 앱 시작 시 catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=heed`이면 snapshot과 문서 토큰이 `SNAPSHOT_HEED_PATH` heed LMDB 디렉터리의 `snapshots` database에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 heed catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=hightower_kv`이면 snapshot과 문서 토큰이 `SNAPSHOT_HIGHTOWER_KV_PATH` hightower-kv 디렉터리의 `snapshot:<doc_id>` key-value 엔트리에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 prefix scan catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=bitask`이면 snapshot과 문서 토큰이 `SNAPSHOT_BITASK_PATH` bitask append-only log 디렉터리의 `doc_id` key와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 log replay로 keydir를 재구축한 뒤 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
@@ -479,15 +479,15 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - 기본 `LocalRoomLocator`는 모든 문서를 현재 프로세스 소유로 해석한다.
 - `StaticRoomLocator`는 `ROOM_OWNER_HINTS_PATH`의 문서별 owner 힌트를 읽고, 현재 `NODE_ID`와 다른 owner를 가진 문서에 대해 `409 conflict`와 owner 힌트를 반환한다.
 - `FileRoomLocator`는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`을 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으며 `expires_at`이 아직 지나지 않았으면 `409 conflict`와 `owner.node_id` 및 optional `owner.base_url`를 반환한다.
-- `SqliteRoomLocator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으며 `expires_at`이 아직 지나지 않았으면 `409 conflict`와 `owner.node_id` 및 optional `owner.base_url`를 반환한다.
+- `SqliteRoomLocator`는 `ROOM_COORDINATOR_SQLITE_PATH`의 repository-local sqlite shim 파일 안 logical `room_leases` row를 읽고, 현재 `NODE_ID`와 다른 node가 active owner로 기록돼 있으며 `expires_at`이 아직 지나지 않았으면 `409 conflict`와 `owner.node_id` 및 optional `owner.base_url`를 반환한다.
 - `ROOM_COORDINATOR=noop`은 아무 side effect 없이 통과하고, `ROOM_COORDINATOR=logging`은 `NODE_ID`와 `doc_id` 기준 lifecycle log만 남긴다.
 - `ROOM_COORDINATOR=file`은 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json`에 canonical lease state (`doc_id`, `node_id`, optional `base_url`, `lease_id`, `epoch`, `acquired_at`, `renewed_at`, `expires_at`)를 atomic write로 남기고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 시 compare-and-release 방식으로 정리한다. `NODE_BASE_URL`이 주어지면 이 값도 canonical origin으로 정규화해 함께 기록한다.
-- `ROOM_COORDINATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` 테이블에 같은 canonical lease state를 upsert하고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 시 `node_id + lease_id + epoch` compare-and-delete로 정리한다. `NODE_BASE_URL`이 주어지면 canonical origin으로 정규화한 `base_url`도 함께 기록한다.
+- `ROOM_COORDINATOR=sqlite`는 `ROOM_COORDINATOR_SQLITE_PATH`의 repository-local sqlite shim 파일 안 logical `room_leases` table에 같은 canonical lease state를 upsert하고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 시 `node_id + lease_id + epoch` compare-and-delete로 정리한다. write/read 경계는 같은 `<path>.lock` sidecar lock으로 serialize된다. `NODE_BASE_URL`이 주어지면 canonical origin으로 정규화한 `base_url`도 함께 기록한다.
 - `ROOM_LOCATOR=file`과 `ROOM_COORDINATOR=file`은 같은 `ROOM_COORDINATOR_STATE_DIR`를 공유해야 하며, 멀티 노드에서 쓰려면 각 노드가 같은 디렉터리를 읽고 쓸 수 있어야 한다.
-- `ROOM_LOCATOR=sqlite`와 `ROOM_COORDINATOR=sqlite`는 같은 `ROOM_COORDINATOR_SQLITE_PATH`를 공유해야 하며, 실제 owner handoff를 원하면 shared snapshot store도 함께 맞춰야 한다.
+- `ROOM_LOCATOR=sqlite`와 `ROOM_COORDINATOR=sqlite`는 같은 `ROOM_COORDINATOR_SQLITE_PATH`와 `<path>.lock` sidecar를 공유해야 하며, 실제 owner handoff를 원하면 shared snapshot store도 함께 맞춰야 한다.
 - WebSocket 첫 세션 시작과 마지막 세션 종료 시점에 `RoomCoordinator` hook이 호출되도록 런타임 경계가 이미 연결돼 있다.
 - 현재 file-backed lease state는 shared filesystem 위에서만 동작하는 best-effort 구현이다. crash 뒤에는 `expires_at` 경과 후에만 stale로 간주된다.
-- `SqliteRoomCoordinator`/`SqliteRoomLocator`는 shared SQLite DB에서 transactional lease compare-and-swap을 수행한다. 실제 owner handoff는 `SNAPSHOT_STORE=sqlite` 같은 shared snapshot store와 함께 구성했을 때만 안전하게 활성화해야 한다.
+- `SqliteRoomCoordinator`/`SqliteRoomLocator`는 shared sqlite shim 파일에서 sidecar lock 기반 lease compare-and-swap을 수행한다. 실제 owner handoff는 `SNAPSHOT_STORE=sqlite` 같은 shared snapshot store와 함께 구성했을 때만 안전하게 활성화해야 한다.
 - `ManagedRoomCoordinator`는 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service에 `POST /v1/leases/:doc_id/acquire|renew|release`를 호출해 same canonical lease contract를 유지하고, background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 시 compare-and-release를 요청한다. `ManagedRoomLocator`는 같은 service의 `GET /v1/leases/:doc_id`를 읽어 non-local owner를 판단한다.
 - `ManagedSnapshotStore`는 `SNAPSHOT_MANAGED_BASE_URL` 아래의 external snapshot service에 `GET /v1/snapshots`, `GET|PUT|DELETE /v1/snapshots/:doc_id`를 호출해 document catalog와 full-state Yrs snapshot을 유지한다. optional `SNAPSHOT_MANAGED_AUTH_TOKEN`이 설정되면 모든 요청에 `Authorization: Bearer <token>` 헤더를 붙인다.
 - `S3SnapshotStore`는 `SNAPSHOT_S3_ENDPOINT`, `SNAPSHOT_S3_BUCKET`, `SNAPSHOT_S3_PREFIX` 조합 아래의 S3-compatible object storage에 `<prefix><doc_id>.json` object를 저장하고, optional `SNAPSHOT_S3_SESSION_TOKEN`을 포함한 SigV4 요청으로 catalog/list/load/save/delete를 수행한다.
@@ -508,7 +508,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - 권장 기본값은 `heartbeat_interval=10s`, `lease_ttl=30s`, `stale_after_missed_heartbeats=2`다. 즉, owner는 TTL의 절반보다 짧은 간격으로 renew를 시도하고, 다른 노드는 마지막 `expires_at`이 지난 뒤에만 ownership takeover를 시도한다.
 - crash 복구 경로는 `owner crash -> renew 중단 -> expires_at 경과 -> 새 owner acquire -> snapshot restore -> room activate` 순서를 따른다. awareness는 재게시 허용 범위로 두고 내구성 복구 대상에는 포함하지 않는다.
 - 현재 저장소의 `FileRoomCoordinator`/`FileRoomLocator`는 이 계약의 file-backed 준비 구현을 제공한다. canonical lease record, compare-and-release, background heartbeat renew, `expires_at` 기반 stale 판정은 로컬/shared filesystem 경계에서 검증할 수 있지만 여전히 best-effort rehearsal mode로만 사용해야 한다.
-- 현재 저장소의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared SQLite DB row에 매핑한 authoritative CAS 구현을 제공한다.
+- 현재 저장소의 `SqliteRoomCoordinator`/`SqliteRoomLocator`는 같은 계약을 shared sqlite shim file row에 매핑한 authoritative CAS 구현을 제공한다.
 - 현재 저장소의 `ManagedRoomCoordinator`/`ManagedRoomLocator`는 external lease service를 쓰는 multi-host coordination backend를 제공하고, `ManagedSnapshotStore`는 같은 방식의 external durability backend를 제공한다. `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=sqlite`와 결합한 owner handoff rehearsal, `SNAPSHOT_STORE=managed` 자체의 저장/복구 경계, 그리고 `ROOM_LOCATOR=managed` / `ROOM_COORDINATOR=managed`를 `SNAPSHOT_STORE=managed`와 결합한 actual handoff rehearsal까지 모두 회귀 테스트로 검증됐다.
 
 ## Static Room Owner Hints

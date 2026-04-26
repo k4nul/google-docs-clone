@@ -110,7 +110,7 @@ rumdb = "0.3.0"
 rubin = "0.4.0"
 rskey = "0.4.0"
 rustlite = "0.8.0"
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.37.0", path = "vendor/rusqlite" }
 rustbreak = { version = "2", features = ["bin_enc"] }
 rustcask = "0.1.0"
 rusty-leveldb = "4.0.1"

@@ -144,6 +144,7 @@ impl SnapshotStore for SqliteSnapshotStore {
         let connection = self.open_connection()?;
         self.initialize_schema(&connection)?;
         let document = snapshot.document;
+        let access_token = document.access_token().to_owned();
 
         connection
             .execute(
@@ -166,7 +167,7 @@ impl SnapshotStore for SqliteSnapshotStore {
                     document.title,
                     document.created_at.to_rfc3339(),
                     document.updated_at.to_rfc3339(),
-                    document.access_token().to_owned(),
+                    access_token,
                     snapshot.update,
                 ],
             )
@@ -198,7 +199,7 @@ impl SnapshotStore for SqliteSnapshotStore {
             )
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
         let rows = statement
-            .query_map([], |row| {
+            .query_map(params![], |row| {
                 Ok(SnapshotRow {
                     doc_id: row.get(0)?,
                     title: row.get(1)?,
