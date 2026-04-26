@@ -362,7 +362,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_SMOLLDB_PATH`다.
 - smolldb catalog는 compressed single-file SmollDB map에 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key를 저장하고, `GET /api/documents` catalog는 file load 뒤 catalog key를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_KSTONE_PATH`다.
-- kstone catalog는 Kstone WAL/SSTable LSM 디렉터리 keyspace의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key를 저장하고, `GET /api/documents` catalog는 catalog key 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- kstone catalog는 repository-local kstone shim `wal.log` append-only keyspace의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key write/delete event를 저장하고, `GET /api/documents` catalog는 startup replay 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_ROUGHDB_PATH`다.
 - roughdb catalog는 LevelDB-compatible WAL/SSTable 디렉터리 keyspace의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key를 sync write batch로 함께 저장하고, `GET /api/documents` catalog는 catalog key 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_RAINDB_PATH`다.

@@ -158,7 +158,7 @@ mindb = { version = "0.1.2", path = "vendor/mindb" }
 log_kv = "0.1.0"
 loro-kv-store = "1.11.1"
 lsm-tree = "3.1.4"
-kstone-core = "0.1.0"
+kstone-core = { version = "0.1.0", path = "vendor/kstone-core" }
 roughdb = { version = "0.9.0", path = "vendor/roughdb" }
 InfuseDB = "0.2.1"
 kafi = "0.1.2"

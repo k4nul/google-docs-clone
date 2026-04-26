@@ -137,7 +137,7 @@ cargo run
 - `SNAPSHOT_YAKVDB_PATH`: yakvdb snapshot store 단일 파일 경로
 - `SNAPSHOT_SABERDB_PATH`: saberdb snapshot store JSON 파일 경로
 - `SNAPSHOT_SMOLLDB_PATH`: smolldb snapshot store compressed 단일 파일 경로
-- `SNAPSHOT_KSTONE_PATH`: kstone snapshot store WAL/SSTable LSM 디렉터리 경로
+- `SNAPSHOT_KSTONE_PATH`: kstone snapshot store repository-local shim 디렉터리 경로 (`wal.log` append-only replay)
 - `SNAPSHOT_ROUGHDB_PATH`: roughdb shim snapshot 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_RAINDB_PATH`: raindb snapshot store LevelDB-style WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_INFUSEDB_PATH`: infusedb snapshot store 단일 파일 경로
@@ -293,7 +293,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `yakv` | 단일 B-Tree 파일 | 낮음 | `snapshot:<doc_id>` key를 직접 저장하고 full scan으로 catalog를 복구한다. payload는 binary value이고 파일 전체 무결성에 의존하므로 수동 수정 대신 whole-file backup/restore와 회귀 테스트가 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `saberdb` | 단일 pretty JSON 파일 store | 중간 | atomic temp+rename은 단순하지만 catalog 전체를 pretty JSON으로 다시 쓰고 startup 시 전체 역직렬화에 의존하므로 파일 손상 시 startup 전체 복구 실패가 된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `smolldb` | 단일 compressed 파일 store | 낮음 | in-memory key-value map을 zlib-compatible compressed 파일로 temp+rename 저장한다. 전체 파일 load/rewrite 경계라 단일 노드 재시작 복구에 맞고, corruption 시 startup 전체 복구 실패가 될 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
-| `kstone` | 디렉터리 + WAL/SSTable LSM store | 낮음 | Kstone item의 binary payload에 `snapshot:<doc_id>` 값과 explicit `__catalog__` key를 저장하고 save/delete 뒤 flush한다. 엔진 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `kstone` | 디렉터리 + append-only WAL shim | 낮음 | repository-local kstone shim `wal.log`에 `snapshot:<doc_id>` 값과 explicit `__catalog__` key write/delete event를 저장하고 startup replay + save/delete flush로 복구 경계를 고정한다. 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `roughdb` | 디렉터리 + LevelDB-compatible WAL/SSTable store | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 sync write batch로 함께 저장하고 wait flush로 재시작 복구 경계를 고정한다. 엔진 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | no-bindgen/no-new-native-conflict 기준선 |
 | `raindb` | 디렉터리 + LevelDB-style WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload와 explicit `__catalog__` key를 synchronous batch로 함께 저장한다. 교육용 LevelDB port 성격이 강하므로 엔진 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `infusedb` | 단일 document-oriented text 파일 store | 중간 | `snapshots` collection에 base64-encoded `snapshot:<doc_id> -> persisted snapshot JSON bytes` payload와 explicit `__catalog__` key를 저장한다. whole-file dump/load 경계라 수동 payload inspection은 가능하지만 파일 손상 시 startup 전체 복구 실패가 될 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -349,7 +349,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `yakv`는 single-file B-Tree embedded durability 기준선이다.
 - `saberdb`는 atomic temp+rename pretty JSON embedded durability 기준선이다.
 - `smolldb`는 in-memory key-value map을 compressed single-file backup으로 flush하는 embedded durability 기준선이다.
-- `kstone`은 WAL/SSTable LSM 디렉터리 저장소를 쓰는 embedded durability 기준선이다.
+- `kstone`은 repository-local append-only WAL shim 디렉터리를 쓰는 embedded durability 기준선이다.
 - `roughdb`는 LevelDB-compatible WAL/SSTable 디렉터리 저장소를 sync write batch와 flush 경계로 연결한 embedded durability 기준선이다.
 - `jsondb`는 schema-versioned pretty JSON embedded durability 기준선이다.
 - `lite_db`는 LiteDb append-only 디렉터리 저장소를 쓰면서도 현재 저장소 제약(pure-Rust/no-bindgen/no-native-conflict)을 유지한 추가 기준선이다.
@@ -566,8 +566,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 saberdb catalog에 `doc_id -> persisted snapshot JSON string` key-value로 저장되고, document catalog는 whole-file map load로 복구된다.
 - `SNAPSHOT_STORE=smolldb`는 `SNAPSHOT_SMOLLDB_PATH` 단일 compressed SmollDB 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 file load 뒤 catalog key로 복구된다.
-- `SNAPSHOT_STORE=kstone`는 `SNAPSHOT_KSTONE_PATH` Kstone WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 Kstone item의 binary field에 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 catalog key 뒤 각 payload를 복원해 복구된다.
+- `SNAPSHOT_STORE=kstone`는 `SNAPSHOT_KSTONE_PATH` repository-local kstone shim 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `wal.log` append-only keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key write/delete event로 저장되고, document catalog는 startup replay 뒤 각 payload를 복원해 복구된다.
 - `SNAPSHOT_STORE=roughdb`는 `SNAPSHOT_ROUGHDB_PATH/store.json` repository-local roughdb shim map을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 roughdb shim keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` 값과 explicit `__catalog__` key로 저장되고, save/delete는 sync write batch와 flush로 확정된다.
 - `SNAPSHOT_STORE=raindb`는 `SNAPSHOT_RAINDB_PATH` RainDB WAL/SSTable 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
