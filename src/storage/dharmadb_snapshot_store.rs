@@ -245,7 +245,8 @@ impl DharmaWorker {
 
 pub struct DharmadbSnapshotStore {
     path: PathBuf,
-    requests: mpsc::Sender<DharmaRequest>,
+    requests: Option<mpsc::Sender<DharmaRequest>>,
+    worker: Option<thread::JoinHandle<()>>,
 }
 
 impl DharmadbSnapshotStore {
@@ -264,7 +265,7 @@ impl DharmadbSnapshotStore {
         let (startup_sender, startup_receiver) = mpsc::sync_channel(1);
         let worker_path = path.clone();
 
-        thread::Builder::new()
+        let worker = thread::Builder::new()
             .name("dharmadb-snapshot-store".to_owned())
             .spawn(move || {
                 let worker = DharmaWorker::new(worker_path);
@@ -300,7 +301,11 @@ impl DharmadbSnapshotStore {
             .recv()
             .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))??;
 
-        Ok(Self { path, requests })
+        Ok(Self {
+            path,
+            requests: Some(requests),
+            worker: Some(worker),
+        })
     }
 
     fn request<T>(
@@ -308,12 +313,21 @@ impl DharmadbSnapshotStore {
         build: impl FnOnce(mpsc::SyncSender<Result<T, StorageError>>) -> DharmaRequest,
     ) -> Result<T, StorageError> {
         let (respond_to, response) = mpsc::sync_channel(1);
-        self.requests.send(build(respond_to)).map_err(|_| {
-            StorageError::Io(format!(
-                "{}: dharmadb worker thread is unavailable",
-                self.path.display()
-            ))
-        })?;
+        self.requests
+            .as_ref()
+            .ok_or_else(|| {
+                StorageError::Io(format!(
+                    "{}: dharmadb worker thread is unavailable",
+                    self.path.display()
+                ))
+            })?
+            .send(build(respond_to))
+            .map_err(|_| {
+                StorageError::Io(format!(
+                    "{}: dharmadb worker thread is unavailable",
+                    self.path.display()
+                ))
+            })?;
 
         response.recv().map_err(|error| {
             StorageError::Io(format!(
@@ -321,6 +335,21 @@ impl DharmadbSnapshotStore {
                 self.path.display()
             ))
         })?
+    }
+}
+
+impl Drop for DharmadbSnapshotStore {
+    fn drop(&mut self) {
+        let _ = self.requests.take();
+
+        if let Some(worker) = self.worker.take() {
+            if worker.join().is_err() {
+                tracing::warn!(
+                    path = %self.path.display(),
+                    "dharmadb snapshot worker thread panicked during shutdown"
+                );
+            }
+        }
     }
 }
 

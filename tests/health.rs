@@ -19593,6 +19593,49 @@ fn dharmadb_snapshot_store_reuses_doc_id_after_delete_and_reopen() {
 }
 
 #[test]
+fn dharmadb_snapshot_store_survives_immediate_reopen_cycles() {
+    let snapshot_dir = temp_snapshot_dir("dharmadb-store-reopen-cycles");
+    fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
+    let snapshot_path = snapshot_dir.join("snapshots.dharmadb");
+    let document_id = Uuid::new_v4();
+
+    for cycle in 0u8..5 {
+        let document = backend::models::document::Document::new(
+            document_id,
+            Some(format!("DharmaDB cycle {cycle}")),
+        );
+        let expected_update = vec![cycle, cycle.saturating_add(1), cycle.saturating_add(2)];
+        let snapshot = DocumentSnapshot::new(document.clone(), expected_update.clone());
+
+        let store = DharmadbSnapshotStore::new(&snapshot_path)
+            .expect("dharmadb snapshot store should initialize");
+        store
+            .save_snapshot(snapshot)
+            .expect("snapshot should save before immediate reopen");
+        drop(store);
+
+        let reopened_store = DharmadbSnapshotStore::new(&snapshot_path)
+            .expect("dharmadb snapshot store should reopen");
+        assert_eq!(
+            reopened_store
+                .list_documents()
+                .expect("document catalog should survive immediate reopen"),
+            vec![document.clone()]
+        );
+
+        let loaded_snapshot = reopened_store
+            .load_snapshot(&document_id)
+            .expect("snapshot lookup should succeed after immediate reopen")
+            .expect("snapshot should exist after immediate reopen");
+        assert_eq!(loaded_snapshot.document, document);
+        assert_eq!(loaded_snapshot.update, expected_update);
+        drop(reopened_store);
+    }
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[test]
 fn dir_cache_snapshot_store_round_trips_document_catalog() {
     let snapshot_dir = temp_snapshot_dir("dir-cache-store-roundtrip");
     fs::create_dir_all(&snapshot_dir).expect("test snapshot directory should be created");
