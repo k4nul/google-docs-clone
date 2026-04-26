@@ -112,6 +112,7 @@ rskey = "0.4.0"
 rustlite = "0.8.0"
 rusqlite = { version = "0.37.0", path = "vendor/rusqlite" }
 rustbreak = { version = "2", features = ["bin_enc"] }
+rustls = "=0.21.12"
 rustcask = "0.1.0"
 rusty-leveldb = "4.0.1"
 snaildb = "0.2.2"
@@ -143,9 +144,9 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 url = "2"
-ureq = { version = "2", features = ["json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 vsdb = { version = "13.4.5", path = "vendor/vsdb" }
+webpki-roots = "0.25.4"
 yakv = "0.2.7"
 yakvdb = "0.6.2"
 yedb = { version = "0.5.1", path = "vendor/yedb" }

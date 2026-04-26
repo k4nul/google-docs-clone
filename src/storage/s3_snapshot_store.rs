@@ -1,4 +1,4 @@
-use std::{io, io::Read, time::Duration};
+use std::{io, time::Duration};
 
 use chrono::Utc;
 use hmac::{Hmac, Mac};
@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     config::normalize_http_base_url,
+    http_client::{BlockingHttpClient, RequestError, Response},
     models::document::Document,
     storage::{DocumentSnapshot, PersistedSnapshot, SnapshotStore, StorageError},
 };
@@ -25,7 +26,7 @@ pub struct S3SnapshotStore {
     secret_access_key: String,
     session_token: Option<String>,
     path_style: bool,
-    agent: ureq::Agent,
+    client: BlockingHttpClient,
 }
 
 struct RequestTarget {
@@ -66,7 +67,7 @@ impl S3SnapshotStore {
         let secret_access_key =
             normalize_required_string(secret_access_key, "SNAPSHOT_S3_SECRET_ACCESS_KEY")?;
         let session_token = normalize_optional_string(session_token);
-        let agent = ureq::AgentBuilder::new().timeout(timeout).build();
+        let client = BlockingHttpClient::new(timeout);
 
         Ok(Self {
             endpoint,
@@ -78,7 +79,7 @@ impl S3SnapshotStore {
             secret_access_key,
             session_token,
             path_style,
-            agent,
+            client,
         })
     }
 
@@ -204,7 +205,7 @@ impl S3SnapshotStore {
         target: &RequestTarget,
         body: &[u8],
         content_type: Option<&str>,
-    ) -> Result<ureq::Response, StorageError> {
+    ) -> Result<Response, StorageError> {
         let payload_hash = hex::encode(Sha256::digest(body));
         let now = Utc::now();
         let amz_date = now.format("%Y%m%dT%H%M%SZ").to_string();
@@ -254,8 +255,14 @@ impl S3SnapshotStore {
         );
 
         let mut request = self
-            .agent
+            .client
             .request(method, target.url.as_str())
+            .map_err(|error| {
+                StorageError::Io(format!(
+                    "{method} {} (endpoint `{}`, bucket `{}`): {error}",
+                    target.url, self.endpoint_label, self.bucket
+                ))
+            })?
             .set("Authorization", &authorization)
             .set("x-amz-content-sha256", &payload_hash)
             .set("x-amz-date", &amz_date);
@@ -277,9 +284,9 @@ impl S3SnapshotStore {
         }
     }
 
-    fn map_request_error(&self, method: &str, url: &Url, error: ureq::Error) -> StorageError {
+    fn map_request_error(&self, method: &str, url: &Url, error: RequestError) -> StorageError {
         match error {
-            ureq::Error::Status(status, response) => {
+            RequestError::Status(status, response) => {
                 let body = response.into_string().unwrap_or_default();
                 let detail = if body.trim().is_empty() {
                     format!("unexpected HTTP {status}")
@@ -291,7 +298,7 @@ impl S3SnapshotStore {
                     self.endpoint_label, self.bucket
                 ))
             }
-            ureq::Error::Transport(error) => StorageError::Io(format!(
+            RequestError::Transport(error) => StorageError::Io(format!(
                 "{method} {url} (endpoint `{}`, bucket `{}`): {error}",
                 self.endpoint_label, self.bucket
             )),
@@ -492,9 +499,6 @@ fn extract_xml_values(body: &str, tag: &str) -> Vec<String> {
     values
 }
 
-fn read_response_bytes(response: ureq::Response) -> io::Result<Vec<u8>> {
-    let mut reader = response.into_reader();
-    let mut bytes = Vec::new();
-    reader.read_to_end(&mut bytes)?;
-    Ok(bytes)
+fn read_response_bytes(response: Response) -> io::Result<Vec<u8>> {
+    Ok(response.into_bytes())
 }

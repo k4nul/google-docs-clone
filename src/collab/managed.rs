@@ -4,7 +4,11 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{collab::coordinator::PersistedRoomCoordinatorState, config::normalize_http_base_url};
+use crate::{
+    collab::coordinator::PersistedRoomCoordinatorState,
+    config::normalize_http_base_url,
+    http_client::{BlockingHttpClient, RequestBuilder, RequestError, Response},
+};
 
 #[derive(Debug, Error)]
 pub(crate) enum ManagedCoordinationClientError {
@@ -20,7 +24,7 @@ pub(crate) enum ManagedCoordinationClientError {
 pub(crate) struct ManagedCoordinationClient {
     base_url: String,
     auth_token: Option<String>,
-    agent: ureq::Agent,
+    client: BlockingHttpClient,
 }
 
 #[derive(Debug, Serialize)]
@@ -61,12 +65,12 @@ impl ManagedCoordinationClient {
         let base_url =
             normalize_http_base_url(base_url.into().trim(), "ROOM_COORDINATION_MANAGED_BASE_URL")
                 .map_err(ManagedCoordinationClientError::Config)?;
-        let agent = ureq::AgentBuilder::new().timeout(timeout).build();
+        let client = BlockingHttpClient::new(timeout);
 
         Ok(Self {
             base_url,
             auth_token,
-            agent,
+            client,
         })
     }
 
@@ -84,13 +88,13 @@ impl ManagedCoordinationClient {
                     ),
                 )
                 .map(Some),
-            Err(ureq::Error::Status(404, _)) => Ok(None),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(404, _)) => Ok(None),
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 format!("managed coordination lease lookup failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => Err(ManagedCoordinationClientError::Request(
+            Err(RequestError::Transport(error)) => Err(ManagedCoordinationClientError::Request(
                 format!("failed to query managed coordination lease for document `{doc_id}`: {error}"),
             )),
         }
@@ -115,15 +119,15 @@ impl ManagedCoordinationClient {
                     "failed to decode managed coordination acquire response for document `{doc_id}`"
                 ),
             ),
-            Err(ureq::Error::Status(409, response)) => Err(
+            Err(RequestError::Status(409, response)) => Err(
                 ManagedCoordinationClientError::Conflict(self.try_parse_state(response)),
             ),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 format!("managed coordination acquire failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => {
+            Err(RequestError::Transport(error)) => {
                 Err(ManagedCoordinationClientError::Request(format!(
                     "failed to acquire managed coordination lease for document `{doc_id}`: {error}"
                 )))
@@ -154,13 +158,13 @@ impl ManagedCoordinationClient {
                     ),
                 )
                 .map(Some),
-            Err(ureq::Error::Status(404 | 409, _)) => Ok(None),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(404 | 409, _)) => Ok(None),
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 format!("managed coordination renew failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => Err(ManagedCoordinationClientError::Request(
+            Err(RequestError::Transport(error)) => Err(ManagedCoordinationClientError::Request(
                 format!(
                     "failed to renew managed coordination lease for document `{doc_id}`: {error}"
                 ),
@@ -182,13 +186,13 @@ impl ManagedCoordinationClient {
             epoch,
         })) {
             Ok(_) => Ok(true),
-            Err(ureq::Error::Status(404 | 409, _)) => Ok(false),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(404 | 409, _)) => Ok(false),
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 format!("managed coordination release failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => {
+            Err(RequestError::Transport(error)) => {
                 Err(ManagedCoordinationClientError::Request(format!(
                     "failed to release managed coordination lease for document `{doc_id}`: {error}"
                 )))
@@ -196,8 +200,11 @@ impl ManagedCoordinationClient {
         }
     }
 
-    fn authorized_request(&self, method: &str, url: &str) -> ureq::Request {
-        let request = self.agent.request(method, url);
+    fn authorized_request(&self, method: &str, url: &str) -> RequestBuilder {
+        let request = self
+            .client
+            .request(method, url)
+            .expect("managed coordination URLs should be valid");
         match self.auth_token.as_deref() {
             Some(token) => request.set("Authorization", &format!("Bearer {token}")),
             None => request,
@@ -217,7 +224,7 @@ impl ManagedCoordinationClient {
 
     fn parse_state_response(
         &self,
-        response: ureq::Response,
+        response: Response,
         context: String,
     ) -> Result<PersistedRoomCoordinatorState, ManagedCoordinationClientError> {
         response
@@ -225,14 +232,14 @@ impl ManagedCoordinationClient {
             .map_err(|error| ManagedCoordinationClientError::Request(format!("{context}: {error}")))
     }
 
-    fn try_parse_state(&self, response: ureq::Response) -> Option<PersistedRoomCoordinatorState> {
+    fn try_parse_state(&self, response: Response) -> Option<PersistedRoomCoordinatorState> {
         response.into_json().ok()
     }
 
     fn unexpected_status(
         &self,
         status: u16,
-        response: ureq::Response,
+        response: Response,
         context: String,
     ) -> ManagedCoordinationClientError {
         let body = response.into_string().unwrap_or_default();

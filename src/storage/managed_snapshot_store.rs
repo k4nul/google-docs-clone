@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     config::normalize_http_base_url,
+    http_client::{BlockingHttpClient, RequestBuilder, RequestError, Response},
     models::document::Document,
     storage::{DocumentSnapshot, SnapshotStore, StorageError},
 };
@@ -14,7 +15,7 @@ use crate::{
 pub struct ManagedSnapshotStore {
     base_url: String,
     auth_token: Option<String>,
-    agent: ureq::Agent,
+    client: BlockingHttpClient,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,17 +53,20 @@ impl ManagedSnapshotStore {
 
         let base_url = normalize_http_base_url(base_url.into().trim(), "SNAPSHOT_MANAGED_BASE_URL")
             .map_err(StorageError::Config)?;
-        let agent = ureq::AgentBuilder::new().timeout(timeout).build();
+        let client = BlockingHttpClient::new(timeout);
 
         Ok(Self {
             base_url,
             auth_token,
-            agent,
+            client,
         })
     }
 
-    fn authorized_request(&self, method: &str, url: &str) -> ureq::Request {
-        let request = self.agent.request(method, url);
+    fn authorized_request(&self, method: &str, url: &str) -> RequestBuilder {
+        let request = self
+            .client
+            .request(method, url)
+            .expect("managed snapshot URLs should be valid");
         match self.auth_token.as_deref() {
             Some(token) => request.set("Authorization", &format!("Bearer {token}")),
             None => request,
@@ -79,7 +83,7 @@ impl ManagedSnapshotStore {
 
     fn parse_snapshot_response(
         &self,
-        response: ureq::Response,
+        response: Response,
         expected_doc_id: Uuid,
         context: &str,
     ) -> Result<DocumentSnapshot, StorageError> {
@@ -89,12 +93,7 @@ impl ManagedSnapshotStore {
         payload.into_snapshot(expected_doc_id)
     }
 
-    fn unexpected_status(
-        &self,
-        status: u16,
-        response: ureq::Response,
-        context: &str,
-    ) -> StorageError {
+    fn unexpected_status(&self, status: u16, response: Response, context: &str) -> StorageError {
         let body = response.into_string().unwrap_or_default();
         let detail = if body.trim().is_empty() {
             format!("unexpected HTTP {status}")
@@ -160,13 +159,13 @@ impl SnapshotStore for ManagedSnapshotStore {
                     &format!("failed to decode managed snapshot response for document `{doc_id}`"),
                 )
                 .map(Some),
-            Err(ureq::Error::Status(404, _)) => Ok(None),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(404, _)) => Ok(None),
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 &format!("managed snapshot lookup failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => Err(StorageError::Io(format!(
+            Err(RequestError::Transport(error)) => Err(StorageError::Io(format!(
                 "failed to load managed snapshot for document `{doc_id}`: {error}"
             ))),
         }
@@ -179,12 +178,12 @@ impl SnapshotStore for ManagedSnapshotStore {
             snapshot
         ))) {
             Ok(_) => Ok(()),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 &format!("managed snapshot save failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => Err(StorageError::Io(format!(
+            Err(RequestError::Transport(error)) => Err(StorageError::Io(format!(
                 "failed to save managed snapshot for document `{doc_id}`: {error}"
             ))),
         }
@@ -193,13 +192,13 @@ impl SnapshotStore for ManagedSnapshotStore {
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let request = self.authorized_request("DELETE", &self.snapshot_url(doc_id));
         match request.call() {
-            Ok(_) | Err(ureq::Error::Status(404, _)) => Ok(()),
-            Err(ureq::Error::Status(status, response)) => Err(self.unexpected_status(
+            Ok(_) | Err(RequestError::Status(404, _)) => Ok(()),
+            Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,
                 response,
                 &format!("managed snapshot delete failed for document `{doc_id}`"),
             )),
-            Err(ureq::Error::Transport(error)) => Err(StorageError::Io(format!(
+            Err(RequestError::Transport(error)) => Err(StorageError::Io(format!(
                 "failed to delete managed snapshot for document `{doc_id}`: {error}"
             ))),
         }
@@ -209,14 +208,14 @@ impl SnapshotStore for ManagedSnapshotStore {
         let request = self.authorized_request("GET", &self.snapshots_url());
         let response = match request.call() {
             Ok(response) => response,
-            Err(ureq::Error::Status(status, response)) => {
+            Err(RequestError::Status(status, response)) => {
                 return Err(self.unexpected_status(
                     status,
                     response,
                     "managed snapshot catalog lookup failed",
                 ));
             }
-            Err(ureq::Error::Transport(error)) => {
+            Err(RequestError::Transport(error)) => {
                 return Err(StorageError::Io(format!(
                     "failed to list managed snapshots: {error}"
                 )));
