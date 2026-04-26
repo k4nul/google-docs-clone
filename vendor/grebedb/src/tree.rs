@@ -731,7 +731,7 @@ impl Tree {
         }
     }
 
-    fn edit_node(&mut self, page_id: PageId) -> Result<PageUpdateGuard<Node>, Error> {
+    fn edit_node(&mut self, page_id: PageId) -> Result<PageUpdateGuard<'_, Node>, Error> {
         if let Some(node) = self.page_table.update(page_id)? {
             Ok(node)
         } else {
@@ -993,13 +993,13 @@ impl Tree {
     }
 
     fn increment_key_value_count(&mut self) {
-        if let Some(mut meta) = self.page_table.auxiliary_metadata_mut() {
+        if let Some(meta) = self.page_table.auxiliary_metadata_mut() {
             meta.key_value_count += 1;
         }
     }
 
     fn decrement_key_value_count(&mut self) {
-        if let Some(mut meta) = self.page_table.auxiliary_metadata_mut() {
+        if let Some(meta) = self.page_table.auxiliary_metadata_mut() {
             meta.key_value_count = meta.key_value_count.saturating_sub(1);
         }
     }

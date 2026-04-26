@@ -321,7 +321,7 @@ impl Database {
     }
 
     /// Return database metadata information.
-    pub fn metadata(&self) -> Metadata {
+    pub fn metadata(&self) -> Metadata<'_> {
         Metadata {
             tree_metadata: self.tree.metadata(),
         }

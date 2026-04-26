@@ -87,7 +87,7 @@ impl<T> PageCache<T> {
     }
 
     pub fn set_page_revision(&mut self, page_id: PageId, revision: RevisionId) {
-        let mut page = self.cached_pages.get_mut(&page_id).unwrap();
+        let page = self.cached_pages.get_mut(&page_id).unwrap();
         page.revision = revision;
     }
 
@@ -430,14 +430,14 @@ where
         Ok(())
     }
 
-    pub fn update(&mut self, page_id: PageId) -> Result<Option<PageUpdateGuard<T>>, Error> {
+    pub fn update(&mut self, page_id: PageId) -> Result<Option<PageUpdateGuard<'_, T>>, Error> {
         self.check_if_closed()?;
         self.check_if_read_only()?;
 
         self.update_(page_id)
     }
 
-    fn update_(&mut self, page_id: PageId) -> Result<Option<PageUpdateGuard<T>>, Error> {
+    fn update_(&mut self, page_id: PageId) -> Result<Option<PageUpdateGuard<'_, T>>, Error> {
         self.check_page_id_counter_consistency(page_id)?;
 
         if !self.page_cache.contains_page(page_id) {
