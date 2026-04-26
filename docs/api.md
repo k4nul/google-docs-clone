@@ -208,7 +208,7 @@ Response: `204 No Content`
 - `SNAPSHOT_STORE=grebedb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=grumpydb`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=graus_db`도 vendor-specific embedded database durability backend다.
-- `SNAPSHOT_STORE=heed`는 vendor-specific embedded database durability backend다.
+- `SNAPSHOT_STORE=heed`는 repository-local shim으로 유지되는 embedded durability backend다.
 - `SNAPSHOT_STORE=jammdb`는 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=fjall`도 vendor-specific embedded database durability backend다.
 - `SNAPSHOT_STORE=persy`도 vendor-specific embedded database durability backend다.
@@ -248,7 +248,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_TINYDB_PATH`다.
 - tinydb catalog는 bincode 단일 파일 안의 `doc_id` keyed record를 저장하고, `GET /api/documents` catalog는 tinydb dump load 뒤 record payload를 다시 읽어 문서 메타데이터를 복원한다.
 - 필수 env는 `SNAPSHOT_HEED_PATH`다.
-- heed LMDB `snapshots` database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- heed shim `snapshots` named database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_JAMMDB_PATH`다.
 - jammdb `snapshots` bucket은 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_MACE_PATH`다.

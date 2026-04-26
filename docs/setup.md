@@ -231,7 +231,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `mindb` | 디렉터리 WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload key와 explicit `__catalog__` key를 저장하고 save/delete 뒤 `sync()`로 WAL durability 경계를 고정한다. reopen point index가 비어 있으면 adapter가 upstream `RecoveryManager`로 WAL을 재생한다. directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | no-bindgen/no-new-native-conflict 기준선 |
 | `mmdb` | 디렉터리 WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload key와 explicit `__catalog__` key를 write batch로 함께 저장하고 sync write 뒤 flush한다. directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `mu_db` | data/index 파일 쌍 key-value store | 중간 | `snapshot:<doc_id>` payload key와 explicit `__catalog__` key를 저장하고 save/delete 뒤 data/index 파일을 fsync한다. 백업/복구는 `SNAPSHOT_MU_DB_PATH`와 같은 디렉터리의 `index_<file_name>`을 함께 다뤄야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
-| `heed` | 디렉터리 + LMDB data file | 낮음 | 엔진 파일 단위 백업이 필요하고 수동 entry 복구는 어렵다 | mmap 기반, pure-Rust baseline에는 포함하지 않음 |
+| `heed` | 디렉터리 + `store.json` | 중간 | hex-encoded JSON map이라 디렉터리 단위 백업은 단순하지만 수동 payload 해석은 제한적이다 | repository-local shim, pure-Rust baseline에 포함 |
 | `hightower_kv` | 디렉터리 + log-structured segments/snapshots | 낮음 | `snapshot:<doc_id>` prefix scan을 쓰므로 엔진 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `hmdb` | 디렉터리 + append-only bincode log | 낮음 | schema 로그 replay로 catalog를 복구한다. tail truncation은 incomplete write로 흡수할 수 있지만, 중간 구간 손상이나 스키마 불일치는 startup 전체 복구 실패로 이어질 수 있다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `icefalldb` | 디렉터리 + append-only `rsdb.log` | 낮음 | 공개 delete/iterator API가 없어 `doc_id` tombstone과 explicit `__catalog__` key를 함께 유지한다. restart recovery는 append-only log replay에 의존하므로 디렉터리 전체 backup/restore와 회귀 테스트 기반 검증이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -427,8 +427,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 
 ## Redb Snapshot Store
 
-- `SNAPSHOT_STORE=heed`는 `SNAPSHOT_HEED_PATH` 단일 heed LMDB 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- heed `snapshots` database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- `SNAPSHOT_STORE=heed`는 `SNAPSHOT_HEED_PATH/store.json` 단일 repository-local shim 파일을 통해 embedded durability를 사용한다.
+- heed shim `snapshots` named database는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - `SNAPSHOT_STORE=hightower_kv`는 `SNAPSHOT_HIGHTOWER_KV_PATH` 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 hightower-kv keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` key-value로 저장되고, `GET /api/documents` catalog는 same prefix scan으로 복원된다.
 - `SNAPSHOT_STORE=jammdb`는 `SNAPSHOT_JAMMDB_PATH` 단일 jammdb 파일을 통해 vendor-specific embedded database durability를 사용한다. `SNAPSHOT_STORE=mace`는 `SNAPSHOT_MACE_PATH` Mace 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
