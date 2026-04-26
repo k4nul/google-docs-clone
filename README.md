@@ -165,7 +165,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_PERSY_PATH`: `SNAPSHOT_STORE=persy`일 때 snapshot persy 파일 경로
 - `SNAPSHOT_PERSISTENT_KV_PATH`: `SNAPSHOT_STORE=persistent_kv`일 때 snapshot persistent-kv 디렉터리 경로
 - `SNAPSHOT_NATIVE_DB_PATH`: `SNAPSHOT_STORE=native_db`일 때 snapshot native_db 파일 경로
-- `SNAPSHOT_NEBARI_PATH`: `SNAPSHOT_STORE=nebari`일 때 snapshot nebari 디렉터리 경로
+- `SNAPSHOT_NEBARI_PATH`: `SNAPSHOT_STORE=nebari`일 때 snapshot nebari shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_NIKIDB_PATH`: `SNAPSHOT_STORE=nikidb`일 때 snapshot nikidb 파일 경로
 - `SNAPSHOT_NODB_PATH`: `SNAPSHOT_STORE=nodb`일 때 snapshot nodb 파일 경로
 - `SNAPSHOT_OKOFDB_PATH`: `SNAPSHOT_STORE=okofdb`일 때 snapshot okofdb key-per-file 디렉터리 경로

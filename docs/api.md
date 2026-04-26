@@ -270,7 +270,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_NATIVE_DB_PATH`다.
 - native_db primary-key catalog는 `doc_id -> persisted snapshot JSON` payload를 저장하고, `GET /api/documents` catalog는 전체 scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_NEBARI_PATH`다.
-- nebari `snapshots` tree는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 tree range scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- nebari shim `snapshots` named tree는 `SNAPSHOT_NEBARI_PATH/store.json` 안에 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 같은 named tree range scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_PARITY_DB_PATH`다.
 - parity-db ordered `snapshots` column은 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 ordered scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_REDB_PATH`다.

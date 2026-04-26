@@ -441,8 +441,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - 손상된 snapshot payload는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛰고, 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=native_db`는 `SNAPSHOT_NATIVE_DB_PATH` 단일 native_db 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 native_db primary-key catalog에 `doc_id -> persisted snapshot JSON` payload로 저장된다.
-- `SNAPSHOT_STORE=nebari`는 `SNAPSHOT_NEBARI_PATH` 디렉터리 아래 append-only tree store를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 nebari `snapshots` tree에 `doc_id -> persisted snapshot JSON` payload로 저장된다.
+- `SNAPSHOT_STORE=nebari`는 `SNAPSHOT_NEBARI_PATH/store.json` repository-local shim을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 nebari shim `snapshots` named tree에 `doc_id -> persisted snapshot JSON` payload로 저장된다.
 - 기본 local ownership 모드에서는 startup catalog lookup 뒤 eager hydrate를 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - 손상된 snapshot payload는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛰고, 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=nikidb`는 `SNAPSHOT_NIKIDB_PATH` 단일 nikidb 파일을 통해 vendor-specific embedded database durability를 사용한다.

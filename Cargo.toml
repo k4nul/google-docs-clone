@@ -94,7 +94,7 @@ mu_db = "0.0.1"
 nanodb = "0.4.5"
 native_db = "0.8.2"
 native_model = "=0.4.20"
-nebari = "0.5.5"
+nebari = { version = "0.5.5", path = "vendor/nebari" }
 nikidb = "0.1.1"
 nodb = "0.2.2"
 parity-db = { version = "0.5.4", path = "vendor/parity-db" }

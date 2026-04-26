@@ -1,10 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use nebari::{
-    ArcBytes, Config as NebariConfig, Tree,
-    io::fs::StdFile,
-    tree::{Root, Unversioned},
-};
+use nebari::{ArcBytes, Config as NebariConfig, Tree, io::fs::StdFile, tree::Unversioned};
 use uuid::Uuid;
 
 use crate::{
