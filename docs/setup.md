@@ -261,7 +261,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `rskey` | 단일 JSON hashmap 파일 | 높음 | store 전체를 한 파일로 다시 쓰므로 파일 손상이 startup 전체 복구 실패로 이어질 수 있다. 대신 `doc_id -> persisted snapshot JSON string` 구조라 수동 점검과 부분 복구는 쉽다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `readb` | 디렉터리 + append-only data/index | 낮음 | `__catalog__` key와 data/index 파일을 함께 백업해야 catalog 복구 경로가 유지된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `kv` | 디렉터리 + sled tree keyspace | 낮음 | `snapshots` bucket의 `doc_id` key를 full scan해 catalog를 복구한다. payload는 JSON codec으로 직렬화되지만 engine 디렉터리 전체 백업이 기본 절차다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
-| `epoch_db` | 디렉터리 + sled-backed multi-tree store | 낮음 | `doc_id` key와 explicit `__catalog__` key를 JSON string으로 저장한다. payload inspection보다는 engine 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `epoch_db` | 디렉터리 + repository-local JSON map shim | 낮음 | `doc_id` key와 explicit `__catalog__` key를 JSON string으로 저장한다. payload inspection보다는 engine 디렉터리 전체 백업/restore와 회귀 테스트 기반 검증이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rumdb` | 디렉터리 + append-only Bitcask-style log set | 낮음 | `doc_id` key와 explicit `__catalog__` key를 append-only log에 저장하고 startup 전체 log replay로 keydir를 복구한다. directory 전체 백업/restore와 replay 검증을 기본 절차로 보는 편이 안전하다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `rustlite` | 디렉터리 + WAL/SSTable engine | 낮음 | `__catalog__` key와 engine 디렉터리를 함께 백업해야 catalog 복구 경로가 유지된다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `canopydb` | 디렉터리 + transactional tree/WAL | 낮음 | `snapshots` tree iter scan으로 catalog를 복구하므로 engine 디렉터리 전체를 함께 백업해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
@@ -361,7 +361,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - `jfs`는 single-file JSON object embedded durability 기준선이다.
 - `toiletdb`는 temp file persist 기반 single-file JSON embedded durability 기준선이다.
 - `persistent_kv`는 snapshot set + WAL directory embedded durability 기준선이다.
-- `epoch_db`는 sled-backed multi-tree directory embedded durability 기준선이다.
+- `epoch_db`는 directory-local JSON map embedded durability 기준선이다.
 - `nikidb`는 single-file B+tree bucket embedded durability 기준선이다.
 - `nodb`는 single-file dump/rename embedded durability 기준선이다.
 - `simple_db`는 line-oriented single-file embedded durability 기준선이다.
@@ -514,7 +514,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - 기본 local ownership 모드에서는 startup catalog lookup 뒤 eager hydrate를 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - rustbreak catalog 파일 자체가 손상되면 startup 복구는 해당 파일을 역직렬화하지 못해 실패한다.
 - `SNAPSHOT_STORE=yedb`는 `SNAPSHOT_YEDB_PATH` 단일 yedb 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 yedb `snapshots/<doc_id>` key에 `persisted snapshot JSON`으로 저장된다.
+- snapshot payload는 yedb-compatible `snapshots/<doc_id>` key에 `persisted snapshot JSON`으로 저장된다.
 - 기본 local ownership 모드에서는 startup catalog lookup 뒤 eager hydrate를 수행하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - 손상된 snapshot payload는 `GET /api/documents` catalog 생성 중 warning과 함께 건너뛰고, 직접 load 시에는 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=btree_store`는 `SNAPSHOT_BTREE_STORE_PATH` 단일 btree-store 파일을 통해 vendor-specific embedded database durability를 사용한다.

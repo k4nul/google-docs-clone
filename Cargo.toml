@@ -50,7 +50,7 @@ dotenvy = "0.15"
 emdb = "0.7.0"
 osmiumdb = "0.1.0"
 eight = { version = "1.0.0-alpha.2", default-features = false, features = ["filesystem-storage"] }
-epoch-db = "0.2.9"
+epoch-db = { version = "0.2.9", path = "vendor/epoch-db" }
 etchdb = "0.3.3"
 ferrumdb = "0.1.2"
 fastkv = "0.1.2"
@@ -62,8 +62,10 @@ grumpydb = "1.0.0"
 graus-db = "0.2.2"
 ghaladb = { version = "0.1.4", path = "vendor/ghaladb" }
 heed = "0.22"
+hex = "0.4.3"
 hightower-kv = "0.1.5"
 highlandcows-isam = "0.2.0"
+hmac = "0.12"
 hmdb = "0.2.2"
 icefalldb = { version = "0.1.0", path = "vendor/icefalldb" }
 jammdb = "0.11"
@@ -115,13 +117,13 @@ rusty-leveldb = "4.0.1"
 snaildb = "0.2.2"
 saberdb = "1.1.0"
 scdb = "0.2.1"
-s3 = { version = "0.1.27", default-features = false, features = ["blocking", "rustls"] }
 sanakirja = "2.0.0-beta"
 saturn = "0.0.1"
 skv = "0.1.2"
 siamesedb = "0.1.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 simple_db = "0.1.2"
 sled = "0.34"
 joydb = { version = "0.1.0", features = ["json"] }
@@ -140,12 +142,13 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+url = "2"
 ureq = { version = "2", features = ["json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 vsdb = { version = "13.4.5", path = "vendor/vsdb" }
 yakv = "0.2.7"
 yakvdb = "0.6.2"
-yedb = "0.5.1"
+yedb = { version = "0.5.1", path = "vendor/yedb" }
 yrs = "=0.18.2"
 yrs-axum = "0.8.2"
 shorterDB = { version = "0.2.0", path = "vendor/shorterdb" }

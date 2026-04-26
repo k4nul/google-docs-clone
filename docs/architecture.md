@@ -96,7 +96,7 @@
 - `RskeySnapshotStore`는 `SNAPSHOT_RSKEY_PATH` 단일 JSON hashmap 파일의 `doc_id -> persisted snapshot JSON string` 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, save/delete마다 전체 store를 다시 sync하며 startup hydrate/list 경로는 same hashmap key scan을 그대로 사용한다.
 - `YakvSnapshotStore`는 `SNAPSHOT_YAKV_PATH` 단일 B-Tree 파일의 `snapshot:<doc_id>` key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same full scan catalog를 그대로 사용한다.
 - `YakvdbSnapshotStore`는 `SNAPSHOT_YAKVDB_PATH` 단일 yakvdb B-Tree 파일의 `snapshot:<doc_id>` key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 min/above key traversal catalog를 그대로 사용한다.
-- `EpochDbSnapshotStore`는 `SNAPSHOT_EPOCH_DB_PATH` 디렉터리의 sled-backed multi-tree keyspace에 문서 metadata와 Yrs full-state update를 JSON string으로 저장하고, explicit `__catalog__` key를 통해 startup hydrate/list 경로를 그대로 사용한다.
+- `EpochDbSnapshotStore`는 `SNAPSHOT_EPOCH_DB_PATH` 디렉터리의 repository-local epoch-db shim `store.json` map에 문서 metadata와 Yrs full-state update를 JSON string으로 저장하고, explicit `__catalog__` key를 통해 startup hydrate/list 경로를 그대로 사용한다.
 - `EtchdbSnapshotStore`는 `SNAPSHOT_ETCHDB_PATH` 디렉터리의 EtchDB WAL-backed store에 `snapshot:<doc_id> -> persisted snapshot JSON bytes` payload와 explicit `__catalog__` key를 함께 저장하고, save/delete를 `write_durable`로 확정해 startup WAL replay 뒤 같은 catalog key를 그대로 사용한다.
 - `FastKvSnapshotStore`는 `SNAPSHOT_FASTKV_PATH` 단일 compressed binary dump 파일에 `snapshot:<doc_id> -> persisted snapshot JSON bytes` payload와 explicit `__catalog__` key를 함께 저장하고, save/delete마다 temp dump fsync 뒤 rename으로 startup reload 경계를 고정한다.
 - `FerrumdbSnapshotStore`는 `SNAPSHOT_FERRUMDB_PATH` 단일 append-only log 파일에 `snapshot:<doc_id> -> persisted snapshot JSON` JSON value와 explicit `__catalog__` key를 함께 저장하고, `FsyncPolicy::Always`로 save/delete catalog 경계를 sync해 startup hydrate/list 경로가 같은 catalog key를 그대로 사용하도록 고정한다.
@@ -154,7 +154,7 @@
 - `SkvSnapshotStore`는 `SNAPSHOT_SKV_PATH` base path가 만드는 `<path>.data` / `<path>.index` 파일 쌍의 key-value 엔트리와 explicit `__catalog__` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 보조 catalog를 그대로 사용한다.
 - `SurrealkvSnapshotStore`는 `SNAPSHOT_SURREALKV_PATH` 단일 surrealkv B+tree 파일의 key-value 엔트리에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same full scan을 그대로 사용한다.
 - `RustbreakSnapshotStore`는 `SNAPSHOT_RUSTBREAK_PATH` 단일 rustbreak path database catalog에 문서 metadata와 Yrs full-state update를 함께 저장하고, atomic file replace 기반 save 뒤 startup hydrate/list 경로는 same catalog scan을 그대로 사용한다.
-- `YedbSnapshotStore`는 `SNAPSHOT_YEDB_PATH` 디렉터리의 `snapshots/<doc_id>` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same namespace scan을 그대로 사용한다.
+- `YedbSnapshotStore`는 `SNAPSHOT_YEDB_PATH` yedb-compatible 디렉터리의 `snapshots/<doc_id>` key에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same namespace scan을 그대로 사용한다.
 - `BtreeStoreSnapshotStore`는 `SNAPSHOT_BTREE_STORE_PATH` 단일 btree-store 파일의 `snapshots` bucket에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same bucket scan을 그대로 사용한다.
 - `SiamesedbSnapshotStore`는 `SNAPSHOT_SIAMESDB_PATH` 디렉터리의 `snapshots` map에 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same map iteration을 그대로 사용한다.
 - `StructsySnapshotStore`는 `SNAPSHOT_STRUCTSY_PATH` 단일 파일에 structsy persistent record로 문서 metadata와 Yrs full-state update를 함께 저장하고, startup hydrate/list 경로는 same record scan을 그대로 사용한다.

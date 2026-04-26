@@ -1,8 +1,10 @@
-use std::time::Duration;
+use std::{io, io::Read, time::Duration};
 
-use axum::http::StatusCode;
-use s3::{AddressingStyle, Auth, BlockingClient, Credentials, Error as S3Error};
+use chrono::Utc;
+use hmac::{Hmac, Mac};
+use sha2::{Digest, Sha256};
 use tracing::warn;
+use url::Url;
 use uuid::Uuid;
 
 use crate::{
@@ -11,11 +13,25 @@ use crate::{
     storage::{DocumentSnapshot, PersistedSnapshot, SnapshotStore, StorageError},
 };
 
+type HmacSha256 = Hmac<Sha256>;
+
 pub struct S3SnapshotStore {
-    endpoint: String,
+    endpoint: Url,
+    endpoint_label: String,
+    region: String,
     bucket: String,
     prefix: String,
-    client: BlockingClient,
+    access_key_id: String,
+    secret_access_key: String,
+    session_token: Option<String>,
+    path_style: bool,
+    agent: ureq::Agent,
+}
+
+struct RequestTarget {
+    url: Url,
+    canonical_uri: String,
+    canonical_query: String,
 }
 
 impl S3SnapshotStore {
@@ -38,8 +54,11 @@ impl S3SnapshotStore {
             ));
         }
 
-        let endpoint = normalize_http_base_url(endpoint.into().trim(), "SNAPSHOT_S3_ENDPOINT")
-            .map_err(StorageError::Config)?;
+        let endpoint_label =
+            normalize_http_base_url(endpoint.into().trim(), "SNAPSHOT_S3_ENDPOINT")
+                .map_err(StorageError::Config)?;
+        let endpoint = Url::parse(&endpoint_label)
+            .map_err(|error| StorageError::Config(format!("SNAPSHOT_S3_ENDPOINT: {error}")))?;
         let region = normalize_required_string(region, "SNAPSHOT_S3_REGION")?;
         let bucket = normalize_required_string(bucket, "SNAPSHOT_S3_BUCKET")?;
         let prefix = normalize_prefix(prefix.into());
@@ -47,33 +66,19 @@ impl S3SnapshotStore {
         let secret_access_key =
             normalize_required_string(secret_access_key, "SNAPSHOT_S3_SECRET_ACCESS_KEY")?;
         let session_token = normalize_optional_string(session_token);
-
-        let mut credentials =
-            Credentials::new(access_key_id, secret_access_key).map_err(map_s3_config_error)?;
-        if let Some(session_token) = session_token {
-            credentials = credentials
-                .with_session_token(session_token)
-                .map_err(map_s3_config_error)?;
-        }
-
-        let client = BlockingClient::builder(&endpoint)
-            .map_err(map_s3_config_error)?
-            .region(region)
-            .auth(Auth::Static(credentials))
-            .addressing_style(if path_style {
-                AddressingStyle::Path
-            } else {
-                AddressingStyle::Auto
-            })
-            .timeout(timeout)
-            .build()
-            .map_err(map_s3_config_error)?;
+        let agent = ureq::AgentBuilder::new().timeout(timeout).build();
 
         Ok(Self {
             endpoint,
+            endpoint_label,
+            region,
             bucket,
             prefix,
-            client,
+            access_key_id,
+            secret_access_key,
+            session_token,
+            path_style,
+            agent,
         })
     }
 
@@ -103,14 +108,192 @@ impl S3SnapshotStore {
         Ok(snapshot)
     }
 
-    fn map_operation_error(&self, context: &str, error: S3Error) -> StorageError {
+    fn object_target(&self, key: &str) -> Result<RequestTarget, StorageError> {
+        self.request_target(
+            if self.path_style {
+                vec![self.bucket.clone()]
+            } else {
+                Vec::new()
+            },
+            key.split('/').map(str::to_owned).collect(),
+            Vec::new(),
+        )
+    }
+
+    fn list_target(&self) -> Result<RequestTarget, StorageError> {
+        let mut query = vec![
+            ("list-type".to_owned(), "2".to_owned()),
+            ("max-keys".to_owned(), "1000".to_owned()),
+        ];
+        if !self.prefix.is_empty() {
+            query.push(("prefix".to_owned(), self.prefix.clone()));
+        }
+
+        self.request_target(
+            if self.path_style {
+                vec![self.bucket.clone()]
+            } else {
+                Vec::new()
+            },
+            Vec::new(),
+            query,
+        )
+    }
+
+    fn request_target(
+        &self,
+        mut path_segments: Vec<String>,
+        extra_segments: Vec<String>,
+        mut query: Vec<(String, String)>,
+    ) -> Result<RequestTarget, StorageError> {
+        let mut url = self.endpoint.clone();
+        if !self.path_style {
+            let host = url.host_str().ok_or_else(|| {
+                StorageError::Config("SNAPSHOT_S3_ENDPOINT must include a host".to_owned())
+            })?;
+            let bucket_host = format!("{}.{}", self.bucket, host);
+            url.set_host(Some(&bucket_host)).map_err(|_| {
+                StorageError::Config("invalid SNAPSHOT_S3_BUCKET host label".to_owned())
+            })?;
+        }
+
+        let base_segments = url
+            .path_segments()
+            .map(|segments| {
+                segments
+                    .filter(|segment| !segment.is_empty())
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let mut canonical_segments = base_segments;
+        canonical_segments.append(&mut path_segments);
+        canonical_segments.extend(extra_segments);
+
+        let canonical_uri = canonical_path(&canonical_segments);
+        url.set_path(&canonical_uri);
+
+        query.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
+        let canonical_query = query
+            .iter()
+            .map(|(key, value)| {
+                format!(
+                    "{}={}",
+                    encode_query_component(key),
+                    encode_query_component(value)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("&");
+        if canonical_query.is_empty() {
+            url.set_query(None);
+        } else {
+            url.set_query(Some(&canonical_query));
+        }
+
+        Ok(RequestTarget {
+            url,
+            canonical_uri,
+            canonical_query,
+        })
+    }
+
+    fn send(
+        &self,
+        method: &str,
+        target: &RequestTarget,
+        body: &[u8],
+        content_type: Option<&str>,
+    ) -> Result<ureq::Response, StorageError> {
+        let payload_hash = hex::encode(Sha256::digest(body));
+        let now = Utc::now();
+        let amz_date = now.format("%Y%m%dT%H%M%SZ").to_string();
+        let date_stamp = now.format("%Y%m%d").to_string();
+        let host_header = host_header_value(&target.url)?;
+
+        let mut canonical_headers = vec![
+            format!("host:{host_header}"),
+            format!("x-amz-content-sha256:{payload_hash}"),
+            format!("x-amz-date:{amz_date}"),
+        ];
+        let mut signed_headers = vec![
+            "host".to_owned(),
+            "x-amz-content-sha256".to_owned(),
+            "x-amz-date".to_owned(),
+        ];
+        if let Some(session_token) = self.session_token.as_deref() {
+            canonical_headers.push(format!("x-amz-security-token:{session_token}"));
+            signed_headers.push("x-amz-security-token".to_owned());
+        }
+
+        let canonical_request = format!(
+            "{method}\n{}\n{}\n{}\n{}\n{}",
+            target.canonical_uri,
+            target.canonical_query,
+            canonical_headers.join("\n") + "\n",
+            signed_headers.join(";"),
+            payload_hash,
+        );
+        let credential_scope = format!("{date_stamp}/{}/s3/aws4_request", self.region);
+        let string_to_sign = format!(
+            "AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n{}",
+            hex::encode(Sha256::digest(canonical_request.as_bytes()))
+        );
+        let signing_key = signing_key(&self.secret_access_key, &date_stamp, &self.region)?;
+        let signature = {
+            let mut mac = HmacSha256::new_from_slice(&signing_key).map_err(|error| {
+                StorageError::Config(format!("failed to build s3 signer: {error}"))
+            })?;
+            mac.update(string_to_sign.as_bytes());
+            hex::encode(mac.finalize().into_bytes())
+        };
+        let authorization = format!(
+            "AWS4-HMAC-SHA256 Credential={}/{credential_scope}, SignedHeaders={}, Signature={signature}",
+            self.access_key_id,
+            signed_headers.join(";"),
+        );
+
+        let mut request = self
+            .agent
+            .request(method, target.url.as_str())
+            .set("Authorization", &authorization)
+            .set("x-amz-content-sha256", &payload_hash)
+            .set("x-amz-date", &amz_date);
+        if let Some(content_type) = content_type {
+            request = request.set("Content-Type", content_type);
+        }
+        if let Some(session_token) = self.session_token.as_deref() {
+            request = request.set("x-amz-security-token", session_token);
+        }
+
+        if body.is_empty() {
+            request
+                .call()
+                .map_err(|error| self.map_request_error(method, &target.url, error))
+        } else {
+            request
+                .send_bytes(body)
+                .map_err(|error| self.map_request_error(method, &target.url, error))
+        }
+    }
+
+    fn map_request_error(&self, method: &str, url: &Url, error: ureq::Error) -> StorageError {
         match error {
-            S3Error::InvalidConfig { message } | S3Error::Signing { message } => {
-                StorageError::Config(format!("{context}: {message}"))
+            ureq::Error::Status(status, response) => {
+                let body = response.into_string().unwrap_or_default();
+                let detail = if body.trim().is_empty() {
+                    format!("unexpected HTTP {status}")
+                } else {
+                    format!("unexpected HTTP {status}: {}", body.trim())
+                };
+                StorageError::Io(format!(
+                    "{method} {url} (endpoint `{}`, bucket `{}`): {detail}",
+                    self.endpoint_label, self.bucket
+                ))
             }
-            other => StorageError::Io(format!(
-                "{context} (endpoint `{}`, bucket `{}`): {other}",
-                self.endpoint, self.bucket
+            ureq::Error::Transport(error) => StorageError::Io(format!(
+                "{method} {url} (endpoint `{}`, bucket `{}`): {error}",
+                self.endpoint_label, self.bucket
             )),
         }
     }
@@ -119,83 +302,73 @@ impl S3SnapshotStore {
 impl SnapshotStore for S3SnapshotStore {
     fn load_snapshot(&self, doc_id: &Uuid) -> Result<Option<DocumentSnapshot>, StorageError> {
         let key = self.object_key(doc_id);
-        match self.client.objects().get(&self.bucket, &key).send() {
-            Ok(output) => {
-                let bytes = output.bytes().map_err(|error| {
-                    self.map_operation_error("failed to read s3 snapshot body", error)
+        let target = self.object_target(&key)?;
+        match self.send("GET", &target, &[], None) {
+            Ok(response) => {
+                let bytes = read_response_bytes(response).map_err(|error| {
+                    StorageError::Io(format!(
+                        "failed to read s3 snapshot body for `{key}` (endpoint `{}`, bucket `{}`): {error}",
+                        self.endpoint_label, self.bucket
+                    ))
                 })?;
                 self.snapshot_from_bytes(*doc_id, &bytes).map(Some)
             }
-            Err(error) if error.status() == Some(StatusCode::NOT_FOUND) => Ok(None),
-            Err(error) => Err(self
-                .map_operation_error(&format!("failed to load s3 snapshot object `{key}`"), error)),
+            Err(StorageError::Io(message)) if message.contains("unexpected HTTP 404") => Ok(None),
+            Err(error) => Err(error),
         }
     }
 
     fn save_snapshot(&self, snapshot: DocumentSnapshot) -> Result<(), StorageError> {
         let doc_id = snapshot.document.id;
         let key = self.object_key(&doc_id);
+        let target = self.object_target(&key)?;
         let bytes = serde_json::to_vec(&PersistedSnapshot::from(snapshot)).map_err(|error| {
             StorageError::Io(format!(
                 "failed to serialize s3 snapshot `{doc_id}`: {error}"
             ))
         })?;
 
-        self.client
-            .objects()
-            .put(&self.bucket, &key)
-            .content_type("application/json")
-            .body_bytes(bytes)
-            .send()
+        self.send("PUT", &target, &bytes, Some("application/json"))
             .map(|_| ())
-            .map_err(|error| {
-                self.map_operation_error(
-                    &format!("failed to save s3 snapshot object `{key}`"),
-                    error,
-                )
-            })
     }
 
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError> {
         let key = self.object_key(doc_id);
-        match self.client.objects().delete(&self.bucket, &key).send() {
+        let target = self.object_target(&key)?;
+        match self.send("DELETE", &target, &[], None) {
             Ok(_) => Ok(()),
-            Err(error) if error.status() == Some(StatusCode::NOT_FOUND) => Ok(()),
-            Err(error) => Err(self.map_operation_error(
-                &format!("failed to delete s3 snapshot object `{key}`"),
-                error,
-            )),
+            Err(StorageError::Io(message)) if message.contains("unexpected HTTP 404") => Ok(()),
+            Err(error) => Err(error),
         }
     }
 
     fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
-        let mut request = self.client.objects().list_v2(&self.bucket).max_keys(1000);
-        if !self.prefix.is_empty() {
-            request = request.prefix(self.prefix.clone());
-        }
+        let target = self.list_target()?;
+        let response = self.send("GET", &target, &[], None)?;
+        let body = response.into_string().map_err(|error| {
+            StorageError::Io(format!(
+                "failed to read s3 snapshot catalog response (endpoint `{}`, bucket `{}`): {error}",
+                self.endpoint_label, self.bucket
+            ))
+        })?;
 
         let mut documents = Vec::new();
-        for page in request.pager() {
-            let page = page.map_err(|error| {
-                self.map_operation_error("failed to list s3 snapshot objects", error)
-            })?;
-            for object in page.contents {
-                let Some(doc_id) = self.doc_id_from_object_key(&object.key) else {
-                    continue;
-                };
+        for key in extract_xml_values(&body, "Key") {
+            let Some(doc_id) = self.doc_id_from_object_key(&key) else {
+                continue;
+            };
 
-                match self.load_snapshot(&doc_id) {
-                    Ok(Some(snapshot)) => documents.push(snapshot.document),
-                    Ok(None) => continue,
-                    Err(StorageError::CorruptSnapshot(doc_id)) => warn!(
-                        doc_id = %doc_id,
-                        key = object.key,
-                        endpoint = %self.endpoint,
-                        bucket = %self.bucket,
-                        "skipping corrupt s3 snapshot object while building document catalog"
-                    ),
-                    Err(error) => return Err(error),
-                }
+            match self.load_snapshot(&doc_id) {
+                Ok(Some(snapshot)) => documents.push(snapshot.document),
+                Ok(None) => continue,
+                Err(StorageError::CorruptSnapshot(doc_id)) => warn!(
+                    doc_id = %doc_id,
+                    key,
+                    endpoint = %self.endpoint_label,
+                    bucket = %self.bucket,
+                    "skipping corrupt s3 snapshot object while building document catalog"
+                ),
+                Err(error) => return Err(error),
             }
         }
 
@@ -234,11 +407,94 @@ fn normalize_prefix(value: String) -> String {
     }
 }
 
-fn map_s3_config_error(error: S3Error) -> StorageError {
-    match error {
-        S3Error::InvalidConfig { message } | S3Error::Signing { message } => {
-            StorageError::Config(message)
-        }
-        other => StorageError::Io(other.to_string()),
+fn canonical_path(segments: &[String]) -> String {
+    if segments.is_empty() {
+        "/".to_owned()
+    } else {
+        format!(
+            "/{}",
+            segments
+                .iter()
+                .map(|segment| encode_path_segment(segment))
+                .collect::<Vec<_>>()
+                .join("/")
+        )
     }
+}
+
+fn encode_path_segment(value: &str) -> String {
+    percent_encode(value, b"-_.~")
+}
+
+fn encode_query_component(value: &str) -> String {
+    percent_encode(value, b"-_.~")
+}
+
+fn percent_encode(value: &str, allowed: &[u8]) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || allowed.contains(&byte) {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push('%');
+            encoded.push_str(&format!("{byte:02X}"));
+        }
+    }
+    encoded
+}
+
+fn host_header_value(url: &Url) -> Result<String, StorageError> {
+    let host = url.host_str().ok_or_else(|| {
+        StorageError::Config("SNAPSHOT_S3_ENDPOINT must include a host".to_owned())
+    })?;
+    Ok(match url.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host.to_owned(),
+    })
+}
+
+fn signing_key(
+    secret_access_key: &str,
+    date_stamp: &str,
+    region: &str,
+) -> Result<Vec<u8>, StorageError> {
+    let date_key = hmac_bytes(
+        format!("AWS4{secret_access_key}").as_bytes(),
+        date_stamp.as_bytes(),
+    )?;
+    let region_key = hmac_bytes(&date_key, region.as_bytes())?;
+    let service_key = hmac_bytes(&region_key, b"s3")?;
+    hmac_bytes(&service_key, b"aws4_request")
+}
+
+fn hmac_bytes(key: &[u8], data: &[u8]) -> Result<Vec<u8>, StorageError> {
+    let mut mac = HmacSha256::new_from_slice(key)
+        .map_err(|error| StorageError::Config(format!("failed to build s3 signer: {error}")))?;
+    mac.update(data);
+    Ok(mac.finalize().into_bytes().to_vec())
+}
+
+fn extract_xml_values(body: &str, tag: &str) -> Vec<String> {
+    let start_tag = format!("<{tag}>");
+    let end_tag = format!("</{tag}>");
+    let mut values = Vec::new();
+    let mut remaining = body;
+
+    while let Some(start_index) = remaining.find(&start_tag) {
+        let after_start = &remaining[start_index + start_tag.len()..];
+        let Some(end_index) = after_start.find(&end_tag) else {
+            break;
+        };
+        values.push(after_start[..end_index].to_owned());
+        remaining = &after_start[end_index + end_tag.len()..];
+    }
+
+    values
+}
+
+fn read_response_bytes(response: ureq::Response) -> io::Result<Vec<u8>> {
+    let mut reader = response.into_reader();
+    let mut bytes = Vec::new();
+    reader.read_to_end(&mut bytes)?;
+    Ok(bytes)
 }

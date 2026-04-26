@@ -308,7 +308,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_RUSTBREAK_PATH`다.
 - rustbreak path database catalog는 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_YEDB_PATH`다.
-- yedb catalog는 `snapshots/<doc_id>` key에 `persisted snapshot JSON`을 저장하고, `GET /api/documents` catalog는 `snapshots` namespace 전체 scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- yedb-compatible catalog는 `snapshots/<doc_id>` key에 `persisted snapshot JSON`을 저장하고, `GET /api/documents` catalog는 `snapshots` namespace 전체 scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_BTREE_STORE_PATH`다.
 - btree-store `snapshots` bucket은 `doc_id -> persisted snapshot JSON` key-value를 저장하고, `GET /api/documents` catalog는 전체 key scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_SIAMESDB_PATH`다.
@@ -388,7 +388,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_EIGHT_PATH`다.
 - eight catalog는 filesystem storage의 `doc_<uuid_simple> -> persisted snapshot JSON string` key-value를 저장하고, `GET /api/documents` catalog는 empty-prefix search 뒤 각 payload를 다시 읽어 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_EPOCH_DB_PATH`다.
-- epoch-db catalog는 sled-backed multi-tree store의 `doc_id -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key를 함께 저장하고, `GET /api/documents` catalog는 same catalog key를 읽은 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- epoch-db shim catalog는 directory-local `store.json` map의 `doc_id -> persisted snapshot JSON string` key-value와 explicit `__catalog__` key를 함께 저장하고, `GET /api/documents` catalog는 same catalog key를 읽은 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_RUMDB_PATH`다.
 - rumdb catalog는 append-only log 세트의 `doc_id -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key를 함께 저장하고, `GET /api/documents` catalog는 startup log replay 뒤 재구축된 keydir를 따라 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_KV_PATH`다.
