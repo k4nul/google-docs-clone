@@ -46,7 +46,7 @@ cargo run
 - `SNAPSHOT_AGDB_PATH`: agdb snapshot store 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: Amandine snapshot store 디렉터리 경로
 - `SNAPSHOT_APEX_STORE_PATH`: apex_store shim snapshot 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
-- `SNAPSHOT_ARMDB_PATH`: armdb snapshot store 디렉터리 경로
+- `SNAPSHOT_ARMDB_PATH`: armdb shim snapshot store 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_ASSYSTEM_PATH`: assystem snapshot store 단일 파일 경로
 - `SNAPSHOT_COLON_DB_PATH`: colon_db snapshot store 단일 파일 경로
 - `SNAPSHOT_FLASH_KV_PATH`: flash-kv snapshot store 디렉터리 경로
@@ -225,7 +225,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 | `agdb` | 단일 memory-mapped graph DB 파일 | 중간 | `snapshot:<doc_id>` alias node에 JSON payload를 저장하고 alias catalog scan으로 문서 목록을 복구한다. 단일 파일 backup/restore와 회귀 테스트 기반 검증이 기본 절차다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `amandine` | 디렉터리 + JSON collection 파일 | 높음 | `snapshots.json` collection에 `doc_id -> persisted snapshot JSON` record를 저장한다. whole-file rewrite와 전체 JSON parse에 의존하므로 directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `apex_store` | 디렉터리 WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload key와 explicit `__catalog__` key를 ApexStore engine에 저장한다. 엔진 디렉터리 전체가 복구 단위라 directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
-| `armdb` | 디렉터리 sharded Bitcask-style VarTree store | 낮음 | UUID bytes key에 persisted snapshot JSON bytes를 저장하고 tree iteration으로 catalog를 복구한다. adapter는 fsync-enabled flush를 호출하지만 엔진 디렉터리 전체 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
+| `armdb` | 디렉터리 기반 repository-local key-value shim | 낮음 | `store.json` hex-keyed map에 UUID bytes key와 persisted snapshot JSON bytes를 저장하고 tree iteration 호환 scan으로 catalog를 복구한다. adapter는 fsync-enabled flush를 호출하며 디렉터리 전체 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `grumpydb` | 디렉터리 WAL-backed page/B+Tree object store | 중간 | `data.db`, `index.db`, `wal.log` 파일 세트에 UUID key와 bytes payload를 저장하고 full range scan으로 catalog를 복구한다. adapter는 save/delete 뒤 `flush()`로 checkpoint와 WAL truncate를 수행하지만, 운영 backup/restore는 디렉터리 전체를 단위로 잡고 회귀 테스트로 검증해야 한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `graus_db` | 디렉터리 append-only log store | 낮음 | `doc_id` key와 explicit `__catalog__` key를 저장한다. save/delete 뒤 handle 재오픈으로 buffered writer flush와 log replay 경계를 고정한다 | pure-Rust/no-bindgen/no-native-conflict 기준선 |
 | `mindb` | 디렉터리 WAL/SSTable LSM store | 낮음 | `snapshot:<doc_id>` payload key와 explicit `__catalog__` key를 저장하고 save/delete 뒤 `sync()`로 WAL durability 경계를 고정한다. reopen point index가 비어 있으면 adapter가 upstream `RecoveryManager`로 WAL을 재생한다. directory-level backup/restore와 회귀 테스트 기반 검증을 기본 절차로 둔다 | no-bindgen/no-new-native-conflict 기준선 |
@@ -494,7 +494,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 Amandine `snapshots` collection의 `doc_id -> persisted snapshot JSON` record로 저장되고, document catalog는 `snapshots.json` whole-file parse로 복구된다.
 - `SNAPSHOT_STORE=apex_store`는 `SNAPSHOT_APEX_STORE_PATH/store.json` repository-local apex_store shim map을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 shim map의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 persisted snapshot JSON bytes로 저장되고, document catalog는 same persisted catalog key를 읽어 복구된다.
-- `SNAPSHOT_STORE=armdb`는 `SNAPSHOT_ARMDB_PATH` 디렉터리의 sharded ArmDB VarTree를 통해 vendor-specific embedded database durability를 사용한다.
+- `SNAPSHOT_STORE=armdb`는 `SNAPSHOT_ARMDB_PATH/store.json` repository-local armdb shim map을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 shim map에 UUID bytes key와 persisted snapshot JSON bytes value로 저장되고, document catalog는 full keyspace scan 뒤 각 payload를 복원해 구성된다.
 - snapshot payload는 ArmDB VarTree에 UUID bytes key와 persisted snapshot JSON bytes value로 저장되고, document catalog는 tree iteration 뒤 각 payload를 복원해 구성된다.
 - `SNAPSHOT_STORE=rcask`는 `SNAPSHOT_RCASK_PATH` RCask append-only segment 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 rcask segment log의 `doc_id` key와 explicit `__catalog__` key에 JSON string으로 저장되고, delete는 tombstone string을 덮어써 가린다. document catalog는 같은 `__catalog__` key를 읽어 복구된다.

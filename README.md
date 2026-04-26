@@ -107,6 +107,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=ferrumdb`: FerrumDB append-only log 파일 store도 지원한다.
 - `SNAPSHOT_STORE=cdb64`: cdb64 single-file key-value store도 지원한다.
 - `SNAPSHOT_STORE=kagi`: kagi whole-file bincode hashmap store도 지원한다.
+- `SNAPSHOT_STORE=armdb`: repository-local armdb shim 디렉터리 store도 지원한다.
 - `SNAPSHOT_STORE=mindb`: repository-local mindb shim 디렉터리 store도 지원한다.
 - `SNAPSHOT_STORE=mmdb`: repository-local mmdb shim 디렉터리 store도 지원한다.
 - `SNAPSHOT_STORE=mu_db`: muDB data/index 파일 쌍 기반 key-value store도 지원한다.
@@ -115,7 +116,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_AGDB_PATH`: `SNAPSHOT_STORE=agdb`일 때 snapshot agdb 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: `SNAPSHOT_STORE=amandine`일 때 snapshot Amandine 디렉터리 경로
 - `SNAPSHOT_APEX_STORE_PATH`: `SNAPSHOT_STORE=apex_store`일 때 snapshot apex_store shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
-- `SNAPSHOT_ARMDB_PATH`: `SNAPSHOT_STORE=armdb`일 때 snapshot ArmDB 디렉터리 경로
+- `SNAPSHOT_ARMDB_PATH`: `SNAPSHOT_STORE=armdb`일 때 snapshot armdb shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_ASSYSTEM_PATH`: `SNAPSHOT_STORE=assystem`일 때 snapshot assystem 단일 파일 경로
 - `SNAPSHOT_COLON_DB_PATH`: `SNAPSHOT_STORE=colon_db`일 때 snapshot colon_db 단일 파일 경로
 - `SNAPSHOT_FLASH_KV_PATH`: `SNAPSHOT_STORE=flash_kv`일 때 snapshot flash-kv 디렉터리 경로

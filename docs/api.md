@@ -240,7 +240,7 @@ Response: `204 No Content`
 - 필수 env는 `SNAPSHOT_AGDB_PATH`다.
 - agdb catalog는 단일 graph DB 파일의 `snapshot:<doc_id>` alias node payload key에 persisted snapshot JSON string을 저장하고, `GET /api/documents` catalog는 all-alias scan 뒤 matching alias node를 다시 읽어 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_ARMDB_PATH`다.
-- armdb catalog는 디렉터리 기반 sharded VarTree에 UUID bytes key와 persisted snapshot JSON bytes value를 저장하고, `GET /api/documents` catalog는 tree iteration 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
+- armdb catalog는 `SNAPSHOT_ARMDB_PATH/store.json` repository-local shim map에 UUID bytes key와 persisted snapshot JSON bytes value를 저장하고, `GET /api/documents` catalog는 full keyspace scan 뒤 각 payload를 복원해 문서 메타데이터를 만든다.
 - 필수 env는 `SNAPSHOT_BLOCKBUCKET_PATH`다.
 - blockbucket bucket 파일은 `doc_id -> persisted snapshot JSON` raw bytes entry를 저장하고, `GET /api/documents` catalog는 `list_next` pagination으로 keyspace를 끝까지 스캔해 각 payload를 복원한다.
 - 필수 env는 `SNAPSHOT_TINYBASE_PATH`다.
