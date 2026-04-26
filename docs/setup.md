@@ -123,7 +123,7 @@ cargo run
 - `SNAPSHOT_AETERNUSDB_PATH`: aeternusdb snapshot store 디렉터리 경로
 - `SNAPSHOT_THUNDERDB_PATH`: thunderdb snapshot store 단일 파일 경로
 - `SNAPSHOT_THETADB_PATH`: thetadb snapshot store 단일 파일 경로
-- `SNAPSHOT_VSDB_PATH`: vsdb snapshot store handle metadata 디렉터리 경로 (`store.meta.json`). 실제 keyspace는 upstream `vsdb`의 process-global base dir(`VSDB_BASE_DIR` 또는 기본 `$HOME/.vsdb`)을 따른다
+- `SNAPSHOT_VSDB_PATH`: vsdb snapshot store handle metadata 디렉터리 경로 (`store.meta.json`). 실제 payload map file은 `VSDB_BASE_DIR` 또는 기본 `$HOME/.vsdb` 아래 `maps/<instance_id>.json`에 저장된다
 - `SNAPSHOT_TINYBASE_PATH`: tinybase snapshot store sled 디렉터리 경로
 - `SNAPSHOT_TINYDB_PATH`: tinydb snapshot store bincode 단일 파일 경로
 - `SNAPSHOT_DBLITE_PATH`: dblite snapshot store 단일 파일 경로
@@ -543,7 +543,7 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 GrumpyDB UUID key에 bytes value로 저장되고, document catalog는 full range scan으로 복구된다. WAL 모듈은 아직 upstream roadmap 단계라 운영자는 디렉터리 전체 backup/restore와 회귀 테스트 기반 검증을 기본 절차로 보는 편이 안전하다.
 - `SNAPSHOT_STORE=graus_db`는 `SNAPSHOT_GRAUS_DB_PATH` GrausDb append-only log 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 GrausDb keyspace의 `doc_id -> persisted snapshot JSON` value와 explicit `__catalog__` key로 저장되고, save/delete 뒤 handle 재오픈으로 normal restart 복구 경계를 고정한다.
-- `SNAPSHOT_STORE=vsdb`는 `SNAPSHOT_VSDB_PATH/store.meta.json`에 store handle metadata를 두고, upstream `vsdb`의 process-global base dir(`VSDB_BASE_DIR` 또는 기본 `$HOME/.vsdb`)을 실제 durability keyspace로 사용한다.
+- `SNAPSHOT_STORE=vsdb`는 `SNAPSHOT_VSDB_PATH/store.meta.json`에 store handle metadata를 두고, `VSDB_BASE_DIR` 또는 기본 `$HOME/.vsdb` 아래 `maps/<instance_id>.json`을 실제 durability payload file로 사용한다.
 - snapshot payload는 vsdb `Mapx<String, Vec<u8>>`의 `doc_id -> persisted snapshot JSON` key-value로 저장되고, document catalog는 same keyspace full scan으로 복구된다. 서버는 snapshot store 접근을 직렬화해 concurrent mutation을 제한한다.
 - `SNAPSHOT_STORE=dblite`는 `SNAPSHOT_DBLITE_PATH` 단일 dblite 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 dblite string key-value 엔트리에 `doc_id -> persisted snapshot JSON` bytes로 저장되고, document catalog는 key scan으로 복구된다.

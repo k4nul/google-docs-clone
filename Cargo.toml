@@ -142,7 +142,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 ureq = { version = "2", features = ["json"] }
 uuid = { version = "1", features = ["v4", "serde"] }
-vsdb = "13.4.5"
+vsdb = { version = "13.4.5", path = "vendor/vsdb" }
 yakv = "0.2.7"
 yakvdb = "0.6.2"
 yedb = "0.5.1"

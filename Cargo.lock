@@ -9918,30 +9918,9 @@ checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 [[package]]
 name = "vsdb"
 version = "13.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91344ab47c6602e4e3630de0423c358436694fa8f2feaf1d4b3c55b1e04309f4"
 dependencies = [
- "parking_lot 0.12.5",
- "postcard",
- "rand 0.10.1",
- "ruc",
  "serde 1.0.228",
- "sha3",
- "thiserror 2.0.18",
- "vsdb_core",
-]
-
-[[package]]
-name = "vsdb_core"
-version = "13.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27d3a804d5264ba86c1d412a3f09242da6bfc0b8643b88b5ae18d2afce8de7da"
-dependencies = [
- "mmdb",
- "parking_lot 0.12.5",
- "rand 0.10.1",
- "ruc",
- "serde 1.0.228",
+ "serde_json",
 ]
 
 [[package]]
