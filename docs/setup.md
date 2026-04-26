@@ -45,7 +45,7 @@ cargo run
 - `SNAPSHOT_DIR`: file snapshot store 루트 디렉터리
 - `SNAPSHOT_AGDB_PATH`: agdb snapshot store 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: Amandine snapshot store 디렉터리 경로
-- `SNAPSHOT_APEX_STORE_PATH`: ApexStore snapshot store WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_APEX_STORE_PATH`: apex_store shim snapshot 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_ARMDB_PATH`: armdb snapshot store 디렉터리 경로
 - `SNAPSHOT_ASSYSTEM_PATH`: assystem snapshot store 단일 파일 경로
 - `SNAPSHOT_COLON_DB_PATH`: colon_db snapshot store 단일 파일 경로
@@ -138,7 +138,7 @@ cargo run
 - `SNAPSHOT_SABERDB_PATH`: saberdb snapshot store JSON 파일 경로
 - `SNAPSHOT_SMOLLDB_PATH`: smolldb snapshot store compressed 단일 파일 경로
 - `SNAPSHOT_KSTONE_PATH`: kstone snapshot store WAL/SSTable LSM 디렉터리 경로
-- `SNAPSHOT_ROUGHDB_PATH`: roughdb snapshot store LevelDB-compatible WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_ROUGHDB_PATH`: roughdb shim snapshot 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_RAINDB_PATH`: raindb snapshot store LevelDB-style WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_INFUSEDB_PATH`: infusedb snapshot store 단일 파일 경로
 - `SNAPSHOT_KAFI_PATH`: kafi snapshot store 단일 파일 경로
@@ -167,8 +167,8 @@ cargo run
 - `SNAPSHOT_LSMDB_PATH`: lsmdb snapshot store WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_FASTKV_PATH`: FastKV snapshot store compressed binary dump 파일 경로
 - `SNAPSHOT_FERRUMDB_PATH`: ferrumdb snapshot store append-only log 파일 경로
-- `SNAPSHOT_MINDB_PATH`: Mindb snapshot store WAL/SSTable 디렉터리 경로
-- `SNAPSHOT_MMDB_PATH`: MMDB snapshot store WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_MINDB_PATH`: mindb shim snapshot 디렉터리 경로. 실제 state는 `store.json`, replay log는 `wal.log`, manifest는 `manifest.json`에 저장된다
+- `SNAPSHOT_MMDB_PATH`: mmdb shim snapshot 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_MU_DB_PATH`: muDB snapshot store data 파일 경로. 같은 디렉터리의 `index_<file_name>` index 파일도 storage 단위다.
 - `SNAPSHOT_NANODB_PATH`: NanoDB snapshot store single JSON 파일 경로
 - `SNAPSHOT_JFS_PATH`: jfs snapshot store single JSON 파일 경로
@@ -492,8 +492,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 agdb의 `snapshot:<doc_id>` alias node payload key에 JSON string으로 저장되고, document catalog는 all-alias scan 뒤 matching alias node를 다시 읽어 복구된다.
 - `SNAPSHOT_STORE=amandine`는 `SNAPSHOT_AMANDINE_PATH` 디렉터리의 `snapshots.json` collection을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 Amandine `snapshots` collection의 `doc_id -> persisted snapshot JSON` record로 저장되고, document catalog는 `snapshots.json` whole-file parse로 복구된다.
-- `SNAPSHOT_STORE=apex_store`는 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine을 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 ApexStore engine의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 persisted snapshot JSON bytes로 저장되고, document catalog는 WAL replay 뒤 catalog key를 읽어 복구된다.
+- `SNAPSHOT_STORE=apex_store`는 `SNAPSHOT_APEX_STORE_PATH/store.json` repository-local apex_store shim map을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 shim map의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 persisted snapshot JSON bytes로 저장되고, document catalog는 same persisted catalog key를 읽어 복구된다.
 - `SNAPSHOT_STORE=armdb`는 `SNAPSHOT_ARMDB_PATH` 디렉터리의 sharded ArmDB VarTree를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 ArmDB VarTree에 UUID bytes key와 persisted snapshot JSON bytes value로 저장되고, document catalog는 tree iteration 뒤 각 payload를 복원해 구성된다.
 - `SNAPSHOT_STORE=rcask`는 `SNAPSHOT_RCASK_PATH` RCask append-only segment 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
@@ -568,8 +568,8 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 file load 뒤 catalog key로 복구된다.
 - `SNAPSHOT_STORE=kstone`는 `SNAPSHOT_KSTONE_PATH` Kstone WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 Kstone item의 binary field에 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, document catalog는 catalog key 뒤 각 payload를 복원해 복구된다.
-- `SNAPSHOT_STORE=roughdb`는 `SNAPSHOT_ROUGHDB_PATH` RoughDB WAL/SSTable 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 roughdb keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` 값과 explicit `__catalog__` key로 저장되고, save/delete는 sync write batch와 wait flush로 확정된다.
+- `SNAPSHOT_STORE=roughdb`는 `SNAPSHOT_ROUGHDB_PATH/store.json` repository-local roughdb shim map을 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 roughdb shim keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` 값과 explicit `__catalog__` key로 저장되고, save/delete는 sync write batch와 flush로 확정된다.
 - `SNAPSHOT_STORE=raindb`는 `SNAPSHOT_RAINDB_PATH` RainDB WAL/SSTable 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 raindb keyspace에 `snapshot:<doc_id> -> persisted snapshot JSON` 값과 explicit `__catalog__` key로 저장되고, save/delete는 synchronous write batch로 확정된다.
 - `SNAPSHOT_STORE=infusedb`는 `SNAPSHOT_INFUSEDB_PATH` InfuseDB 단일 파일을 통해 vendor-specific embedded database durability를 사용한다.
@@ -621,9 +621,9 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON bytes` key-value와 explicit `__catalog__` key로 저장되고, save/delete 뒤 active memtable flush 경계로 document catalog를 복구한다.
 - `SNAPSHOT_STORE=ferrumdb`는 `SNAPSHOT_FERRUMDB_PATH` append-only log 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON` JSON value와 explicit `__catalog__` key로 저장되고, `FsyncPolicy::Always`로 write마다 sync해 document catalog를 복구한다.
-- `SNAPSHOT_STORE=mindb`는 `SNAPSHOT_MINDB_PATH` WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
-- snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key로 저장되고, save/delete 뒤 `sync()`로 WAL durability 경계를 고정한다. reopen point index가 비어 있으면 adapter가 upstream `RecoveryManager`로 WAL을 재생해 document catalog를 복구한다.
-- `SNAPSHOT_STORE=mmdb`는 `SNAPSHOT_MMDB_PATH` WAL/SSTable LSM 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
+- `SNAPSHOT_STORE=mindb`는 `SNAPSHOT_MINDB_PATH` repository-local mindb shim 디렉터리를 통해 vendor-specific embedded database durability를 사용한다.
+- snapshot payload는 `store.json`의 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key로 저장되고, `wal.log`와 `manifest.json`을 함께 유지한 채 save/delete 뒤 `sync()`로 file-level durability 경계를 고정한다. recovery helper는 같은 WAL record를 재생해 document catalog를 복구한다.
+- `SNAPSHOT_STORE=mmdb`는 `SNAPSHOT_MMDB_PATH/store.json` repository-local mmdb shim keyspace를 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 `snapshot:<doc_id> -> persisted snapshot JSON` key-value와 explicit `__catalog__` key를 write batch로 함께 저장하고, sync write 뒤 flush해 document catalog를 복구한다.
 - `SNAPSHOT_STORE=nanodb`는 `SNAPSHOT_NANODB_PATH` 단일 NanoDB JSON 파일을 통해 vendor-specific embedded database durability를 사용한다.
 - snapshot payload는 root object의 `doc_id -> persisted snapshot JSON` entry로 저장되고, save/delete 뒤 whole-file write로 document catalog를 복구한다.

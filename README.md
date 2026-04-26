@@ -107,14 +107,14 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_STORE=ferrumdb`: FerrumDB append-only log 파일 store도 지원한다.
 - `SNAPSHOT_STORE=cdb64`: cdb64 single-file key-value store도 지원한다.
 - `SNAPSHOT_STORE=kagi`: kagi whole-file bincode hashmap store도 지원한다.
-- `SNAPSHOT_STORE=mindb`: Mindb WAL/SSTable LSM 디렉터리 store도 지원한다.
-- `SNAPSHOT_STORE=mmdb`: MMDB WAL/SSTable LSM 디렉터리 store도 지원한다.
+- `SNAPSHOT_STORE=mindb`: repository-local mindb shim 디렉터리 store도 지원한다.
+- `SNAPSHOT_STORE=mmdb`: repository-local mmdb shim 디렉터리 store도 지원한다.
 - `SNAPSHOT_STORE=mu_db`: muDB data/index 파일 쌍 기반 key-value store도 지원한다.
 - `SNAPSHOT_STORE=nanodb`: NanoDB single-file JSON store도 지원한다.
 - `SNAPSHOT_DIR`: `SNAPSHOT_STORE=file`일 때 snapshot JSON 파일을 저장할 디렉터리
 - `SNAPSHOT_AGDB_PATH`: `SNAPSHOT_STORE=agdb`일 때 snapshot agdb 단일 파일 경로
 - `SNAPSHOT_AMANDINE_PATH`: `SNAPSHOT_STORE=amandine`일 때 snapshot Amandine 디렉터리 경로
-- `SNAPSHOT_APEX_STORE_PATH`: `SNAPSHOT_STORE=apex_store`일 때 snapshot ApexStore WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_APEX_STORE_PATH`: `SNAPSHOT_STORE=apex_store`일 때 snapshot apex_store shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_ARMDB_PATH`: `SNAPSHOT_STORE=armdb`일 때 snapshot ArmDB 디렉터리 경로
 - `SNAPSHOT_ASSYSTEM_PATH`: `SNAPSHOT_STORE=assystem`일 때 snapshot assystem 단일 파일 경로
 - `SNAPSHOT_COLON_DB_PATH`: `SNAPSHOT_STORE=colon_db`일 때 snapshot colon_db 단일 파일 경로
@@ -213,7 +213,7 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_SABERDB_PATH`: `SNAPSHOT_STORE=saberdb`일 때 snapshot saberdb JSON 파일 경로
 - `SNAPSHOT_SMOLLDB_PATH`: `SNAPSHOT_STORE=smolldb`일 때 snapshot SmollDB compressed 단일 파일 경로
 - `SNAPSHOT_KSTONE_PATH`: `SNAPSHOT_STORE=kstone`일 때 snapshot Kstone WAL/SSTable LSM 디렉터리 경로
-- `SNAPSHOT_ROUGHDB_PATH`: `SNAPSHOT_STORE=roughdb`일 때 snapshot RoughDB WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_ROUGHDB_PATH`: `SNAPSHOT_STORE=roughdb`일 때 snapshot roughdb shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_RAINDB_PATH`: `SNAPSHOT_STORE=raindb`일 때 snapshot RainDB WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_INFUSEDB_PATH`: `SNAPSHOT_STORE=infusedb`일 때 snapshot InfuseDB 단일 파일 경로
 - `SNAPSHOT_KAFI_PATH`: `SNAPSHOT_STORE=kafi`일 때 snapshot kafi 단일 파일 경로
@@ -241,8 +241,8 @@ non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와
 - `SNAPSHOT_LSM_STORAGE_ENGINE_PATH`: `SNAPSHOT_STORE=lsm_storage_engine`일 때 snapshot lsm_storage_engine WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_LSMDB_PATH`: `SNAPSHOT_STORE=lsmdb`일 때 snapshot lsmdb WAL/SSTable 디렉터리 경로
 - `SNAPSHOT_LSM_TREE_PATH`: `SNAPSHOT_STORE=lsm_tree`일 때 snapshot lsm-tree primitive 디렉터리 경로
-- `SNAPSHOT_MINDB_PATH`: `SNAPSHOT_STORE=mindb`일 때 snapshot Mindb WAL/SSTable 디렉터리 경로
-- `SNAPSHOT_MMDB_PATH`: `SNAPSHOT_STORE=mmdb`일 때 snapshot MMDB WAL/SSTable 디렉터리 경로
+- `SNAPSHOT_MINDB_PATH`: `SNAPSHOT_STORE=mindb`일 때 snapshot mindb shim 디렉터리 경로. 실제 state는 `store.json`, replay log는 `wal.log`, manifest는 `manifest.json`에 저장된다
+- `SNAPSHOT_MMDB_PATH`: `SNAPSHOT_STORE=mmdb`일 때 snapshot mmdb shim 디렉터리 경로. 실제 payload는 `store.json`에 저장된다
 - `SNAPSHOT_MU_DB_PATH`: `SNAPSHOT_STORE=mu_db`일 때 snapshot muDB data 파일 경로. 같은 디렉터리에 `index_<file_name>` index 파일도 함께 생성된다.
 - `SNAPSHOT_NANODB_PATH`: `SNAPSHOT_STORE=nanodb`일 때 snapshot NanoDB single JSON 파일 경로
 - `SNAPSHOT_JFS_PATH`: `SNAPSHOT_STORE=jfs`일 때 snapshot jfs single-file JSON catalog 경로
@@ -342,7 +342,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - `SNAPSHOT_STORE=file`이면 snapshot과 문서 토큰이 `SNAPSHOT_DIR/<doc_id>.json`에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 해당 디렉터리에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=agdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_AGDB_PATH` agdb 단일 파일의 `snapshot:<doc_id>` alias node에 JSON payload로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 agdb alias catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=amandine`이면 snapshot과 문서 토큰이 `SNAPSHOT_AMANDINE_PATH/snapshots.json` Amandine collection record에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 collection catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
-- `SNAPSHOT_STORE=apex_store`이면 snapshot과 문서 토큰이 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine에 `snapshot:<doc_id>` payload와 explicit `__catalog__` key로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
+- `SNAPSHOT_STORE=apex_store`이면 snapshot과 문서 토큰이 `SNAPSHOT_APEX_STORE_PATH/store.json` repository-local apex_store shim map에 `snapshot:<doc_id>` payload와 explicit `__catalog__` key로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
 - `SNAPSHOT_STORE=assystem`이면 snapshot과 문서 토큰이 `SNAPSHOT_ASSYSTEM_PATH` 단일 assystem 파일의 `doc_id -> persisted snapshot JSON bytes` entry로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 file-backed key list에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
 - `SNAPSHOT_STORE=colon_db`이면 snapshot과 문서 토큰이 `SNAPSHOT_COLON_DB_PATH` 단일 colon_db 파일의 `doc_id -> base64(persisted snapshot JSON)` row로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 file-backed row catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
 - `SNAPSHOT_STORE=grebedb`이면 snapshot과 문서 토큰이 `SNAPSHOT_GREBEDB_PATH` 디렉터리의 `doc_id` key와 explicit `__catalog__` key에 저장된다. payload와 catalog는 같은 `flush()` 경계에서 함께 반영돼 기본 local ownership 모드에서는 앱 시작 시 grebedb catalog에서 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 ownership 확인 이후 on-demand로 복구한다.
@@ -412,7 +412,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - `SNAPSHOT_STORE=saberdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_SABERDB_PATH` saberdb pretty JSON 파일의 `doc_id -> persisted snapshot JSON string` catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 whole-file catalog load로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=smolldb`이면 snapshot과 문서 토큰이 `SNAPSHOT_SMOLLDB_PATH` compressed SmollDB 파일의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 파일을 load해 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=kstone`이면 snapshot과 문서 토큰이 `SNAPSHOT_KSTONE_PATH` Kstone WAL/SSTable LSM 디렉터리의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
-- `SNAPSHOT_STORE=roughdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_ROUGHDB_PATH` RoughDB WAL/SSTable 디렉터리의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
+- `SNAPSHOT_STORE=roughdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_ROUGHDB_PATH/store.json` repository-local roughdb shim map의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=raindb`이면 snapshot과 문서 토큰이 `SNAPSHOT_RAINDB_PATH` RainDB WAL/SSTable 디렉터리의 `snapshot:<doc_id> -> persisted snapshot JSON bytes`와 explicit `__catalog__` key에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog key를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=infusedb`이면 snapshot과 문서 토큰이 `SNAPSHOT_INFUSEDB_PATH` InfuseDB 단일 파일의 `snapshots` collection에 base64 text payload와 explicit `__catalog__` key로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 collection을 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
 - `SNAPSHOT_STORE=kafi`이면 snapshot과 문서 토큰이 `SNAPSHOT_KAFI_PATH` 단일 bincode hashmap 파일의 `snapshot:<doc_id>` key와 explicit `__catalog__` key에 JSON string payload로 저장된다. 기본 local ownership 모드에서는 앱 시작 시 catalog를 읽어 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.
@@ -446,8 +446,8 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - `SNAPSHOT_STORE=lsm_storage_engine`이면 snapshot과 문서 토큰이 `SNAPSHOT_LSM_STORAGE_ENGINE_PATH` 디렉터리의 WAL/SSTable LSM keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. save/delete 뒤 `flush()`를 호출해 재시작 복구 경계를 고정하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=lsmdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_LSMDB_PATH` 디렉터리의 WAL/SSTable LSM keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. WAL sync-on-write 경계로 저장을 확정하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=lsm_tree`이면 snapshot과 문서 토큰이 `SNAPSHOT_LSM_TREE_PATH` 디렉터리의 lsm-tree primitive keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. save/delete 뒤 active memtable을 flush해 재시작 복구 경계를 고정하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
-- `SNAPSHOT_STORE=mindb`이면 snapshot과 문서 토큰이 `SNAPSHOT_MINDB_PATH` 디렉터리의 WAL/SSTable LSM keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. save/delete 뒤 `sync()`를 호출해 WAL durability 경계를 고정하고, reopen point index가 비어 있는 경우 adapter가 upstream `RecoveryManager`로 WAL을 재생해 catalog key와 snapshot payload를 읽는다. 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
-- `SNAPSHOT_STORE=mmdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_MMDB_PATH` 디렉터리의 WAL/SSTable LSM keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. sync write와 flush로 재시작 복구 경계를 고정하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
+- `SNAPSHOT_STORE=mindb`이면 snapshot과 문서 토큰이 `SNAPSHOT_MINDB_PATH` 디렉터리의 repository-local mindb shim에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. current state는 `store.json`, replay log는 `wal.log`, manifest는 `manifest.json`에 유지되고 save/delete 뒤 `sync()`로 file-level durability 경계를 고정한다. 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
+- `SNAPSHOT_STORE=mmdb`이면 snapshot과 문서 토큰이 `SNAPSHOT_MMDB_PATH/store.json` repository-local mmdb shim keyspace에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. sync write와 flush로 재시작 복구 경계를 고정하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=mu_db`이면 snapshot과 문서 토큰이 `SNAPSHOT_MU_DB_PATH` data 파일과 같은 디렉터리의 `index_<file_name>` index 파일에 `snapshot:<doc_id>` key와 explicit `__catalog__` key로 저장된다. adapter는 save/delete 뒤 data/index 파일을 fsync하고, 기본 local ownership 모드에서는 catalog key를 읽어 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=nanodb`이면 snapshot과 문서 토큰이 `SNAPSHOT_NANODB_PATH` single JSON 파일의 root object에 `doc_id -> persisted snapshot JSON` entry로 저장된다. save/delete 뒤 whole-file write로 재시작 복구 경계를 고정하고, 기본 local ownership 모드에서는 whole-file object load로 room을 eager hydrate한다.
 - `SNAPSHOT_STORE=jfs`이면 snapshot과 문서 토큰이 `SNAPSHOT_JFS_PATH` jfs single JSON 파일의 `doc_id -> persisted snapshot JSON string` catalog에 저장된다. 기본 local ownership 모드에서는 앱 시작 시 whole-file catalog load로 room을 eager hydrate하고, distributed ownership 모드에서는 문서 catalog만 읽은 뒤 실제 room restore는 ownership 확인 이후 on-demand로 수행한다.

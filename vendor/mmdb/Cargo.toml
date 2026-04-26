@@ -1,0 +1,12 @@
+[package]
+name = "mmdb"
+version = "3.2.2"
+edition = "2021"
+
+[lib]
+name = "mmdb"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
