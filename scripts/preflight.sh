@@ -5,6 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-all}"
 STATUS=0
 CARGO_BIN="${CARGO:-cargo}"
+NESTED_TARGET_DIR=""
+
+if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
+    NESTED_TARGET_DIR="${BACKEND_ROLE_COMPLETION_TARGET_DIR:-$ROOT_DIR/target/backend-role-completion-nested}"
+    mkdir -p "$NESTED_TARGET_DIR"
+fi
 
 pass() {
     printf '[pass] %s\n' "$1"
@@ -52,7 +58,7 @@ check_socket_bind() {
 
     probe_log="$(mktemp)"
     if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
-        probe_command=("$CARGO_BIN" test --locked --test health websocket_endpoint_accepts_document_connections -- --exact)
+        probe_command=(env "CARGO_TARGET_DIR=$NESTED_TARGET_DIR" "$CARGO_BIN" test --locked --test health websocket_endpoint_accepts_document_connections -- --exact)
     else
         probe_command=("$CARGO_BIN" test --locked websocket_endpoint_accepts_document_connections -- --exact)
     fi

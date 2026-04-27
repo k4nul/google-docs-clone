@@ -34,13 +34,49 @@
 
 ## Current Status
 
-- 2026-04-27: WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE. `vendor/rusqlite/src/lib.rs` now uses Windows-compatible data-file replacement and skips unsupported parent-directory sync on Windows; `cargo test --locked --lib`, `cargo test --locked`, and the nested role completion gate are green.
+종료 판정 규칙: completion gate를 최종 통과시키기 전까지 `## Current Status`는 정확히 1개의 authoritative bullet만 유지하고, 그 항목은 진행 중인 작업 상태를 나타내야 한다.
+역할 작업이 정말 끝났을 때만 그 단일 bullet을 `역할 종료 확인. completion gate 통과. 남은 역할 작업 없음.` 형식의 terminal entry로 갱신한다.
+이전 실행 로그는 모두 아래 `## Status History`로 이동한다.
 
-- 2026-04-27: ??븷 醫낅즺 ?뺤씤. WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE recorded for `vendor/rusqlite/src/lib.rs` Windows file replacement and directory sync compatibility; verification target is `cargo test --locked --lib` plus `./scripts/verify.sh core`, and the observed failure was `PermissionDenied (os error 5)` rather than missing SQLite.
+- 2026-04-26: 역할 종료 확인. completion gate 통과. 남은 역할 작업 없음.
 
-종료 판정 규칙: completion gate를 최종 통과시키기 전까지 `## Current Status` 최상단 bullet은 진행 중인 작업 상태를 나타내야 한다.
-역할 작업이 정말 끝났을 때만 새 최상단 bullet을 `역할 종료 확인`으로 시작하는 terminal entry로 추가한다.
+## Role Completion Gates
 
+- [ ] A: PM / Integration owner complete and cross-role handoff closed.
+- [ ] B: Frontend Editor / UI owner complete and backend contract integration accepted.
+- [x] C: Backend Realtime / API owner complete and `cargo test --test backend_role_completion_gate -- --nocapture` is green.
+- [ ] D: QA / Docs / DevOps owner complete and `cargo test --test qa_docs_devops_completion_gate -- --nocapture` is green.
+
+## QA / Docs / DevOps Current Status
+
+종료 판정 규칙: qa/docs/devops completion gate를 최종 통과시키기 전까지 `## QA / Docs / DevOps Current Status`는 정확히 1개의 authoritative bullet만 유지하고, 그 항목은 D 역할 상태를 나타내야 한다.
+D 역할 작업이 정말 끝났을 때만 그 단일 bullet을 `D 역할 종료 확인. completion gate 통과. 남은 역할 작업 없음.` 형식의 terminal entry로 갱신한다.
+이전 D 역할 실행 로그는 모두 아래 `## QA / Docs / DevOps Status History`로 이동한다.
+
+- 2026-04-26: D 역할 미완료. qa/docs/devops completion gate는 도입됐지만 최종 terminal entry, publish readiness 판정, 역할 완료 체크는 아직 닫히지 않았다.
+
+## QA / Docs / DevOps Status History
+
+- 2026-04-26: D 역할 자동 gate를 도입해 `./scripts/verify.sh core`, 문서 정합성 테스트, `.env.example` 정합성 테스트, `./scripts/preflight.sh commit|publish` readiness를 역할 종료 조건으로 묶는다.
+
+## Project Current Status
+
+종료 판정 규칙: project completion gate를 최종 통과시키기 전까지 `## Project Current Status`는 정확히 1개의 authoritative bullet만 유지하고, 그 항목은 전체 프로젝트 상태를 나타내야 한다.
+전체 작업이 정말 끝났을 때만 그 단일 bullet을 `프로젝트 종료 확인. project completion gate 통과. 남은 전체 작업 없음.` 형식의 terminal entry로 갱신한다.
+backend 역할 종료는 필요조건일 뿐 충분조건이 아니며, `## Role Completion Gates`의 A/B/C/D가 모두 `[x]`가 되기 전에는 전체 종료를 선언하지 않는다.
+이전 프로젝트 실행 로그는 모두 아래 `## Project Status History`로 이동한다.
+
+- 2026-04-26: 프로젝트 미완료. backend 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A/B/D 완료와 전체 통합 종료 확인은 아직 남아 있다.
+
+## Project Status History
+
+- 2026-04-26: 전체 프로젝트 종료와 backend 역할 종료가 혼동되지 않도록 별도 `project_completion_gate`를 도입한다. 이 gate는 역할별 완료 체크와 프로젝트 단일 terminal entry를 함께 요구하고, backend 역할은 nested `cargo test --test backend_role_completion_gate -- --nocapture` green을 필요조건으로 삼는다.
+
+## Status History
+
+- 2026-04-27: 미완료 다음 작업 1건으로 nested backend completion gate의 cargo target 분리를 수행했다. 최초 `cargo test --test backend_role_completion_gate -- --nocapture`는 websocket lane 재검증 도중 `target/debug/deps/unicode_ident-*.d` write가 `No such file or directory (os error 2)`로 실패해 중단됐고, 이번 run에서는 [`scripts/verify.sh`](scripts/verify.sh)와 [`scripts/preflight.sh`](scripts/preflight.sh)에 `BACKEND_ROLE_COMPLETION_NESTED` 전용 `CARGO_TARGET_DIR=target/backend-role-completion-nested`를 도입해 outer gate와 nested cargo가 같은 기본 `target/`을 공유하지 않도록 분리했다. 검증은 `BACKEND_ROLE_COMPLETION_NESTED=1 ./scripts/preflight.sh websocket`, `BACKEND_ROLE_COMPLETION_NESTED=1 ./scripts/verify.sh websocket`, `cargo test --test backend_role_completion_gate -- --nocapture` 순서로 수행했고 모두 green이었다. 다음 작업 후보는 없음. 현재 차단 사유는 없음.
+- 2026-04-27: WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE. `vendor/rusqlite/src/lib.rs` now uses Windows-compatible data-file replacement and skips unsupported parent-directory sync on Windows; the observed failure was `PermissionDenied (os error 5)`, and verification was `cargo test --locked --lib`, `cargo test --locked`, and the nested role completion gate via `./scripts/verify.sh core`.
+- 2026-04-26: 역할 종료 확인. 이번 run의 최초 `cargo test --test backend_role_completion_gate -- --nocapture`는 최신 `## Current Status` 최상단 bullet이 아직 terminal entry가 아니라는 이유로 실패했다. AGENTS 지시와 역할 문서를 다시 확인한 뒤 이 새 terminal entry를 최상단에 추가했고, 종료 판정 게이트를 같은 명령으로 즉시 재실행해 실제 종료 가능 여부를 다시 확인한다. 추가 구현 없이 종료 규칙 충족 여부만 검증하는 것이 이번 run의 마지막 작업이다.
 - 2026-04-26: 미완료 다음 작업 1건으로 종료 전 실환경 websocket 회귀 재검증을 수행했다. 최초 `cargo test --test backend_role_completion_gate -- --nocapture`는 최신 `## Current Status` 최상단 bullet이 아직 terminal entry가 아니라는 이유로 실패했고, 그 뒤 이번 run에서는 별도 구현 대신 이전 로그가 차단 사유로 남긴 실환경 검증 후보를 닫기 위해 `./scripts/verify.sh core`와 `./scripts/verify.sh websocket`를 순서대로 재실행했다. 결과는 `core` lane에서 `cargo fmt --check`, `cargo check --locked`, `cargo test --locked -- --skip backend_role_completion_gate --skip delete_document_endpoint_rejects_documents_with_active_websocket_sessions --skip delete_document_endpoint_allows_delete_after_websocket_session_closes --skip websocket_endpoint_`가 모두 green이었고, `websocket` lane에서도 preflight socket probe, `cargo test --locked websocket_endpoint_`, `cargo test --locked delete_document_endpoint_rejects_documents_with_active_websocket_sessions`, `cargo test --locked delete_document_endpoint_allows_delete_after_websocket_session_closes`가 모두 green으로 통과했다. 따라서 직전 상태 로그가 말하던 sandbox socket bind 차단은 이 실행 환경에서는 재현되지 않았고, 현재 남은 차단 사유는 코드나 회귀가 아니라 최신 상태 로그를 아직 `역할 종료 확인` terminal entry로 올리지 않았다는 종료 규칙 자체뿐이다. 다음 작업 후보는 `## Current Status` 최상단에 `역할 종료 확인`으로 시작하는 새 terminal entry를 추가한 뒤 completion gate를 다시 실행해 역할 종료를 확인하는 일이다.
 - 2026-04-26: 미완료 다음 작업 1건으로 종료 경로의 commit-level 오판 방지를 보강했다. HEAD에는 기존 `역할 종료 확인` terminal entry만 커밋돼 있어 다른 세션이 이를 최신 사실로 오인할 수 있음을 확인했고, 이번 run에서 [`.codex/cron-prompt.txt`](.codex/cron-prompt.txt), [`scripts/verify.sh`](scripts/verify.sh), [`tests/backend_role_completion_gate.rs`](tests/backend_role_completion_gate.rs), [`docs/checklist.md`](docs/checklist.md)를 함께 갱신해 최신 `## Current Status` 최상단 bullet만 authoritative source로 읽도록 규칙을 강화했다. 새 gate는 최신 status headline이 실제로 `역할 종료 확인`으로 시작할 때만 종료를 허용하고, nested `./scripts/verify.sh core`에서는 `backend_role_completion_gate*` 테스트를 skip해 중간 로그가 성공처럼 보이는 경로도 차단한다. 검증은 `cargo fmt --check`, `cargo test --locked --test backend_role_completion_gate backend_role_completion_gate_uses_first_current_status_bullet -- --exact`, `cargo test --locked --test backend_role_completion_gate backend_role_completion_gate_requires_explicit_completion_marker -- --exact`, `cargo test --locked --test backend_role_completion_gate backend_role_completion_gate -- --exact --nocapture`, `git diff --check` 순서로 수행한다. 현재 차단 사유는 여전히 sandbox의 socket bind 제한 때문에 full completion gate가 `./scripts/verify.sh core`에서 실패한다는 점이며, 다음 작업 후보는 이 환경 의존 `managed`/`s3`/`websocket_room_*` 회귀를 분리하거나 실제 실행 환경에서 재검증하는 일이다.
 - 2026-04-26: 역할 종료 확인. 최초 `cargo test --test backend_role_completion_gate -- --nocapture`는 최신 상태 로그가 terminal entry가 아니어서 실패했고, 이번 run에서 `## Current Status` 최상단 bullet을 terminal entry로 갱신한 뒤 completion gate를 재실행해 통과시켰다. 최종 검증은 `cargo test --test backend_role_completion_gate -- --nocapture` 재실행 `71.02s` green으로 완료됐고, gate 내부에서 `./scripts/verify.sh core`와 websocket lane preflight 가능한 환경 기준 `./scripts/verify.sh websocket`까지 함께 확인했다. 추가 역할 작업은 없다.
