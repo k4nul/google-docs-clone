@@ -1,6 +1,18 @@
 ﻿# Backend Collaborative Server
 
-Axum, Tokio, Yrs 기반으로 시작하는 협업 편집 백엔드 부트스트랩 프로젝트입니다.
+Axum, Tokio, Yrs 기반의 실시간 협업 편집 백엔드 부트스트랩 프로젝트입니다. 문서 단위 협업 서버를 빠르게 시작할 수 있도록 HTTP API, WebSocket 동기화 경계, room registry, snapshot 저장 추상화, 역할/운영 규칙을 함께 제공합니다.
+
+현재 운영 범위는 단일 프로세스 기준입니다. 다중 프로세스 분산 전략은 문서화되어 있지만, 외부 snapshot store와 owner coordination 저장소가 준비되기 전까지는 한 `doc_id`를 하나의 프로세스만 소유해야 합니다.
+
+## 문서 바로가기
+
+- [Agent Rules](./docs/agent-rules.md)
+- [Setup](./docs/setup.md)
+- [Architecture](./docs/architecture.md)
+- [API](./docs/api.md)
+- [Roles](./docs/roles.md)
+- [Conventions](./docs/conventions.md)
+- [Checklist](./docs/checklist.md)
 
 ## 프로젝트 개요
 
@@ -63,6 +75,23 @@ cargo check --features full-snapshot-stores
 - 전체 snapshot adapter inventory를 다시 컴파일하거나 회귀를 돌릴 때는 `--features full-snapshot-stores`를 추가한다.
 - socket-required 테스트를 새로 추가하면 `scripts/verify.sh`의 core skip 목록과 websocket lane을 함께 갱신한다.
 
+## 역할 분담
+
+- `A` PM / Integration: 범위 정의, 일정 관리, 프런트-백엔드 계약 조율, 통합 우선순위 결정
+- `B` Frontend Editor / UI Owner: 편집기 UI, provider 연결, 문서 진입 흐름, 사용자 상호작용 설계
+- `C` Backend Realtime / API Owner: HTTP API, room registry, WebSocket 협업, CRDT 서버 구조 유지
+- `D` QA / Docs / DevOps Owner: 테스트 실행, 문서 최신화, 실행 절차 검증, 릴리스/운영 준비
+
+## 협업 규칙
+
+- 커밋 메시지는 `type(scope): subject` 형식을 사용하고, `type`은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 사용한다.
+- `scope`는 `api`, `sync`, `yrs`, `auth`, `db`, `websocket`, `storage`, `config`, `docs`, `repo` 중에서 변경 의미가 드러나도록 고른다.
+- `subject`는 현재형, 소문자 시작, 마침표 없음, 변경 내용을 직접 설명하는 문장 조각으로 작성한다.
+- 한 커밋에는 한 가지 목적만 담고, 리팩토링과 동작 변경을 섞지 않는다.
+- API, WebSocket, 환경변수, 스키마가 바뀌면 `README.md`와 관련 `/docs` 문서를 같은 작업 안에서 함께 갱신한다.
+- 작업 브랜치는 `main`에서 분기하고, 직접 `main`에 push하지 않고 PR로 병합한다.
+- PR을 올리기 전에는 가능하면 `cargo fmt --check`, `cargo check`, `cargo test` 결과를 남기고 최신 `main` 기준 충돌을 정리한다.
+
 ## API/WS 개요
 
 - HTTP base path: `/api`
@@ -70,7 +99,7 @@ cargo check --features full-snapshot-stores
 - Documents: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `DELETE /api/documents/:id`
 - Collaboration WebSocket: `GET /ws/:doc_id`
 
-`GET /api/documents`와 `POST /api/documents`는 `Authorization: Bearer <API_TOKEN>` 헤더가 필요합니다. `POST /api/documents` 응답에는 해당 문서 전용 `access_token`이 포함되며, 이후 `GET /api/documents/:id`, `DELETE /api/documents/:id`, `GET /ws/:doc_id`는 모두 `Authorization: Bearer <access_token>` 헤더가 필요합니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다.
+`GET /api/documents`와 `POST /api/documents`는 `Authorization: Bearer <API_TOKEN>` 헤더가 필요합니다. `POST /api/documents` 응답에는 해당 문서 전용 `access_token`이 포함되며, 이후 `GET /api/documents/:id`, `DELETE /api/documents/:id`, `GET /ws/:doc_id`는 모두 `Authorization: Bearer <access_token>` 헤더가 필요합니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
 
 non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
 
