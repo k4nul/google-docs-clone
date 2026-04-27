@@ -9,9 +9,9 @@
 
 ## B: Frontend Editor / UI Owner
 
-- 책임: 편집기 UI, provider 연결, 문서 진입 흐름, 사용자 상호작용 설계
+- 책임: 별도 프런트엔드 레포지토리에서 편집기 UI, provider 연결, 문서 진입 흐름, 사용자 상호작용을 구현하고 이 백엔드 레포에는 계약/검증 문서만 유지
 - 입력물: API 계약, WebSocket 경로 규약, 제품 요구사항
-- 출력물: 프런트엔드 편집기 구현, 연결 검증 결과, UI 요구 변경점
+- 출력물: 프런트엔드 레포 구현, 연결 검증 결과, 이 레포에 반영할 UI/API 계약 변경점
 - Handoff Point: 필요한 API/WS 변경 사항을 C와 A에 전달하고 사용자 플로우 검증 결과를 D와 공유한다.
 
 ## C: Backend Realtime / API Owner
