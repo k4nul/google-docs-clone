@@ -3,13 +3,16 @@ use std::{
     collections::BTreeMap,
     error::Error as StdError,
     fmt,
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     io::{self, Write},
     marker::PhantomData,
     path::{Path, PathBuf},
     thread,
     time::{Duration, Instant},
 };
+
+#[cfg(not(windows))]
+use std::fs::File;
 
 use serde::{Deserialize, Serialize};
 
@@ -495,11 +498,44 @@ fn persist_db(path: &Path, db: &PersistedDb) -> Result<()> {
     file.write_all(&bytes)?;
     file.sync_all()?;
     drop(file);
-    fs::rename(&temp_path, path)?;
+    replace_data_file(&temp_path, path)?;
+    sync_parent_directory(path)?;
+    Ok(())
+}
+
+fn replace_data_file(temp_path: &Path, path: &Path) -> Result<()> {
+    match fs::rename(temp_path, path) {
+        Ok(()) => Ok(()),
+        #[cfg(windows)]
+        Err(error)
+            if matches!(
+                error.kind(),
+                io::ErrorKind::AlreadyExists | io::ErrorKind::PermissionDenied
+            ) =>
+        {
+            match fs::remove_file(path) {
+                Ok(()) => {}
+                Err(remove_error) if remove_error.kind() == io::ErrorKind::NotFound => {}
+                Err(remove_error) => return Err(Error::Io(remove_error)),
+            }
+            fs::rename(temp_path, path)?;
+            Ok(())
+        }
+        Err(error) => Err(Error::Io(error)),
+    }
+}
+
+#[cfg(not(windows))]
+fn sync_parent_directory(path: &Path) -> Result<()> {
     if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
         let directory = File::open(parent)?;
         directory.sync_all()?;
     }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn sync_parent_directory(_path: &Path) -> Result<()> {
     Ok(())
 }
 

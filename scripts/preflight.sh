@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-all}"
 STATUS=0
+CARGO_BIN="${CARGO:-cargo}"
 
 pass() {
     printf '[pass] %s\n' "$1"
@@ -47,10 +48,16 @@ check_github_dns() {
 
 check_socket_bind() {
     local probe_log
+    local -a probe_command
 
     probe_log="$(mktemp)"
-    if cargo test --locked websocket_endpoint_accepts_document_connections -- --exact \
-        >"$probe_log" 2>&1; then
+    if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
+        probe_command=("$CARGO_BIN" test --locked --test health websocket_endpoint_accepts_document_connections -- --exact)
+    else
+        probe_command=("$CARGO_BIN" test --locked websocket_endpoint_accepts_document_connections -- --exact)
+    fi
+
+    if "${probe_command[@]}" >"$probe_log" 2>&1; then
         rm -f "$probe_log"
         pass "socket-backed websocket probe passed"
         return 0

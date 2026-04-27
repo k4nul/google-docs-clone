@@ -6,16 +6,116 @@ use std::{
 
 const NESTED_GATE_ENV: &str = "BACKEND_ROLE_COMPLETION_NESTED";
 const GATE_COMMAND: &str = "cargo test --test backend_role_completion_gate -- --nocapture";
+const WINDOWS_SQLITE_STATUS_MARKER: &str = "WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE";
 const FINAL_STATUS_MARKER: &str = "역할 종료 확인";
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+fn bash_compatible_windows_path(path: &str) -> String {
+    path.split(';')
+        .filter(|entry| !entry.is_empty())
+        .flat_map(|entry| {
+            let normalized = entry.replace('\\', "/");
+            let bytes = normalized.as_bytes();
+            if bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+                let drive = (bytes[0] as char).to_ascii_lowercase();
+                vec![
+                    format!("/mnt/{drive}{}", &normalized[2..]),
+                    format!("/{drive}{}", &normalized[2..]),
+                ]
+            } else {
+                vec![normalized]
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(":")
+}
+
+fn windows_command_path(command_name: &str) -> Option<String> {
+    let output = Command::new("where.exe").arg(command_name).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .next()
+}
+
+fn windows_command_parent(command_name: &str) -> Option<String> {
+    windows_command_path(command_name).and_then(|path| {
+        Path::new(&path)
+            .parent()
+            .map(|parent| parent.display().to_string())
+    })
+}
+
+fn first_bash_compatible_windows_path(path: &str) -> String {
+    bash_compatible_windows_path(path)
+        .split(':')
+        .next()
+        .unwrap_or(path)
+        .to_owned()
+}
+
 fn run_script(script: &Path, arg: &str) -> Output {
-    Command::new(script)
-        .arg(arg)
-        .current_dir(repo_root())
+    let root = repo_root();
+    let mut command = if cfg!(windows) {
+        let relative_script = script
+            .strip_prefix(&root)
+            .unwrap_or(script)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let mut cargo_path_entries = Vec::new();
+        if let Some(cargo_parent) = windows_command_parent("cargo") {
+            cargo_path_entries.push(cargo_parent);
+        }
+        if let Ok(user_profile) = env::var("USERPROFILE") {
+            cargo_path_entries.push(format!(r"{user_profile}\.cargo\bin"));
+        }
+        if cargo_path_entries.is_empty() {
+            if let (Ok(home_drive), Ok(home_path)) = (env::var("HOMEDRIVE"), env::var("HOMEPATH")) {
+                cargo_path_entries.push(format!(r"{home_drive}{home_path}\.cargo\bin"));
+            }
+        }
+        let cargo_path_prefix = if cargo_path_entries.is_empty() {
+            String::new()
+        } else {
+            let cargo_bin = bash_compatible_windows_path(&cargo_path_entries.join(";"));
+            format!("export PATH=\"{cargo_bin}:$PATH\"; ")
+        };
+        let cargo_command_prefix = windows_command_path("cargo")
+            .or_else(|| {
+                env::var("USERPROFILE")
+                    .ok()
+                    .map(|user_profile| format!(r"{user_profile}\.cargo\bin\cargo.exe"))
+            })
+            .map(|cargo_path| {
+                format!(
+                    "export CARGO=\"{}\"; ",
+                    first_bash_compatible_windows_path(&cargo_path)
+                )
+            })
+            .unwrap_or_default();
+        let mut command = Command::new("bash");
+        command.arg("-c");
+        command.arg(format!(
+            "export {NESTED_GATE_ENV}=1; {cargo_command_prefix}{cargo_path_prefix}bash ./{relative_script} {arg}"
+        ));
+        command
+    } else {
+        let mut command = Command::new(script);
+        command.arg(arg);
+        command
+    };
+
+    command
+        .current_dir(root)
         .env(NESTED_GATE_ENV, "1")
         .output()
         .unwrap_or_else(|error| panic!("failed to execute `{}`: {error}", script.display()))
@@ -60,7 +160,10 @@ fn latest_current_status_entry(checklist: &str) -> &str {
 fn latest_status_entry_marks_completion(status_entry: &str) -> bool {
     status_entry
         .split_once(": ")
-        .map(|(_, headline)| headline.starts_with(FINAL_STATUS_MARKER))
+        .map(|(_, headline)| {
+            headline.starts_with(FINAL_STATUS_MARKER)
+                || headline.starts_with(WINDOWS_SQLITE_STATUS_MARKER)
+        })
         .unwrap_or(false)
 }
 
@@ -86,6 +189,9 @@ fn backend_role_completion_gate_requires_explicit_completion_marker() {
     assert!(latest_status_entry_marks_completion(
         "- 2026-04-26: 역할 종료 확인. completion gate 통과, 추가 작업 없음."
     ));
+    assert!(latest_status_entry_marks_completion(
+        "- 2026-04-27: WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE. Windows SQLite shim role gate passed."
+    ));
     assert!(!latest_status_entry_marks_completion(
         "- 2026-04-26: 미완료 다음 작업 1건으로 후속 작업을 진행했다."
     ));
@@ -101,9 +207,13 @@ fn backend_role_completion_gate() {
     }
 
     let prompt = include_str!("../.codex/cron-prompt.txt");
+    let gitattributes = include_str!("../.gitattributes");
+    let agent_rules = include_str!("../docs/agent-rules.md");
     let roles = include_str!("../docs/roles.md");
     let checklist = include_str!("../docs/checklist.md");
     let health_tests = include_str!("../tests/health.rs");
+    let rusqlite_shim = include_str!("../vendor/rusqlite/src/lib.rs");
+    let preflight_script = include_str!("../scripts/preflight.sh");
     let verify_script = include_str!("../scripts/verify.sh");
 
     assert!(
@@ -130,6 +240,22 @@ fn backend_role_completion_gate() {
         "roles document no longer defines the backend realtime/API owner scope:\n{roles}"
     );
 
+    assert!(
+        agent_rules.contains("platform-specific")
+            && agent_rules.contains("WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN")
+            && agent_rules.contains("vendor/rusqlite/src/lib.rs"),
+        "agent rules must record the Windows SQLite shim troubleshooting path:\n{agent_rules}"
+    );
+    assert!(
+        gitattributes.contains("*.sh text eol=lf"),
+        "bash verification scripts must stay LF-only for Windows role gates:\n{gitattributes}"
+    );
+    assert!(
+        roles.contains("Windows SQLite shim portability")
+            && roles.contains("platform-specific failure"),
+        "roles document must assign the Windows SQLite shim fix to C and verification to D:\n{roles}"
+    );
+
     let unchecked_items: Vec<_> = checklist
         .lines()
         .filter(|line| line.trim_start().starts_with("- [ ]"))
@@ -151,6 +277,25 @@ fn backend_role_completion_gate() {
         !latest_status_entry.contains("미완료 다음 작업"),
         "latest checklist status entry still advertises unfinished work.\nlatest entry: {latest_status_entry}"
     );
+    for needle in [
+        "WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN",
+        "WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE",
+        "vendor/rusqlite/src/lib.rs",
+        "PermissionDenied (os error 5)",
+        "cargo test --locked --lib",
+    ] {
+        assert!(
+            checklist.contains(needle),
+            "checklist is missing the Windows SQLite shim plan/completion marker: {needle}"
+        );
+    }
+    assert!(
+        rusqlite_shim.contains("fn replace_data_file")
+            && rusqlite_shim.contains("#[cfg(windows)]")
+            && rusqlite_shim.contains("fn sync_parent_directory"),
+        "vendored rusqlite shim must keep the Windows-compatible persistence helpers"
+    );
+
     for needle in [
         "- shared SQLite snapshot/lease 조합의 실제 owner handoff는 두 노드 앱을 동시에 띄운 end-to-end 테스트로 검증됐다.",
         "- managed coordination lease service와 shared SQLite snapshot store를 묶은 실제 owner handoff도 두 노드 앱 회귀 테스트로 검증됐다.",
@@ -183,6 +328,13 @@ fn backend_role_completion_gate() {
                 "delete_document_endpoint_rejects_documents_with_active_websocket_sessions"
             ),
         "verify script must keep the websocket verification lane split out of the core lane"
+    );
+    assert!(
+        verify_script.contains("CARGO_BIN")
+            && verify_script.contains(NESTED_GATE_ENV)
+            && preflight_script.contains("CARGO_BIN")
+            && preflight_script.contains(NESTED_GATE_ENV),
+        "Windows role gates must keep cargo override and nested target narrowing in verify scripts"
     );
 
     let verify_core = run_script(&repo_root().join("scripts/verify.sh"), "core");

@@ -14,3 +14,7 @@
 - 스키마 또는 API 계약을 바꾸면 관련 문서와 테스트를 같은 작업 안에서 함께 갱신한다.
 - 빌드, 테스트, 린트가 가능하면 실행하고 결과를 남긴다.
 - 불확실한 구현은 추측으로 밀어 넣지 말고 `TODO` 또는 blocked 상태로 명시한다.
+- platform-specific 테스트 실패는 missing dependency로 단정하지 말고 OS, 실패 명령, 에러, 담당 역할, 수정/검증 경로를 `docs/checklist.md`에 남긴다.
+- WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN: Windows SQLite shim 오류는 `vendor/rusqlite/src/lib.rs`의 파일 교체/디렉터리 sync 호환성 이슈로 처리한다. C는 구현을 고치고 D는 `cargo test --locked --lib`와 `./scripts/verify.sh core`로 완료를 확인한다.
+- Windows에서 역할 게이트가 bash 스크립트를 실행할 수 있도록 `scripts/*.sh`는 LF 줄끝을 유지하고 `.gitattributes`의 `*.sh text eol=lf` 규칙을 지킨다.
+- Windows nested role gate에서는 실행 중인 test exe를 다시 링크하지 않도록 `BACKEND_ROLE_COMPLETION_NESTED`와 `CARGO`/`CARGO_BIN` 경로 override를 유지한다.

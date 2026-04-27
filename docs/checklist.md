@@ -20,7 +20,23 @@
 - [x] 인증과 문서 접근 제어 추가
 - [x] frontend editor provider와 end-to-end 상호운용 테스트 추가
 
+## Platform Compatibility Plan
+
+### WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN
+
+- Problem: Windows `cargo test --locked` failed in SQLite room coordinator/locator tests with `PermissionDenied (os error 5)` while the same flow worked on Linux.
+- Cause: this is not missing SQLite. The repository uses vendored `vendor/rusqlite`, and the failure comes from shim persistence behavior around data-file replacement and parent-directory sync on Windows.
+- Owner C: fix `vendor/rusqlite/src/lib.rs` so Windows replaces existing data files with Windows-compatible semantics while POSIX keeps parent-directory fsync where available.
+- Owner D: verify `cargo test --locked --lib`, `cargo test --locked`, and `./scripts/verify.sh core`; record any remaining platform-specific failure with OS, command, error, and owner instead of calling it a dependency absence.
+- Windows gate runner: keep bash scripts LF-only via `.gitattributes`, and run them through `bash` when role tests execute on Windows.
+- Nested role gate: `scripts/verify.sh` and `scripts/preflight.sh` must honor `CARGO`/`CARGO_BIN` and narrow nested Windows runs to concrete test targets so the running gate executable is not relinked.
+- Completion: `WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE` can be used only when the shim fix and role verification gate both pass.
+
 ## Current Status
+
+- 2026-04-27: WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE. `vendor/rusqlite/src/lib.rs` now uses Windows-compatible data-file replacement and skips unsupported parent-directory sync on Windows; `cargo test --locked --lib`, `cargo test --locked`, and the nested role completion gate are green.
+
+- 2026-04-27: ??븷 醫낅즺 ?뺤씤. WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE recorded for `vendor/rusqlite/src/lib.rs` Windows file replacement and directory sync compatibility; verification target is `cargo test --locked --lib` plus `./scripts/verify.sh core`, and the observed failure was `PermissionDenied (os error 5)` rather than missing SQLite.
 
 종료 판정 규칙: completion gate를 최종 통과시키기 전까지 `## Current Status` 최상단 bullet은 진행 중인 작업 상태를 나타내야 한다.
 역할 작업이 정말 끝났을 때만 새 최상단 bullet을 `역할 종료 확인`으로 시작하는 terminal entry로 추가한다.
