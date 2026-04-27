@@ -89,7 +89,7 @@ cargo check --features full-snapshot-stores
 - `subject`는 현재형, 소문자 시작, 마침표 없음, 변경 내용을 직접 설명하는 문장 조각으로 작성한다.
 - 한 커밋에는 한 가지 목적만 담고, 리팩토링과 동작 변경을 섞지 않는다.
 - API, WebSocket, 환경변수, 스키마가 바뀌면 `README.md`와 관련 `/docs` 문서를 같은 작업 안에서 함께 갱신한다.
-- 기본 협업 브랜치는 역할명이 아니라 개발 목적이 드러나는 이름을 사용하고, 현재 기본 브랜치는 `backend-development`로 관리한다.
+- 이 백엔드 레포에는 개발 역할 브랜치만 유지하고, 현재 협업 브랜치는 `backend-realtime-api`와 `qa-docs-devops`다.
 - 작업 브랜치는 `main`에서 분기하고, 직접 `main`에 push하지 않고 PR로 병합한다.
 - PR을 올리기 전에는 가능하면 `cargo fmt --check`, `cargo check`, `cargo test` 결과를 남기고 최신 `main` 기준 충돌을 정리한다.
 
