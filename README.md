@@ -104,6 +104,101 @@ cargo check --features full-snapshot-stores
 
 non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
 
+## WebSocket Binary Format
+
+프런트엔드는 문서 diff를 JSON이나 multipart 파일로 보내지 않고, `/ws/:doc_id` WebSocket binary frame에 Yjs/Yrs sync protocol 메시지를 담아 보낸다. 이 서버는 `yrs::sync::Message::encode_v1()`와 호환되는 v1 binary payload를 받는다.
+
+```text
+WebSocket binary frame
+`-- Yrs Message v1
+    |-- message type
+    `-- payload
+```
+
+Top-level message type:
+
+| 값 | 의미 |
+| --- | --- |
+| `0` | `Sync` |
+| `1` | `Awareness` |
+| `2` | `Auth` |
+| `3` | `AwarenessQuery` |
+
+`Sync` message 내부 type:
+
+| 값 | 의미 | 사용 시점 |
+| --- | --- | --- |
+| `0` | `SyncStep1` | 연결 직후 클라이언트 state vector 전송 |
+| `1` | `SyncStep2` | 상대 state vector 기준으로 만든 update 응답 |
+| `2` | `Update` | 편집 중 발생한 Yjs document update diff 전송 |
+
+기본 흐름:
+
+1. 클라이언트가 `/ws/:doc_id`에 WebSocket으로 연결한다.
+2. 클라이언트가 binary `Sync(SyncStep1(stateVector))`를 보낸다.
+3. 서버가 binary `Sync(SyncStep2(update))`를 반환한다.
+4. 클라이언트가 받은 update를 로컬 `Y.Doc`에 적용한다.
+5. 편집이 발생하면 클라이언트가 binary `Sync(Update(update))`를 보낸다.
+6. 서버는 같은 `doc_id` room의 다른 클라이언트에게 binary `Sync(Update(update))`를 broadcast한다.
+
+브라우저 프런트에서 직접 인코딩할 때의 예시는 아래와 같다. 일반적으로는 같은 포맷을 처리하는 Yjs provider를 사용하는 편이 안전하다.
+
+```ts
+import * as Y from "yjs";
+import * as encoding from "lib0/encoding";
+import * as decoding from "lib0/decoding";
+import * as syncProtocol from "y-protocols/sync";
+import * as awarenessProtocol from "y-protocols/awareness";
+
+const MSG_SYNC = 0;
+const MSG_AWARENESS = 1;
+
+const doc = new Y.Doc();
+const awareness = new awarenessProtocol.Awareness(doc);
+const ws = new WebSocket(`ws://localhost:3000/ws/${docId}`);
+ws.binaryType = "arraybuffer";
+
+ws.onopen = () => {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, MSG_SYNC);
+  syncProtocol.writeSyncStep1(encoder, doc);
+  ws.send(encoding.toUint8Array(encoder));
+};
+
+doc.on("update", (update: Uint8Array) => {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, MSG_SYNC);
+  syncProtocol.writeUpdate(encoder, update);
+  ws.send(encoding.toUint8Array(encoder));
+});
+
+ws.onmessage = (event) => {
+  const data = new Uint8Array(event.data);
+  const decoder = decoding.createDecoder(data);
+  const messageType = decoding.readVarUint(decoder);
+
+  if (messageType === MSG_SYNC) {
+    const reply = encoding.createEncoder();
+    encoding.writeVarUint(reply, MSG_SYNC);
+    syncProtocol.readSyncMessage(decoder, reply, doc, ws);
+
+    const replyBytes = encoding.toUint8Array(reply);
+    if (replyBytes.length > 1) {
+      ws.send(replyBytes);
+    }
+  }
+
+  if (messageType === MSG_AWARENESS) {
+    const update = decoding.readVarUint8Array(decoder);
+    awarenessProtocol.applyAwarenessUpdate(awareness, update, "remote");
+  }
+};
+```
+
+Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프런트가 아래 구조를 Yjs awareness local state로 설정하면, provider 또는 `y-protocols/awareness`가 `Awareness` binary message로 인코딩해 전송한다. 서버는 이 JSON shape를 검증한 뒤 room awareness state에 반영한다.
+
+브라우저 기본 `WebSocket` API는 임의의 `Authorization` 헤더를 직접 설정할 수 없다. 현재 서버 계약은 `Authorization: Bearer <access_token>` 헤더를 요구하므로, 브라우저 프런트는 gateway/header injection, cookie 기반 인증, `Sec-WebSocket-Protocol`, query token 등 별도 인증 전달 방식 변경이 필요하다.
+
 ## 폴더 구조 요약
 
 ```text
