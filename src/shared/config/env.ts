@@ -10,5 +10,6 @@ function normalizeEnvValue(value: string | undefined) {
 
 export const appEnv = {
   apiBaseUrl: normalizeEnvValue(import.meta.env.VITE_API_BASE_URL),
+  apiToken: normalizeEnvValue(import.meta.env.VITE_API_TOKEN),
   wsUrl: normalizeEnvValue(import.meta.env.VITE_WS_URL),
 } as const;
