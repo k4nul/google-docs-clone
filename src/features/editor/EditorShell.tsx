@@ -1,3 +1,4 @@
+import type { Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -14,6 +15,7 @@ import { EditorToolbar } from './EditorToolbar';
 
 interface EditorShellProps {
   docId: string;
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 function getConnectionMode(hasProvider: boolean) {
@@ -24,7 +26,7 @@ function getConnectionMode(hasProvider: boolean) {
   return 'Realtime provider configured';
 }
 
-export function EditorShell({ docId }: EditorShellProps) {
+export function EditorShell({ docId, onEditorReady }: EditorShellProps) {
   const [user] = useState(() => createPlaceholderCollaborationUser());
   const connection = useMemo(
     () =>
@@ -55,6 +57,18 @@ export function EditorShell({ docId }: EditorShellProps) {
     },
     [connection.roomId, connection.provider, user.id],
   );
+
+  useEffect(() => {
+    if (!onEditorReady) {
+      return;
+    }
+
+    onEditorReady(editor ?? null);
+
+    return () => {
+      onEditorReady(null);
+    };
+  }, [editor, onEditorReady]);
 
   return (
     <section className="card editor-shell">
