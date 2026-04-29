@@ -3901,6 +3901,51 @@ async fn app_state_hydrates_snapshot_backed_rooms_on_startup() {
 }
 
 #[tokio::test]
+async fn app_state_restores_active_file_snapshot_after_restart() {
+    let mut config = test_config();
+    let snapshot_dir = temp_snapshot_dir("file-store-active-autosave");
+    config.snapshot_store = "file".to_owned();
+    config.snapshot_dir = snapshot_dir.to_string_lossy().into_owned();
+
+    let state = AppState::from_config(&config).expect("state should initialize with file store");
+    let document = state
+        .rooms()
+        .create_document(Some("Active autosave".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have a room");
+
+    {
+        let server_doc = room.awareness().write().await.doc().clone();
+        let text = server_doc.get_or_insert_text("content");
+        let mut txn = server_doc.transact_mut();
+        text.insert(&mut txn, 0, "restored without teardown");
+    }
+
+    drop(room);
+    drop(state);
+
+    let reloaded_state =
+        AppState::from_config(&config).expect("state should reload autosaved file snapshot");
+    let restored_room = reloaded_state
+        .rooms()
+        .get(&document.id)
+        .expect("autosaved room should hydrate on startup");
+    let restored_doc = restored_room.awareness().read().await.doc().clone();
+    let restored_text = restored_doc.get_or_insert_text("content");
+
+    assert_eq!(
+        restored_text.get_string(&restored_doc.transact()),
+        "restored without teardown"
+    );
+    assert!(snapshot_dir.join(format!("{}.json", document.id)).exists());
+
+    fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
+}
+
+#[tokio::test]
 #[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_file_snapshot_store_from_config() {
     let mut config = test_config();

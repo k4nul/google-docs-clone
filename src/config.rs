@@ -9,7 +9,7 @@ pub const DEFAULT_PORT: u16 = 4000;
 pub const DEFAULT_FRONTEND_ORIGIN: &str = "http://localhost:3000";
 pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
 pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
-pub const DEFAULT_SNAPSHOT_STORE: &str = "memory";
+pub const DEFAULT_SNAPSHOT_STORE: &str = "file";
 pub const DEFAULT_SNAPSHOT_DIR: &str = "./data/snapshots";
 pub const DEFAULT_SNAPSHOT_AGDB_PATH: &str = "./data/snapshots.agdb";
 pub const DEFAULT_SNAPSHOT_AMANDINE_PATH: &str = "./data/snapshots.amandine";

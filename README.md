@@ -56,7 +56,7 @@ cp .env.example .env
 cargo run
 ```
 
-기본 실행 주소는 `127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`으로 설정되어 있어 로컬 프런트엔드 개발 서버와 포트가 겹치지 않습니다.
+기본 실행 주소는 `127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`으로 설정되어 있어 로컬 프런트엔드 개발 서버와 포트가 겹치지 않습니다. 기본 `SNAPSHOT_STORE`는 `file`이라 문서 snapshot은 `SNAPSHOT_DIR` 아래에 저장됩니다.
 
 ## 검증 흐름
 
@@ -100,7 +100,7 @@ cargo check --features full-snapshot-stores
 - Documents: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `DELETE /api/documents/:id`
 - Collaboration WebSocket: `GET /ws/:doc_id`
 
-현재 문서 API와 협업 WebSocket은 `Authorization` 헤더 없이 동작합니다. `POST /api/documents` 응답에는 저장소 호환을 위한 문서 전용 `access_token`이 계속 포함되지만, 클라이언트가 이후 요청에 이 값을 보낼 필요는 없습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
+현재 문서 API와 협업 WebSocket은 `Authorization` 헤더 없이 동작합니다. `POST /api/documents` 응답에는 저장소 호환을 위한 문서 전용 `access_token`이 계속 포함되지만, 클라이언트가 이후 요청에 이 값을 보낼 필요는 없습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, Yrs document update가 commit될 때마다 최신 snapshot을 저장합니다. 마지막 WebSocket 세션이 종료되면 한 번 더 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
 
 non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
 
@@ -417,7 +417,7 @@ Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프�
 - 문서별 WebSocket 협업 세션 진입
 - API/앱 상태/설정/에러 모듈 분리
 - 테스트 가능한 앱 빌더 제공
-- 기본 in-memory snapshot store와 상단 `SNAPSHOT_STORE` 항목에 나열된 모든 로컬/embedded backend, S3-compatible object storage, external managed snapshot store 지원
+- 기본 file-backed snapshot store와 상단 `SNAPSHOT_STORE` 항목에 나열된 모든 로컬/embedded backend, S3-compatible object storage, external managed snapshot store 지원
 - config-driven room locator local/static/file/sqlite/managed 모드와 room coordinator dry-run logging/file/sqlite/managed state 모드 지원
 
 ## 비범위
@@ -464,7 +464,8 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - 문서 생성 시 초기 snapshot을 저장하고 active room을 메모리에 등록한다.
 - `GET /api/documents`는 active room이 없어도 snapshot store에 남아 있는 문서를 카탈로그로 반환한다.
 - `GET /api/documents/:id`와 `GET /ws/:doc_id`는 먼저 `RoomLocator`로 현재 노드 ownership을 확인한 뒤, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
-- WebSocket 세션이 종료될 때마다 room의 active session 수를 감소시키고, 마지막 세션이 닫히면 최신 snapshot을 저장한 뒤 room을 메모리에서 제거한다.
+- Yrs document update가 commit될 때마다 room의 full-state update 바이너리와 문서 metadata를 snapshot store에 저장한다.
+- WebSocket 세션이 종료될 때마다 room의 active session 수를 감소시키고, 마지막 세션이 닫히면 최신 snapshot을 한 번 더 저장한 뒤 room을 메모리에서 제거한다.
 - 문서가 삭제된 경우에는 snapshot과 active room을 함께 제거한다. 활성 WebSocket 세션이 남아 있으면 삭제를 거절하고 `409 conflict`를 반환한다.
 - `SNAPSHOT_STORE=file`일 때 손상된 snapshot 파일은 startup hydrate와 `GET /api/documents` 카탈로그 생성 중 warning과 함께 건너뛴다. 해당 문서를 직접 복구하려고 로드하면 여전히 corrupt snapshot 오류로 취급한다.
 - `SNAPSHOT_STORE=file` 저장은 같은 디렉터리의 임시 파일 작성 후 `rename`으로 마무리해, 저장 도중 프로세스가 중단돼도 마지막 정상 snapshot을 바로 덮어쓰지 않도록 한다.

@@ -177,7 +177,7 @@ Response: `204 No Content`
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
 - snapshot restore source는 현재 `SNAPSHOT_STORE=file|apex_store|armdb|flash_kv|blockbucket|grebedb|grumpydb|graus_db|highlandcows_isam|simple_db|docdb|emdb|osmiumdb|eight|epoch_db|etchdb|fastkv|ferrumdb|rumdb|shorterdb|sqlite|heed|hightower_kv|hmdb|hurrahdb|fs_db|icefalldb|bitask|bitkv_rs|bitcask_engine|blazeup|candystore|celerix_store|citadeldb|cuendillar|data_pile|jammdb|mace|fjall|persy|persistent_kv|native_db|nebari|nikidb|nodb|okofdb|parity_db|pickledb|rcask|microkv|redb|rskey|readb|rustlite|rustcask|rusty_leveldb|canopydb|caves|ckydb|crepedb|scdb|skv|surrealkv|sled|rustbreak|yedb|btree_store|cacache|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|thetadb|tinybase|tinydb|dblite|dbless|db_rs|dharmadb|sanakirja|snaildb|tinykv|yakv|yakvdb|saberdb|smolldb|kstone|jsondb|joydb|png_db|kopperdb|kv|koit|lite_db|lmdb_rs_core|log_kv|append_log|mhdb|marble|loro_kv|luckdb|ipjdb|kagi|deeb|rubin|lsm_engine|lsm_storage_engine|lsmdb|lsm_tree|mindb|mmdb|nanodb|jfs|json_store|cdb64|json_mutex_db|toiletdb|feoxdb|s3|managed` 중 하나다.
 - 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, `file`, `sqlite`, 또는 `managed` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
-- 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
+- Yrs document update가 commit될 때마다 최신 full-state snapshot을 저장하고, 마지막 WebSocket 세션이 종료되면 한 번 더 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
 - 문서가 존재하지 않으면 업그레이드 전에 `404` JSON 에러 응답을 반환한다.
 - `Origin` 헤더가 없거나 허용되지 않으면 업그레이드 전에 `403` JSON 에러 응답을 반환한다.

@@ -66,7 +66,7 @@ fn readme_scope_section_references_snapshot_store_summary() {
     let readme = include_str!("../README.md");
 
     assert!(readme.contains(
-        "- 기본 in-memory snapshot store와 상단 `SNAPSHOT_STORE` 항목에 나열된 모든 로컬/embedded backend, S3-compatible object storage, external managed snapshot store 지원"
+        "- 기본 file-backed snapshot store와 상단 `SNAPSHOT_STORE` 항목에 나열된 모든 로컬/embedded backend, S3-compatible object storage, external managed snapshot store 지원"
     ));
     assert!(readme.contains(
         "그 외 상단 `SNAPSHOT_STORE` 항목의 embedded/local durability backend는 같은 `SnapshotStore` 경계를 통해 로컬 durable restart 복구를 제공한다."

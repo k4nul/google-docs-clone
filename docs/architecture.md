@@ -34,7 +34,7 @@
 6. 클라이언트는 연결 직후 awareness state를 `user`, optional `selection`, `client` 구조로 게시한다.
 7. 업그레이드된 socket은 `AxumSink` / `AxumStream`으로 감싸진다.
 8. `BroadcastGroup::subscribe`가 해당 문서의 협업 세션을 처리한다.
-9. 마지막 WebSocket 세션이 종료되면 room snapshot을 저장하고 idle room을 registry에서 제거한다.
+9. Yrs document update가 commit될 때마다 room snapshot을 저장하고, 마지막 WebSocket 세션이 종료되면 한 번 더 저장한 뒤 idle room을 registry에서 제거한다.
 
 ## Room Registry Structure
 
@@ -58,7 +58,8 @@
 - `ManagedRoomCoordinator`는 `ROOM_COORDINATION_MANAGED_BASE_URL` 아래의 external lease service에 `POST /v1/leases/:doc_id/acquire|renew|release`를 호출해 같은 canonical lease state를 유지하고, active room 동안 background heartbeat로 `renewed_at`/`expires_at`을 갱신한 뒤 마지막 세션 종료 뒤 compare-and-release를 요청하는 managed authority 구현이다. optional `ROOM_COORDINATION_MANAGED_AUTH_TOKEN`이 있으면 모든 요청에 Bearer 토큰을 실어 보낸다.
 - `Room::snapshot()`은 Yrs document를 full-state update로 직렬화하고 문서 metadata를 함께 저장한다.
 - `Room::from_snapshot()`은 저장된 update를 다시 apply해 room을 복구한다.
-- 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시에만 snapshot 저장 후 eviction을 시도한다.
+- 각 room은 Yrs update observer를 유지해 document commit마다 full-state update 바이너리를 snapshot store에 저장한다.
+- 각 room은 active WebSocket session 수를 추적하고, 마지막 세션 종료 시 snapshot을 한 번 더 저장한 뒤 eviction을 시도한다.
 - 문서 삭제는 active WebSocket session 수가 0일 때만 허용하며, 세션이 남아 있으면 `409 conflict`로 거절한다.
 - 현재는 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 in-tree `SnapshotStore` adapter가 연결되며, future adapter는 같은 trait으로 다른 db/object storage를 대체할 수 있다.
 - compile fan-out을 줄이기 위해 exhaustive snapshot adapter inventory와 저장소별 health regression은 `full-snapshot-stores` feature가 켜졌을 때만 기본 crate graph에 다시 합류한다.
