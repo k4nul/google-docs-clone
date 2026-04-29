@@ -214,13 +214,13 @@ npm run preview
 
 ## 백엔드 연동 흐름
 
-현재 프런트는 백엔드 README의 문서 생성/문서별 access token 계약에 맞춰 동작합니다.
+현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다.
 
 1. 홈 화면에서 `Create backend editor`를 클릭합니다.
 2. 프런트가 `POST /api/documents`를 `Authorization: Bearer <VITE_API_TOKEN>` 헤더와 함께 호출합니다.
-3. 백엔드가 문서를 만들고 `document.id`와 `credentials.access_token`을 응답합니다.
-4. 프런트는 `/docs/:docId?accessToken=...`으로 이동합니다.
-5. 협업 연결은 `ws://host/ws/:docId?access_token=...` 형태로 열립니다.
+3. 백엔드가 문서를 만들고 `document.id`를 응답합니다.
+4. 프런트는 `/docs/:docId`로 이동합니다.
+5. 협업 연결은 `ws://host/ws/:docId` 형태로 열립니다.
 
 즉, mock 문서 경로가 아니라 백엔드가 생성한 UUID 문서 경로로 들어가야 실제 협업이 연결됩니다.
 
@@ -246,15 +246,15 @@ npm run preview
 - 홈 화면에 `Create backend editor` 버튼 추가
 - `POST /api/documents`로 실제 문서를 생성한 뒤 해당 UUID로 이동
 
-### 3. 문서별 access token 누락
+### 3. 문서 경로 전달 정리
 
-백엔드는 문서 생성 시 문서 전용 `access_token`을 내려주고, 이후 WebSocket 연결에도 그 토큰이 필요합니다. 브라우저 기본 `WebSocket`은 임의의 `Authorization` 헤더를 직접 설정할 수 없어서, 헤더 방식만으로는 연결이 불가능했습니다.
+문서 생성 후 협업 페이지로 이동할 때 불필요한 query parameter를 붙이지 않고, 문서 ID만으로 이동하도록 단순화했습니다.
 
 해결:
 
-- 프런트에서 문서 생성 응답의 `credentials.access_token`을 받아 에디터 페이지로 전달
-- 프런트 WebSocket 연결을 `?access_token=` query parameter 방식으로 전송
-- 백엔드 WebSocket 인증에서 `Authorization` 헤더가 없을 때 `access_token` query parameter도 허용하도록 보완
+- 프런트 문서 생성 응답에서 `document.id`만 사용
+- 프런트 라우팅을 `/docs/:docId` 형태로 고정
+- WebSocket endpoint를 `ws://host/ws/:docId`로 단순화
 
 ### 4. awareness payload shape 불일치
 
@@ -290,12 +290,12 @@ VITE_WS_URL=ws://localhost:4000
 
 3. 프런트 dev 서버를 재시작
 4. 홈 화면에서 `Open mock editor`가 아니라 `Create backend editor`를 클릭
-5. 브라우저 URL이 `/docs/<uuid>?accessToken=...` 형태인지 확인
+5. 브라우저 URL이 `/docs/<uuid>` 형태인지 확인
 6. 콘솔에 아래 로그가 찍히는지 확인
 
 ```text
 [collab] websocket connect requested {
-  endpoint: "ws://localhost:4000/ws/<uuid>?access_token=<token>",
+  endpoint: "ws://localhost:4000/ws/<uuid>",
   roomId: "<uuid>",
   status: "connecting"
 }

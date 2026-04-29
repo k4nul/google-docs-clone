@@ -30,8 +30,8 @@ export function HomePage() {
     setIsCreating(true);
 
     try {
-      const { accessToken, document } = await createBackendDocument('Realtime collaboration draft');
-      navigate(`/docs/${document.id}?accessToken=${encodeURIComponent(accessToken)}`);
+      const { document } = await createBackendDocument('Realtime collaboration draft');
+      navigate(`/docs/${document.id}`);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : '백엔드 문서 생성에 실패했습니다.');
     } finally {

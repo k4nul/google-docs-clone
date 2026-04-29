@@ -15,13 +15,9 @@ export type ProviderConnectionStatus =
   | 'reconnecting'
   | 'disconnected';
 
-function buildWsEndpoint(serverUrl: string, roomId: string, accessToken?: string | null) {
+function buildWsEndpoint(serverUrl: string, roomId: string) {
   const normalizedBaseUrl = serverUrl.replace(/\/+$/, '');
   const endpoint = new URL(`/ws/${encodeURIComponent(roomId)}`, `${normalizedBaseUrl}/`);
-
-  if (accessToken) {
-    endpoint.searchParams.set('access_token', accessToken);
-  }
 
   return endpoint.toString();
 }
@@ -51,7 +47,6 @@ function sendAwarenessUpdate(provider: BinaryWebsocketProvider, clientIds: numbe
 
 export class BinaryWebsocketProvider {
   readonly awareness: awarenessProtocol.Awareness;
-  readonly accessToken: string | null;
   readonly doc: Y.Doc;
   readonly roomId: string;
   readonly serverUrl: string;
@@ -71,8 +66,7 @@ export class BinaryWebsocketProvider {
   wsconnecting = false;
   shouldConnect = false;
 
-  constructor(serverUrl: string, roomId: string, doc: Y.Doc, accessToken: string | null) {
-    this.accessToken = accessToken;
+  constructor(serverUrl: string, roomId: string, doc: Y.Doc) {
     this.serverUrl = serverUrl;
     this.roomId = roomId;
     this.doc = doc;
@@ -130,7 +124,7 @@ export class BinaryWebsocketProvider {
     this.wsconnecting = true;
     this.setConnectionStatus(this.reconnectTimer === null ? 'connecting' : 'reconnecting');
 
-    const endpoint = buildWsEndpoint(this.serverUrl, this.roomId, this.accessToken);
+    const endpoint = buildWsEndpoint(this.serverUrl, this.roomId);
     logConnectionEvent('websocket connect requested', {
       endpoint,
       roomId: this.roomId,
@@ -284,13 +278,11 @@ export interface CollaborationConnection {
 }
 
 interface CreateCollaborationConnectionParams {
-  accessToken?: string | null;
   roomId: string;
   serverUrl: string | null;
 }
 
 export function createCollaborationConnection({
-  accessToken = null,
   roomId,
   serverUrl,
 }: CreateCollaborationConnectionParams): CollaborationConnection {
@@ -305,7 +297,7 @@ export function createCollaborationConnection({
     };
   }
 
-  const provider = new BinaryWebsocketProvider(serverUrl, normalizedRoomId, doc, accessToken);
+  const provider = new BinaryWebsocketProvider(serverUrl, normalizedRoomId, doc);
 
   return {
     roomId: normalizedRoomId,

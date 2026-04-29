@@ -28,7 +28,6 @@ export interface CollaborationSnapshot {
 }
 
 interface EditorShellProps {
-  accessToken?: string | null;
   docId: string;
   onEditorReady?: (editor: Editor | null) => void;
   onCollaborationChange?: (snapshot: CollaborationSnapshot) => void;
@@ -55,7 +54,6 @@ function getConnectionMode(status: ProviderConnectionStatus) {
 }
 
 export function EditorShell({
-  accessToken = null,
   docId,
   onEditorReady,
   onCollaborationChange,
@@ -71,11 +69,10 @@ export function EditorShell({
   const connection = useMemo(
     () =>
       createCollaborationConnection({
-        accessToken,
         roomId: docId,
         serverUrl: appEnv.wsUrl,
       }),
-    [accessToken, docId],
+    [docId],
   );
 
   useEffect(() => {

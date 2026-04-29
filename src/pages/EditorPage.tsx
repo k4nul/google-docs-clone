@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
 import { useState } from 'react';
 
@@ -11,7 +11,6 @@ import { PageLayout } from '@/shared/ui/PageLayout';
 
 export function EditorPage() {
   const { docId } = useParams<{ docId: string }>();
-  const [searchParams] = useSearchParams();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [collaboration, setCollaboration] = useState<CollaborationSnapshot>({
@@ -26,8 +25,6 @@ export function EditorPage() {
   }
 
   const decodedDocId = decodeURIComponent(docId);
-  const accessToken = searchParams.get('accessToken');
-
   return (
     <PageLayout
       eyebrow="Realtime Document"
@@ -45,7 +42,6 @@ export function EditorPage() {
       <div className="page-grid">
         <div className="aside-stack">
           <EditorShell
-            accessToken={accessToken}
             docId={decodedDocId}
             onCollaborationChange={setCollaboration}
             onEditorReady={setEditor}
@@ -67,9 +63,6 @@ export function EditorPage() {
               </span>
               <span>
                 Revision sync: <code>{appEnv.wsUrl ?? 'VITE_WS_URL not set'}</code>
-              </span>
-              <span>
-                Document token: <code>{accessToken ? 'provided' : 'missing'}</code>
               </span>
               <span>
                 Import ingest: <code>@/lib/import/docxImport.ts</code>

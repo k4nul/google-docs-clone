@@ -10,9 +10,6 @@ interface BackendDocument {
 
 interface CreateDocumentResponse {
   document: BackendDocument;
-  credentials: {
-    access_token: string;
-  };
 }
 
 function getAdminHeaders() {
@@ -35,7 +32,6 @@ export async function createBackendDocument(title?: string) {
   );
 
   return {
-    accessToken: response.credentials.access_token,
     document: {
       id: response.document.id,
       title: response.document.title,
