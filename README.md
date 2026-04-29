@@ -16,7 +16,7 @@ Axum, Tokio, Yrs 기반의 실시간 협업 편집 백엔드 부트스트랩 프
 
 ## 프로젝트 개요
 
-문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, 관리용 API 토큰과 문서별 access token 기반 접근 제어, in-memory room registry, 그리고 memory/file/agdb/amandine/apex_store/armdb/assystem/flash_kv/ghaladb/blockbucket/grebedb/grumpydb/graus_db/highlandcows_isam/simple_db/docdb/emdb/osmiumdb/eight/epoch_db/etchdb/fastkv/ferrumdb/rumdb/rubin/shorterdb/sqlite/heed/hightower_kv/hmdb/hurrahdb/fs_db/sqjson/bitask/bitkv_rs/bitcask_engine/blazeup/candystore/celerix_store/citadeldb/cuendillar/data_pile/jammdb/mace/janql/jasondb/jasonisnthappy/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/rcask/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/crepedb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/tinybase/tinydb/dblite/dbless/db_rs/dharmadb/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/smolldb/kstone/roughdb/raindb/infusedb/kafi/tinkv/ledger_kv/jsondb/kv/koit/lite_db/lmdb_rs_core/log_kv/mhdb/marble/loro_kv/luckdb/ipjdb/kagi/deeb/rubin/lsm_engine/lsm_storage_engine/lsmdb/lsm_tree/mindb/mmdb/mu_db/nanodb/jfs/json_store/json_db_rs/cdb64/json_mutex_db/toiletdb/dir_cache/feoxdb/s3/managed snapshot 저장 추상화를 포함합니다.
+문서 단위의 실시간 협업 서버를 Rust로 안전하게 시작할 수 있도록 최소 실행 구조를 제공합니다. 현재 단계에서는 HTTP 헬스체크, 문서 생성/조회/삭제 API, 문서별 WebSocket 진입점, in-memory room registry, 그리고 memory/file/agdb/amandine/apex_store/armdb/assystem/flash_kv/ghaladb/blockbucket/grebedb/grumpydb/graus_db/highlandcows_isam/simple_db/docdb/emdb/osmiumdb/eight/epoch_db/etchdb/fastkv/ferrumdb/rumdb/rubin/shorterdb/sqlite/heed/hightower_kv/hmdb/hurrahdb/fs_db/sqjson/bitask/bitkv_rs/bitcask_engine/blazeup/candystore/celerix_store/citadeldb/cuendillar/data_pile/jammdb/mace/janql/jasondb/jasonisnthappy/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/rcask/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/crepedb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/tinybase/tinydb/dblite/dbless/db_rs/dharmadb/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/smolldb/kstone/roughdb/raindb/infusedb/kafi/tinkv/ledger_kv/jsondb/kv/koit/lite_db/lmdb_rs_core/log_kv/mhdb/marble/loro_kv/luckdb/ipjdb/kagi/deeb/rubin/lsm_engine/lsm_storage_engine/lsmdb/lsm_tree/mindb/mmdb/mu_db/nanodb/jfs/json_store/json_db_rs/cdb64/json_mutex_db/toiletdb/dir_cache/feoxdb/s3/managed snapshot 저장 추상화를 포함합니다.
 
 기본 빌드는 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 컴파일합니다. 전체 adapter 인벤토리와 확장 회귀 테스트가 필요하면 `cargo check --features full-snapshot-stores` 또는 `cargo test --features full-snapshot-stores`를 사용합니다.
 
@@ -32,7 +32,7 @@ Axum, Tokio, Yrs 기반의 실시간 협업 편집 백엔드 부트스트랩 프
 - `GET /api/documents/:id` 기존 문서 상세 조회
 - `DELETE /api/documents/:id` 문서 및 room 제거
 - `GET /ws/:doc_id` 문서별 협업 WebSocket 진입점
-- 관리용 API 토큰과 문서별 access token 기반 인증/접근 제어
+- 로컬 프런트엔드 개발을 단순화하기 위한 인증 없는 HTTP/WebSocket 진입점
 - `DashMap` 기반 room registry와 idle room eviction
 - `yrs-axum` 기반 broadcast group 연결
 - `SnapshotStore` trait 및 memory/file/agdb/amandine/apex_store/armdb/assystem/flash_kv/ghaladb/blockbucket/grebedb/grumpydb/graus_db/highlandcows_isam/simple_db/docdb/emdb/osmiumdb/eight/epoch_db/etchdb/fastkv/ferrumdb/rumdb/rubin/shorterdb/sqlite/heed/hightower_kv/hmdb/hurrahdb/fs_db/sqjson/bitask/bitkv_rs/bitcask_engine/blazeup/candystore/celerix_store/citadeldb/cuendillar/data_pile/jammdb/mace/janql/jasondb/jasonisnthappy/fjall/persy/persistent_kv/native_db/nebari/nikidb/nodb/okofdb/parity_db/pickledb/rcask/microkv/redb/rskey/readb/rustlite/rustcask/rusty_leveldb/canopydb/caves/ckydb/crepedb/scdb/skv/surrealkv/sled/rustbreak/yedb/btree_store/siamesedb/structsy/abyssiniandb/aeternusdb/thunderdb/thetadb/tinybase/tinydb/dblite/dbless/db_rs/dharmadb/sanakirja/snaildb/tinykv/vsdb/yakv/saberdb/smolldb/kstone/roughdb/raindb/infusedb/kafi/tinkv/ledger_kv/jsondb/joydb/png_db/kopperdb/kv/koit/lite_db/lmdb_rs_core/log_kv/mhdb/marble/loro_kv/luckdb/ipjdb/kagi/deeb/rubin/lsm_engine/lsm_storage_engine/lsmdb/lsm_tree/mindb/mmdb/mu_db/nanodb/jfs/json_store/json_db_rs/cdb64/json_mutex_db/toiletdb/dir_cache/feoxdb/s3/managed adapter
@@ -100,7 +100,7 @@ cargo check --features full-snapshot-stores
 - Documents: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `DELETE /api/documents/:id`
 - Collaboration WebSocket: `GET /ws/:doc_id`
 
-`GET /api/documents`와 `POST /api/documents`는 `Authorization: Bearer <API_TOKEN>` 헤더가 필요합니다. `POST /api/documents` 응답에는 해당 문서 전용 `access_token`이 포함되며, 이후 `GET /api/documents/:id`, `DELETE /api/documents/:id`, `GET /ws/:doc_id`는 모두 `Authorization: Bearer <access_token>` 헤더가 필요합니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
+현재 문서 API와 협업 WebSocket은 `Authorization` 헤더 없이 동작합니다. `POST /api/documents` 응답에는 저장소 호환을 위한 문서 전용 `access_token`이 계속 포함되지만, 클라이언트가 이후 요청에 이 값을 보낼 필요는 없습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
 
 non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
 
@@ -197,7 +197,7 @@ ws.onmessage = (event) => {
 
 Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프런트가 아래 구조를 Yjs awareness local state로 설정하면, provider 또는 `y-protocols/awareness`가 `Awareness` binary message로 인코딩해 전송한다. 서버는 이 JSON shape를 검증한 뒤 room awareness state에 반영한다.
 
-브라우저 기본 `WebSocket` API는 임의의 `Authorization` 헤더를 직접 설정할 수 없다. 현재 서버 계약은 `Authorization: Bearer <access_token>` 헤더를 요구하므로, 브라우저 프런트는 gateway/header injection, cookie 기반 인증, `Sec-WebSocket-Protocol`, query token 등 별도 인증 전달 방식 변경이 필요하다.
+브라우저 기본 `WebSocket` API는 임의의 `Authorization` 헤더를 직접 설정할 수 없으므로, 현재 로컬 개발 계약에서는 `/ws/:doc_id` 연결에 인증 헤더를 요구하지 않는다. WebSocket 연결에는 `FRONTEND_ORIGIN`과 일치하는 `Origin` 헤더만 필요하다.
 
 ## 폴더 구조 요약
 
@@ -227,7 +227,7 @@ Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프�
 - `PORT`: 서버 바인드 포트
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing 필터 설정
-- `API_TOKEN`: 문서 생성/목록 조회용 관리 토큰
+- `API_TOKEN`: 현재 로컬 개발용 HTTP/WS 경로에서는 검증하지 않는 legacy 관리 토큰 설정
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, 또는 `managed`
 - 기본 feature 없는 빌드에서 바로 쓸 수 있는 값은 `memory`, `file`, `sqlite`, `s3`, `managed`다. 나머지 backend는 `--features full-snapshot-stores`를 켜야 registry와 adapter가 함께 활성화된다.
 - `SNAPSHOT_STORE=append_kv`: append_kv append-only 단일 파일 store도 지원한다.

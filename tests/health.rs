@@ -2153,7 +2153,6 @@ async fn create_document_endpoint_creates_document_and_lists_it() {
 
     let response = server
         .post("/api/documents")
-        .add_header("Authorization", admin_auth_header(&config).as_str())
         .json(&serde_json::json!({
             "title": "Design notes"
         }))
@@ -2165,27 +2164,22 @@ async fn create_document_endpoint_creates_document_and_lists_it() {
     let created_id = payload["document"]["id"]
         .as_str()
         .expect("created document id should be returned");
-    let access_token = payload["credentials"]["access_token"]
-        .as_str()
-        .expect("document access token should be returned");
+    assert!(
+        payload["credentials"]["access_token"].as_str().is_some(),
+        "document access token should still be returned for snapshot compatibility"
+    );
     assert_eq!(payload["document"]["title"].as_str(), Some("Design notes"));
     assert!(payload["document"]["created_at"].as_str().is_some());
     assert!(payload["document"]["updated_at"].as_str().is_some());
 
-    let detail_response = server
-        .get(&format!("/api/documents/{created_id}"))
-        .add_header("Authorization", document_auth_header(access_token).as_str())
-        .await;
+    let detail_response = server.get(&format!("/api/documents/{created_id}")).await;
     detail_response.assert_status_ok();
 
     let detail_payload = detail_response.json::<Value>();
     assert_eq!(detail_payload["document"]["id"].as_str(), Some(created_id));
     assert!(detail_payload["document"]["access_token"].is_null());
 
-    let list_response = server
-        .get("/api/documents")
-        .add_header("Authorization", admin_auth_header(&config).as_str())
-        .await;
+    let list_response = server.get("/api/documents").await;
     list_response.assert_status_ok();
 
     let list_payload = list_response.json::<Value>();
@@ -3111,7 +3105,7 @@ async fn websocket_endpoint_rejects_non_local_owner_with_redirect_headers() {
 }
 
 #[tokio::test]
-async fn documents_endpoint_rejects_missing_admin_token() {
+async fn documents_endpoint_allows_missing_admin_token() {
     let config = test_config();
     let app = build_app(
         &config,
@@ -3122,15 +3116,14 @@ async fn documents_endpoint_rejects_missing_admin_token() {
 
     let response = server.get("/api/documents").await;
 
-    response.assert_status(StatusCode::UNAUTHORIZED);
+    response.assert_status_ok();
 
     let payload = response.json::<Value>();
-    assert_eq!(payload["error"], "unauthorized");
-    assert_eq!(payload["message"], "Authorization header is required");
+    assert!(payload["documents"].as_array().is_some());
 }
 
 #[tokio::test]
-async fn document_detail_endpoint_rejects_invalid_document_token() {
+async fn document_detail_endpoint_ignores_invalid_document_token() {
     let config = test_config();
     let app = build_app(
         &config,
@@ -3141,7 +3134,6 @@ async fn document_detail_endpoint_rejects_invalid_document_token() {
 
     let create_response = server
         .post("/api/documents")
-        .add_header("Authorization", admin_auth_header(&config).as_str())
         .json(&serde_json::json!({
             "title": "Restricted"
         }))
@@ -3158,18 +3150,14 @@ async fn document_detail_endpoint_rejects_invalid_document_token() {
         .add_header("Authorization", "Bearer invalid-doc-token")
         .await;
 
-    response.assert_status_forbidden();
+    response.assert_status_ok();
 
     let payload = response.json::<Value>();
-    assert_eq!(payload["error"], "forbidden");
-    assert_eq!(
-        payload["message"],
-        format!("provided token does not grant access to document `{created_id}`")
-    );
+    assert_eq!(payload["document"]["id"], created_id);
 }
 
 #[tokio::test]
-async fn websocket_endpoint_rejects_missing_document_token() {
+async fn websocket_endpoint_accepts_missing_document_token() {
     let config = test_config();
     let app = build_app(
         &config,
@@ -3179,7 +3167,6 @@ async fn websocket_endpoint_rejects_missing_document_token() {
     let server = TestServer::builder().http_transport().build(app);
     let create_response = server
         .post("/api/documents")
-        .add_header("Authorization", admin_auth_header(&config).as_str())
         .json(&serde_json::json!({}))
         .await;
     create_response.assert_status(StatusCode::CREATED);
@@ -3190,16 +3177,14 @@ async fn websocket_endpoint_rejects_missing_document_token() {
         .expect("created document id should be returned")
         .to_owned();
 
-    let response = server
+    let websocket = server
         .get_websocket(&format!("/ws/{doc_id}"))
         .add_header("Origin", config.frontend_origin.as_str())
+        .await
+        .into_websocket()
         .await;
 
-    response.assert_status(StatusCode::UNAUTHORIZED);
-
-    let payload = response.json::<Value>();
-    assert_eq!(payload["error"], "unauthorized");
-    assert_eq!(payload["message"], "Authorization header is required");
+    websocket.close().await;
 }
 
 #[tokio::test]

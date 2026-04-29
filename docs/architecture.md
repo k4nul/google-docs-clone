@@ -6,7 +6,7 @@
 - `src/config.rs`: 환경변수 로딩, 기본값, 값 검증
 - `src/state.rs`: 전역 `AppState`, room registry 접근, 허용된 프런트엔드 origin 보관
 - `src/errors.rs`: 공통 에러 타입과 HTTP 응답 변환
-- `src/auth.rs`: Bearer 토큰 파싱과 인증 경계
+- `src/auth.rs`: legacy Bearer 토큰 파싱 helper. 현재 로컬 개발용 HTTP/WS 경로에서는 호출하지 않는다.
 - `src/routes`: REST endpoint 집합
 - `src/collab`: Yrs room registry와 WebSocket 협업 경계
 - `src/collab/coordinator.rs`: room ownership coordination lifecycle 확장 경계
@@ -18,7 +18,7 @@
 1. `main.rs`가 환경변수를 읽고 tracing을 초기화한다.
 2. `app.rs`가 `AppState`와 라우트를 조합해 `Router`를 만든다.
 3. `/api/*` 요청은 `routes` 모듈로 들어간다.
-4. 문서 목록/생성은 관리용 `API_TOKEN`을 검증하고, 문서 상세/삭제는 문서별 `access_token`을 검증한다.
+4. 문서 API는 로컬 프런트엔드 개발을 단순화하기 위해 인증 헤더 없이 처리한다.
 5. 문서 단위 room에 닿는 요청은 `AppState`의 `RoomLocator` 경계로 현재 노드 ownership을 먼저 확인한다.
 6. route handler는 `AppState`를 통해 registry를 조회하고 JSON 응답을 반환한다.
 
@@ -28,21 +28,20 @@
 
 1. 클라이언트가 `GET /ws/:doc_id`로 업그레이드를 요청한다.
 2. `collab/ws.rs`가 `doc_id` 형식을 검증하고 `Origin` 헤더가 `FRONTEND_ORIGIN`과 일치하는지 확인한다.
-3. 같은 핸들러가 `Authorization: Bearer <access_token>`을 검증한다.
-4. 같은 경계가 `RoomLocator`로 현재 노드 ownership을 확인한다.
-5. 검증이 통과하면 `doc_id`에 해당하는 room을 조회하거나 snapshot store에서 on-demand로 복구한다.
-6. room은 `Yrs Doc`, `Awareness`, lazy `BroadcastGroup`을 가진다.
-7. 클라이언트는 연결 직후 awareness state를 `user`, optional `selection`, `client` 구조로 게시한다.
-8. 업그레이드된 socket은 `AxumSink` / `AxumStream`으로 감싸진다.
-9. `BroadcastGroup::subscribe`가 해당 문서의 협업 세션을 처리한다.
-10. 마지막 WebSocket 세션이 종료되면 room snapshot을 저장하고 idle room을 registry에서 제거한다.
+3. 같은 경계가 `RoomLocator`로 현재 노드 ownership을 확인한다.
+4. 검증이 통과하면 `doc_id`에 해당하는 room을 조회하거나 snapshot store에서 on-demand로 복구한다.
+5. room은 `Yrs Doc`, `Awareness`, lazy `BroadcastGroup`을 가진다.
+6. 클라이언트는 연결 직후 awareness state를 `user`, optional `selection`, `client` 구조로 게시한다.
+7. 업그레이드된 socket은 `AxumSink` / `AxumStream`으로 감싸진다.
+8. `BroadcastGroup::subscribe`가 해당 문서의 협업 세션을 처리한다.
+9. 마지막 WebSocket 세션이 종료되면 room snapshot을 저장하고 idle room을 registry에서 제거한다.
 
 ## Room Registry Structure
 
 - 저장소는 `DashMap<Uuid, Arc<Room>>`
 - key는 문서 ID
 - value는 placeholder 문서 메타데이터와 Yrs awareness, lazy broadcast group
-- 문서 메타데이터에는 외부 응답으로 노출하지 않는 `access_token`이 포함된다.
+- 문서 메타데이터에는 외부 응답으로 노출하지 않는 legacy `access_token`이 포함된다. 현재 로컬 개발용 API/WS 경로에서는 접근 제어에 사용하지 않는다.
 - 문서 API와 WebSocket 엔트리포인트가 같은 registry를 공유한다.
 - awareness payload의 canonical shape는 `AwarenessState { user, selection?, client }`이며, 사용자 식별과 색상 규칙은 서버 모델과 문서에서 함께 관리한다.
 

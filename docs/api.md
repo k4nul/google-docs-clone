@@ -46,7 +46,7 @@ Response:
 
 ### `GET /api/documents`
 
-- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
+- 인증 헤더 없이 호출한다.
 
 Response:
 
@@ -91,7 +91,7 @@ active room과 snapshot store에 남아 있는 persisted document catalog를 합
 
 ### `POST /api/documents`
 
-- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
+- 인증 헤더 없이 호출한다.
 
 Request body:
 
@@ -104,7 +104,7 @@ Request body:
 - `title`은 선택값이다.
 - `title`이 비어 있거나 누락되면 기본 제목 `Document {uuid}`를 사용한다.
 - 서버가 새 UUID를 생성하고 해당 문서 room을 메모리 및 snapshot store에 등록한다.
-- 응답의 `credentials.access_token`은 이후 문서 상세 조회, 삭제, WebSocket 연결에 사용한다.
+- 응답의 `credentials.access_token`은 저장소 호환을 위해 계속 반환하지만, 현재 로컬 개발 계약에서는 이후 문서 상세 조회, 삭제, WebSocket 연결에 사용하지 않는다.
 
 Response: `201 Created`
 
@@ -124,12 +124,11 @@ Response: `201 Created`
 
 ### `GET /api/documents/:id`
 
-- `Authorization: Bearer <access_token>` 헤더가 필요하다.
+- 인증 헤더 없이 호출한다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
 - snapshot restore source는 현재 `SNAPSHOT_STORE=file|apex_store|armdb|flash_kv|blockbucket|grebedb|grumpydb|graus_db|highlandcows_isam|simple_db|docdb|emdb|osmiumdb|eight|epoch_db|etchdb|fastkv|ferrumdb|rumdb|shorterdb|sqlite|heed|hightower_kv|hmdb|hurrahdb|fs_db|icefalldb|bitask|bitkv_rs|bitcask_engine|blazeup|candystore|celerix_store|citadeldb|cuendillar|data_pile|jammdb|mace|fjall|persy|persistent_kv|native_db|nebari|nikidb|nodb|okofdb|parity_db|pickledb|rcask|microkv|redb|rskey|readb|rustlite|rustcask|rusty_leveldb|canopydb|caves|ckydb|crepedb|scdb|skv|surrealkv|sled|rustbreak|yedb|btree_store|cacache|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|thetadb|tinybase|tinydb|dblite|dbless|db_rs|dharmadb|sanakirja|snaildb|tinykv|yakv|yakvdb|saberdb|smolldb|kstone|jsondb|joydb|png_db|kopperdb|kv|koit|lite_db|lmdb_rs_core|log_kv|append_log|mhdb|marble|loro_kv|luckdb|ipjdb|kagi|deeb|rubin|lsm_engine|lsm_storage_engine|lsmdb|lsm_tree|mindb|mmdb|nanodb|jfs|json_store|cdb64|json_mutex_db|toiletdb|feoxdb|s3|managed` 중 하나다.
 - 문서가 없으면 `404` JSON 에러를 반환한다.
-- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 local restore 대신 `409` JSON 에러로 중단한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`에 선언하는 `owner.node_id`와 `owner.base_url`은 trim 후 저장된다.
 - `owner.base_url`은 선택값이지만, 사용할 경우 path/query 없는 origin-only absolute `http://` 또는 `https://` URL이어야 하며 응답에는 canonical origin (`scheme://authority`) 형태로 반환된다.
@@ -157,11 +156,10 @@ Response:
 
 ### `DELETE /api/documents/:id`
 
-- `Authorization: Bearer <access_token>` 헤더가 필요하다.
+- 인증 헤더 없이 호출한다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 문서가 존재하면 room과 문서 메타데이터를 함께 제거한다.
 - 문서가 없으면 `404` JSON 에러 응답을 반환한다.
-- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403`을 반환한다.
 
 If an active collaboration WebSocket session is still attached to the document, the delete request returns `409 Conflict` with the standard JSON error shape.
 
@@ -171,7 +169,7 @@ Response: `204 No Content`
 
 ### `GET /ws/:doc_id`
 
-- `Authorization: Bearer <access_token>` 헤더가 필요하다.
+- 인증 헤더 없이 연결한다.
 - `doc_id`는 UUID 형식이어야 한다.
 - 문서는 먼저 `POST /api/documents`로 생성되어 있어야 한다.
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
@@ -181,7 +179,6 @@ Response: `204 No Content`
 - 내부 `RoomCoordinator` hook은 `ROOM_COORDINATOR` 설정에 따라 `noop`, `logging`, `file`, `sqlite`, 또는 `managed` 모드로 동작하며, 현재 단계에서는 HTTP/WS 계약 자체를 바꾸지 않는다.
 - 마지막 WebSocket 세션이 종료되면 최신 snapshot을 저장한 뒤 idle room을 메모리에서 제거한다.
 - `doc_id`가 UUID 형식이 아니면 `400` JSON 에러 응답을 반환한다.
-- 토큰이 없으면 `401`, 토큰이 문서와 맞지 않으면 `403` JSON 에러 응답을 반환한다.
 - 문서가 존재하지 않으면 업그레이드 전에 `404` JSON 에러 응답을 반환한다.
 - `Origin` 헤더가 없거나 허용되지 않으면 업그레이드 전에 `403` JSON 에러 응답을 반환한다.
 - `ROOM_LOCATOR=static`, `ROOM_LOCATOR=file`, `ROOM_LOCATOR=sqlite`, `ROOM_LOCATOR=managed`, 또는 동등한 authoritative resolver가 현재 노드 비소유를 보고하면 업그레이드 전에 `409` JSON 에러 응답을 반환한다. 이때 owner 힌트가 있으면 `owner.node_id`와 optional `owner.base_url`를 함께 반환한다. 기본 `LocalRoomLocator` 구성에서는 이 경로가 발생하지 않는다.
@@ -560,8 +557,8 @@ Response: `204 No Content`
 
 - incoming awareness JSON is validated against `AwarenessState`; malformed JSON, blank required identifiers, or invalid `user.color` values are rejected before room awareness state is updated.
 
-- 프런트엔드는 관리 API 호출 시 `Authorization: Bearer <API_TOKEN>`을 넣어야 한다.
-- 문서 생성 응답의 `credentials.access_token`을 저장하고, 같은 문서의 상세 조회, 삭제, WebSocket 연결에 재사용해야 한다.
+- 프런트엔드는 문서 API와 WebSocket 연결에 `Authorization` 헤더를 넣지 않아도 된다.
+- 문서 생성 응답의 `credentials.access_token`은 현재 클라이언트 플로우에서 재사용하지 않는다.
 - WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN`과 일치해야 한다.
 - 연결 후 게시하는 Yrs awareness state는 아래 구조를 표준으로 사용한다.
 

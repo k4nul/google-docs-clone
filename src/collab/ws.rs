@@ -15,7 +15,6 @@ use uuid::Uuid;
 use yrs_axum::ws::{AxumSink, AxumStream};
 
 use crate::{
-    auth::require_bearer_token,
     collab::coordinator::RoomCoordinator,
     collab::protocol::ValidatingProtocol,
     collab::rooms::{Room, RoomRegistry},
@@ -127,7 +126,6 @@ fn resolve_websocket_room(
 ) -> AppResult<(Uuid, Arc<Room>)> {
     let doc_id = parse_uuid_param("doc_id", raw_doc_id)?;
     validate_origin(state, headers, doc_id)?;
-    let token = require_bearer_token(headers)?;
     state.ensure_local_room_owner_for_request(&doc_id, request_uri)?;
     let room = state
         .rooms()
@@ -135,13 +133,6 @@ fn resolve_websocket_room(
         .map_err(anyhow::Error::from)
         .map_err(AppError::from)?
         .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))?;
-
-    if !room.authorizes(token) {
-        warn!(%doc_id, "rejected websocket connection with invalid document token");
-        return Err(AppError::Forbidden(format!(
-            "provided token does not grant access to document `{doc_id}`"
-        )));
-    }
 
     Ok((doc_id, room))
 }
@@ -173,7 +164,7 @@ fn validate_origin(state: &AppState, headers: &HeaderMap, doc_id: Uuid) -> AppRe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::{HeaderValue, header::AUTHORIZATION};
+    use axum::http::HeaderValue;
 
     use crate::{
         collab::locator::{ResolvedRoom, RoomLocator, RoomLocatorError, RoomOwnerHint},
@@ -209,11 +200,6 @@ mod tests {
 
         let mut headers = HeaderMap::new();
         headers.insert(ORIGIN, HeaderValue::from_static(DEFAULT_FRONTEND_ORIGIN));
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
-                .expect("authorization header should be valid"),
-        );
 
         let request_uri: Uri = format!("/ws/{}", document.id)
             .parse()
