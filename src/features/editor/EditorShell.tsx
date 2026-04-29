@@ -77,8 +77,6 @@ export function EditorShell({
 
   useEffect(() => {
     if (!connection.provider) {
-      setConnectionStatus('local-only');
-      setActiveCollaborators([]);
       return;
     }
 
