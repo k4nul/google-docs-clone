@@ -48,7 +48,10 @@ export function createEditorExtensions(
   user: CollaborationUser,
 ): AnyExtension[] {
   const extensions: AnyExtension[] = [
-    StarterKit.configure(connection ? { undoRedo: false } : {}),
+    StarterKit.configure({
+      link: false,
+      ...(connection ? { undoRedo: false } : {}),
+    }),
     Link.configure({
       autolink: true,
       linkOnPaste: true,
