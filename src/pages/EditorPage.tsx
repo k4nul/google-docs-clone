@@ -82,9 +82,9 @@ export function EditorPage() {
               <span>
                 Last sync event: <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
               </span>
-              <span>
+              {/* <span>
                 Active users: <code>{collaboration.activeCollaborators.length}</code>
-              </span>
+              </span> */}
             </div>
             <div className="pill-row" style={{ marginTop: '12px' }}>
               {collaboration.activeCollaborators.length > 0 ? (

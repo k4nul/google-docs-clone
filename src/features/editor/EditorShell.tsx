@@ -211,7 +211,7 @@ export function EditorShell({
       <div className="info-list">
         <span>Presence provider: <code>{appEnv.wsUrl ?? 'disabled'}</code></span>
         <span>Shared fragment: <code>content</code></span>
-        <span>Peers in room: <code>{activeCollaborators.length}</code></span>
+        {/* <span>Peers in room: <code>{activeCollaborators.length}</code></span> */}
       </div>
 
       <EditorToolbar editor={editor} />
