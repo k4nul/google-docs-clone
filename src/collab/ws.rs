@@ -1,18 +1,26 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
     extract::{
         OriginalUri, Path, State,
-        ws::{WebSocket, WebSocketUpgrade},
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::{HeaderMap, Uri, header::ORIGIN},
     response::IntoResponse,
 };
-use futures_util::StreamExt;
-use tokio::sync::Mutex;
+use futures_util::{SinkExt, Stream, StreamExt, stream::SplitStream};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
+use tokio::{sync::Mutex, task::JoinHandle};
 use tracing::{info, warn};
 use uuid::Uuid;
-use yrs_axum::ws::{AxumSink, AxumStream};
+use yrs::{
+    sync::{Error as SyncError, Message as SyncProtocolMessage},
+    updates::encoder::Encode,
+};
+use yrs_axum::ws::AxumSink;
 
 use crate::{
     collab::coordinator::RoomCoordinator,
@@ -21,6 +29,8 @@ use crate::{
     errors::{AppError, AppResult},
     state::AppState,
 };
+
+const WEBSOCKET_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 
 pub async fn ws_handler(
     Path(raw_doc_id): Path<String>,
@@ -81,13 +91,15 @@ async fn serve_room_socket(
     let broadcast_group = room.broadcast_group().await;
     let (sink, stream) = socket.split();
     let sink = Arc::new(Mutex::new(AxumSink::from(sink)));
-    let stream = AxumStream::from(stream);
+    let stream = BinaryAxumStream::from(stream);
+    let heartbeat = spawn_socket_heartbeat(sink.clone(), doc_id);
     let subscription = broadcast_group.subscribe_with(sink, stream, ValidatingProtocol);
 
     match subscription.completed().await {
         Ok(()) => info!(%doc_id, "websocket collaboration session ended"),
         Err(error) => warn!(%doc_id, %error, "websocket collaboration session failed"),
     }
+    heartbeat.abort();
 
     match registry.persist_and_evict_if_idle(&doc_id, &room) {
         Ok(teardown) if teardown.evicted => {
@@ -107,6 +119,75 @@ async fn serve_room_socket(
             "room remains active after websocket session"
         ),
         Err(error) => warn!(%doc_id, %error, "failed to persist snapshot after websocket session"),
+    }
+}
+
+fn spawn_socket_heartbeat(sink: Arc<Mutex<AxumSink>>, doc_id: Uuid) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(WEBSOCKET_HEARTBEAT_INTERVAL).await;
+
+            let mut sink = sink.lock().await;
+            if let Err(error) = sink.send(websocket_heartbeat_payload()).await {
+                warn!(
+                    %doc_id,
+                    %error,
+                    "failed to send websocket heartbeat"
+                );
+                return;
+            }
+        }
+    })
+}
+
+fn websocket_heartbeat_payload() -> Vec<u8> {
+    SyncProtocolMessage::AwarenessQuery.encode_v1()
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SocketMessagePayload {
+    Binary(Vec<u8>),
+    Ignore,
+    Close,
+}
+
+#[derive(Debug)]
+struct BinaryAxumStream(SplitStream<WebSocket>);
+
+impl From<SplitStream<WebSocket>> for BinaryAxumStream {
+    fn from(stream: SplitStream<WebSocket>) -> Self {
+        Self(stream)
+    }
+}
+
+impl Stream for BinaryAxumStream {
+    type Item = Result<Vec<u8>, SyncError>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            match Pin::new(&mut self.0).poll_next(cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Ready(Some(Ok(message))) => match socket_message_payload(message) {
+                    SocketMessagePayload::Binary(payload) => {
+                        return Poll::Ready(Some(Ok(payload)));
+                    }
+                    SocketMessagePayload::Ignore => continue,
+                    SocketMessagePayload::Close => return Poll::Ready(None),
+                },
+                Poll::Ready(Some(Err(error))) => {
+                    return Poll::Ready(Some(Err(SyncError::Other(error.into()))));
+                }
+            }
+        }
+    }
+}
+
+fn socket_message_payload(message: Message) -> SocketMessagePayload {
+    match message {
+        Message::Binary(payload) => SocketMessagePayload::Binary(payload.to_vec()),
+        Message::Close(_) => SocketMessagePayload::Close,
+        Message::Text(_) | Message::Ping(_) | Message::Pong(_) => SocketMessagePayload::Ignore,
     }
 }
 
@@ -145,12 +226,12 @@ fn validate_origin(state: &AppState, headers: &HeaderMap, doc_id: Uuid) -> AppRe
         ));
     };
 
-    if origin.as_bytes() != state.frontend_origin().as_bytes() {
+    if !state.frontend_origin_allowed(origin) {
         let received_origin = origin.to_str().unwrap_or("<invalid origin header>");
         warn!(
             %doc_id,
             received_origin,
-            allowed_origin = state.frontend_origin(),
+            allowed_origins = state.frontend_origin(),
             "rejected websocket connection with disallowed origin"
         );
         return Err(AppError::Forbidden(format!(
@@ -171,6 +252,110 @@ mod tests {
         config::DEFAULT_FRONTEND_ORIGIN,
         storage::InMemorySnapshotStore,
     };
+    use yrs::{sync::Message as SyncProtocolMessage, updates::decoder::Decode};
+
+    #[test]
+    fn websocket_heartbeat_uses_valid_awareness_query_message() {
+        let message = SyncProtocolMessage::decode_v1(websocket_heartbeat_payload().as_slice())
+            .expect("heartbeat should decode as a Yjs protocol message");
+
+        assert_eq!(message, SyncProtocolMessage::AwarenessQuery);
+    }
+
+    #[test]
+    fn websocket_stream_forwards_only_binary_sync_payloads() {
+        assert_eq!(
+            socket_message_payload(Message::Binary(vec![0, 1, 2].into())),
+            SocketMessagePayload::Binary(vec![0, 1, 2])
+        );
+    }
+
+    #[test]
+    fn websocket_stream_ignores_non_sync_control_frames() {
+        assert_eq!(
+            socket_message_payload(Message::Ping(Vec::new().into())),
+            SocketMessagePayload::Ignore
+        );
+        assert_eq!(
+            socket_message_payload(Message::Pong(Vec::new().into())),
+            SocketMessagePayload::Ignore
+        );
+        assert_eq!(
+            socket_message_payload(Message::Text("ignored".into())),
+            SocketMessagePayload::Ignore
+        );
+    }
+
+    #[test]
+    fn websocket_stream_treats_close_as_normal_end() {
+        assert_eq!(
+            socket_message_payload(Message::Close(None)),
+            SocketMessagePayload::Close
+        );
+    }
+
+    #[test]
+    fn websocket_room_resolution_accepts_any_origin_wildcard() {
+        let state = AppState::new(
+            crate::config::FRONTEND_ORIGIN_WILDCARD,
+            crate::config::DEFAULT_API_TOKEN,
+        );
+        let document = state
+            .rooms()
+            .create_document(Some("Wildcard websocket origin".to_owned()))
+            .expect("document should be created");
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            ORIGIN,
+            HeaderValue::from_static("http://new-domain.test:5173"),
+        );
+        let request_uri: Uri = format!("/ws/{}", document.id)
+            .parse()
+            .expect("websocket request URI should parse");
+
+        resolve_websocket_room(&state, &headers, &request_uri, &document.id.to_string())
+            .expect("wildcard frontend origin should allow any browser origin");
+    }
+
+    #[test]
+    fn websocket_room_resolution_accepts_comma_separated_origins() {
+        let state = AppState::new(
+            "http://one.test:5173, http://two.test:5173",
+            crate::config::DEFAULT_API_TOKEN,
+        );
+        let document = state
+            .rooms()
+            .create_document(Some("Listed websocket origin".to_owned()))
+            .expect("document should be created");
+        let request_uri: Uri = format!("/ws/{}", document.id)
+            .parse()
+            .expect("websocket request URI should parse");
+
+        let mut allowed_headers = HeaderMap::new();
+        allowed_headers.insert(ORIGIN, HeaderValue::from_static("http://two.test:5173"));
+        resolve_websocket_room(
+            &state,
+            &allowed_headers,
+            &request_uri,
+            &document.id.to_string(),
+        )
+        .expect("listed frontend origin should be accepted");
+
+        let mut rejected_headers = HeaderMap::new();
+        rejected_headers.insert(ORIGIN, HeaderValue::from_static("http://three.test:5173"));
+        let error = match resolve_websocket_room(
+            &state,
+            &rejected_headers,
+            &request_uri,
+            &document.id.to_string(),
+        ) {
+            Ok(_) => panic!("unlisted frontend origin should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(error, AppError::Forbidden(_)));
+    }
 
     #[derive(Debug, Default)]
     struct RemoteRoomLocator;

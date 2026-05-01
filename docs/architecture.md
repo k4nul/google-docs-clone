@@ -27,7 +27,7 @@
 - Incoming awareness updates pass through a custom Yrs protocol layer before shared room awareness state is mutated.
 
 1. 클라이언트가 `GET /ws/:doc_id`로 업그레이드를 요청한다.
-2. `collab/ws.rs`가 `doc_id` 형식을 검증하고 `Origin` 헤더가 `FRONTEND_ORIGIN`과 일치하는지 확인한다.
+2. `collab/ws.rs`가 `doc_id` 형식을 검증하고 `Origin` 헤더가 `FRONTEND_ORIGIN` 정책과 일치하는지 확인한다. 기본 `*`는 모든 Origin을 허용하며, 단일 origin 또는 comma-separated 목록으로 제한할 수 있다.
 3. 같은 경계가 `RoomLocator`로 현재 노드 ownership을 확인한다.
 4. 검증이 통과하면 `doc_id`에 해당하는 room을 조회하거나 snapshot store에서 on-demand로 복구한다.
 5. room은 `Yrs Doc`, `Awareness`, lazy `BroadcastGroup`을 가진다.
@@ -43,7 +43,7 @@
 - value는 placeholder 문서 메타데이터와 Yrs awareness, lazy broadcast group
 - 문서 메타데이터에는 외부 응답으로 노출하지 않는 legacy `access_token`이 포함된다. 현재 로컬 개발용 API/WS 경로에서는 접근 제어에 사용하지 않는다.
 - 문서 API와 WebSocket 엔트리포인트가 같은 registry를 공유한다.
-- awareness payload의 canonical shape는 `AwarenessState { user, selection?, client }`이며, 사용자 식별과 색상 규칙은 서버 모델과 문서에서 함께 관리한다.
+- awareness payload의 canonical shape는 `AwarenessState { user?, selection?, client? }`이며, y-websocket의 초기 빈 `{}` state와 Tiptap `CollaborationCaret`의 `{ user, cursor? }` payload도 허용한다. 사용자 식별과 색상 규칙은 서버 모델과 문서에서 함께 관리한다.
 
 ## Persistence Extension Points
 

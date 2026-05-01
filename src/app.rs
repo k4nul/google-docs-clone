@@ -22,10 +22,15 @@ pub fn build_app(config: &Config, state: AppState) -> AppResult<Router> {
 }
 
 fn build_cors(config: &Config) -> AppResult<CorsLayer> {
-    let origin: HeaderValue = config.frontend_origin_header()?;
+    let allowed_origin = if config.allows_any_frontend_origin() {
+        AllowOrigin::mirror_request()
+    } else {
+        let origins: Vec<HeaderValue> = config.frontend_origin_headers()?;
+        AllowOrigin::list(origins)
+    };
 
     Ok(CorsLayer::new()
-        .allow_origin(AllowOrigin::exact(origin))
+        .allow_origin(allowed_origin)
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
         .allow_headers(Any))
 }

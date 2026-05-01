@@ -6,7 +6,8 @@ use crate::errors::{AppError, AppResult};
 
 pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 4000;
-pub const DEFAULT_FRONTEND_ORIGIN: &str = "http://localhost:3000";
+pub const FRONTEND_ORIGIN_WILDCARD: &str = "*";
+pub const DEFAULT_FRONTEND_ORIGIN: &str = FRONTEND_ORIGIN_WILDCARD;
 pub const DEFAULT_RUST_LOG: &str = "backend=debug,tower_http=info";
 pub const DEFAULT_API_TOKEN: &str = "dev-admin-token";
 pub const DEFAULT_SNAPSHOT_STORE: &str = "file";
@@ -860,6 +861,61 @@ impl Config {
             ))
         })
     }
+
+    pub fn allows_any_frontend_origin(&self) -> bool {
+        frontend_origin_allows_any(&self.frontend_origin)
+    }
+
+    pub fn frontend_origin_headers(&self) -> AppResult<Vec<HeaderValue>> {
+        frontend_origin_headers(&self.frontend_origin)
+    }
+}
+
+pub fn frontend_origin_allows_any(value: &str) -> bool {
+    split_frontend_origins(value).any(|origin| origin == FRONTEND_ORIGIN_WILDCARD)
+}
+
+pub fn frontend_origin_allowed(allowed_origins: &str, origin: &HeaderValue) -> bool {
+    if frontend_origin_allows_any(allowed_origins) {
+        return true;
+    }
+
+    let Ok(received_origin) = origin.to_str() else {
+        return false;
+    };
+
+    split_frontend_origins(allowed_origins).any(|allowed_origin| allowed_origin == received_origin)
+}
+
+fn frontend_origin_headers(value: &str) -> AppResult<Vec<HeaderValue>> {
+    if frontend_origin_allows_any(value) {
+        return Ok(Vec::new());
+    }
+
+    let origins = split_frontend_origins(value).collect::<Vec<_>>();
+    if origins.is_empty() {
+        return Err(AppError::Config(
+            "FRONTEND_ORIGIN must contain `*` or at least one origin".to_owned(),
+        ));
+    }
+
+    origins
+        .into_iter()
+        .map(|origin| {
+            HeaderValue::from_str(origin).map_err(|_| {
+                AppError::Config(format!(
+                    "FRONTEND_ORIGIN entries must be valid header-safe origins or `*`, received `{origin}`"
+                ))
+            })
+        })
+        .collect()
+}
+
+fn split_frontend_origins(value: &str) -> impl Iterator<Item = &str> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty())
 }
 
 fn env_string(key: &str, default: &str) -> AppResult<String> {

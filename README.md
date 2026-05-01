@@ -56,7 +56,7 @@ cp .env.example .env
 cargo run
 ```
 
-기본 실행 주소는 `127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN`은 `http://localhost:3000`으로 설정되어 있어 로컬 프런트엔드 개발 서버와 포트가 겹치지 않습니다. 기본 `SNAPSHOT_STORE`는 `file`이라 문서 snapshot은 `SNAPSHOT_DIR` 아래에 저장됩니다.
+기본 실행 주소는 `127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN`은 `*`라 로컬 개발에서는 `localhost`, DDNS, 새 도메인 Origin을 모두 허용합니다. 운영처럼 Origin을 제한해야 하는 환경에서는 `FRONTEND_ORIGIN=https://example.com` 또는 `FRONTEND_ORIGIN=https://a.example.com,https://b.example.com`처럼 명시합니다. 기본 `SNAPSHOT_STORE`는 `file`이라 문서 snapshot은 `SNAPSHOT_DIR` 아래에 저장됩니다.
 
 ## 검증 흐름
 
@@ -100,7 +100,7 @@ cargo check --features full-snapshot-stores
 - Documents: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `DELETE /api/documents/:id`
 - Collaboration WebSocket: `GET /ws/:doc_id`
 
-현재 문서 API와 협업 WebSocket은 `Authorization` 헤더 없이 동작합니다. `POST /api/documents` 응답에는 저장소 호환을 위한 문서 전용 `access_token`이 계속 포함되지만, 클라이언트가 이후 요청에 이 값을 보낼 필요는 없습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 합니다. active room이 없으면 snapshot store에서 room을 복구하고, Yrs document update가 commit될 때마다 최신 snapshot을 저장합니다. 마지막 WebSocket 세션이 종료되면 한 번 더 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
+현재 문서 API와 협업 WebSocket은 `Authorization` 헤더 없이 동작합니다. `POST /api/documents` 응답에는 저장소 호환을 위한 문서 전용 `access_token`이 계속 포함되지만, 클라이언트가 이후 요청에 이 값을 보낼 필요는 없습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN` 정책과 일치해야 하며, `*` 또는 comma-separated origin 목록을 지원합니다. active room이 없으면 snapshot store에서 room을 복구하고, Yrs document update가 commit될 때마다 최신 snapshot을 저장합니다. 마지막 WebSocket 세션이 종료되면 한 번 더 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
 
 non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
 
@@ -197,7 +197,7 @@ ws.onmessage = (event) => {
 
 Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프런트가 아래 구조를 Yjs awareness local state로 설정하면, provider 또는 `y-protocols/awareness`가 `Awareness` binary message로 인코딩해 전송한다. 서버는 이 JSON shape를 검증한 뒤 room awareness state에 반영한다.
 
-브라우저 기본 `WebSocket` API는 임의의 `Authorization` 헤더를 직접 설정할 수 없으므로, 현재 로컬 개발 계약에서는 `/ws/:doc_id` 연결에 인증 헤더를 요구하지 않는다. WebSocket 연결에는 `FRONTEND_ORIGIN`과 일치하는 `Origin` 헤더만 필요하다.
+브라우저 기본 `WebSocket` API는 임의의 `Authorization` 헤더를 직접 설정할 수 없으므로, 현재 로컬 개발 계약에서는 `/ws/:doc_id` 연결에 인증 헤더를 요구하지 않는다. WebSocket 연결에는 `FRONTEND_ORIGIN` 정책과 일치하는 `Origin` 헤더만 필요하다. 기본값 `*`는 모든 Origin을 허용하고, 운영 환경에서는 명시적인 단일 origin 또는 comma-separated origin 목록으로 제한할 수 있다.
 
 ## 폴더 구조 요약
 
@@ -225,7 +225,7 @@ Awareness는 JSON을 WebSocket text frame으로 직접 보내지 않는다. 프�
 
 - `HOST`: 서버 바인드 호스트
 - `PORT`: 서버 바인드 포트
-- `FRONTEND_ORIGIN`: CORS 허용 origin
+- `FRONTEND_ORIGIN`: CORS와 WebSocket에서 허용할 origin. 기본값은 `*`이며, 단일 origin 또는 comma-separated 목록도 지원한다.
 - `RUST_LOG`: tracing 필터 설정
 - `API_TOKEN`: 현재 로컬 개발용 HTTP/WS 경로에서는 검증하지 않는 legacy 관리 토큰 설정
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, 또는 `managed`
@@ -688,7 +688,10 @@ WebSocket 연결 이후 클라이언트가 게시하는 Yrs awareness state는 �
 }
 ```
 
-- `user.id`, `user.name`, `client.id`, `client.kind`는 비어 있으면 안 된다.
+- `user`는 선택값이며, 전달하는 경우 `user.id`, `user.name`은 비어 있으면 안 된다.
+- `client`는 선택값이며, 전달하는 경우 `client.id`, `client.kind`는 비어 있으면 안 된다.
 - `user.color`는 `#RRGGBB` 형식의 6자리 hex color를 사용한다.
+- y-websocket provider의 초기 빈 `{}` awareness state도 허용한다.
+- Tiptap `CollaborationCaret`가 보내는 `{ user, cursor? }` awareness payload도 허용한다.
 - `selection`은 선택 사항이며, 커서/선택 범위를 공유하지 않을 때는 생략할 수 있다.
 - 서버는 이 구조를 canonical contract로 문서화하고, 현재 단계에서는 awareness payload를 그대로 중계한다.

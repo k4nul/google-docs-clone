@@ -172,7 +172,7 @@ Response: `204 No Content`
 - 인증 헤더 없이 연결한다.
 - `doc_id`는 UUID 형식이어야 한다.
 - 문서는 먼저 `POST /api/documents`로 생성되어 있어야 한다.
-- WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN`과 정확히 일치해야 한다.
+- WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN` 정책과 일치해야 한다. `FRONTEND_ORIGIN=*`이면 모든 Origin을 허용하고, `FRONTEND_ORIGIN=https://a.example.com,https://b.example.com`처럼 comma-separated 목록도 지원한다.
 - 같은 `doc_id`를 사용하는 클라이언트는 같은 Yrs broadcast group에 연결된다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 room을 on-demand로 복구한다.
 - snapshot restore source는 현재 `SNAPSHOT_STORE=file|apex_store|armdb|flash_kv|blockbucket|grebedb|grumpydb|graus_db|highlandcows_isam|simple_db|docdb|emdb|osmiumdb|eight|epoch_db|etchdb|fastkv|ferrumdb|rumdb|shorterdb|sqlite|heed|hightower_kv|hmdb|hurrahdb|fs_db|icefalldb|bitask|bitkv_rs|bitcask_engine|blazeup|candystore|celerix_store|citadeldb|cuendillar|data_pile|jammdb|mace|fjall|persy|persistent_kv|native_db|nebari|nikidb|nodb|okofdb|parity_db|pickledb|rcask|microkv|redb|rskey|readb|rustlite|rustcask|rusty_leveldb|canopydb|caves|ckydb|crepedb|scdb|skv|surrealkv|sled|rustbreak|yedb|btree_store|cacache|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|thetadb|tinybase|tinydb|dblite|dbless|db_rs|dharmadb|sanakirja|snaildb|tinykv|yakv|yakvdb|saberdb|smolldb|kstone|jsondb|joydb|png_db|kopperdb|kv|koit|lite_db|lmdb_rs_core|log_kv|append_log|mhdb|marble|loro_kv|luckdb|ipjdb|kagi|deeb|rubin|lsm_engine|lsm_storage_engine|lsmdb|lsm_tree|mindb|mmdb|nanodb|jfs|json_store|cdb64|json_mutex_db|toiletdb|feoxdb|s3|managed` 중 하나다.
@@ -559,7 +559,7 @@ Response: `204 No Content`
 
 - 프런트엔드는 문서 API와 WebSocket 연결에 `Authorization` 헤더를 넣지 않아도 된다.
 - 문서 생성 응답의 `credentials.access_token`은 현재 클라이언트 플로우에서 재사용하지 않는다.
-- WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN`과 일치해야 한다.
+- WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN` 정책과 일치해야 한다. 기본 `*`는 모든 Origin을 허용한다.
 - 연결 후 게시하는 Yrs awareness state는 아래 구조를 표준으로 사용한다.
 
 ```json
@@ -580,7 +580,10 @@ Response: `204 No Content`
 }
 ```
 
-- `user.id`, `user.name`, `client.id`, `client.kind`는 trim 후 빈 문자열이면 안 된다.
+- `user`는 선택값이며, 전달하는 경우 `user.id`, `user.name`은 trim 후 빈 문자열이면 안 된다.
+- `client`는 선택값이며, 전달하는 경우 `client.id`, `client.kind`는 trim 후 빈 문자열이면 안 된다.
 - `user.color`는 `#RRGGBB` 형식의 hex color를 사용한다.
+- y-websocket provider의 초기 빈 `{}` awareness state도 허용한다.
+- Tiptap `CollaborationCaret`가 보내는 `{ user, cursor? }` awareness payload도 허용한다.
 - `selection`은 선택 사항이며, 커서 위치를 보내지 않을 때는 생략할 수 있다.
 - 외부 인증 연동과 사용자 프로필의 source of truth는 아직 별도 계약에 포함하지 않는다.

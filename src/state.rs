@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use axum::http::Uri;
+use axum::http::{HeaderValue, Uri};
 
 use crate::{
     collab::coordinator::{RoomCoordinator, noop_room_coordinator, room_coordinator_from_config},
     collab::locator::{ResolvedRoom, RoomLocator, local_room_locator, room_locator_from_config},
     collab::rooms::RoomRegistry,
-    config::{Config, DEFAULT_FRONTEND_ORIGIN},
+    config::{Config, DEFAULT_FRONTEND_ORIGIN, frontend_origin_allowed},
     errors::{AppError, AppResult},
     storage::{SnapshotStore, in_memory_snapshot_store, snapshot_store_from_config},
 };
@@ -136,6 +136,10 @@ impl AppState {
 
     pub fn frontend_origin(&self) -> &str {
         &self.frontend_origin
+    }
+
+    pub fn frontend_origin_allowed(&self, origin: &HeaderValue) -> bool {
+        frontend_origin_allowed(&self.frontend_origin, origin)
     }
 
     pub fn api_token(&self) -> &str {

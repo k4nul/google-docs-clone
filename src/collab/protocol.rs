@@ -70,6 +70,59 @@ mod tests {
     }
 
     #[test]
+    fn validating_protocol_accepts_tiptap_collaboration_caret_awareness() {
+        let protocol = ValidatingProtocol;
+        let mut awareness = Awareness::new(Doc::new());
+        let update = AwarenessUpdate {
+            clients: HashMap::from([(
+                7,
+                AwarenessUpdateEntry {
+                    clock: 1,
+                    json: r##"{
+                        "user": {
+                            "id": "user-7",
+                            "name": "Kim",
+                            "color": "#1f6feb"
+                        },
+                        "cursor": {
+                            "anchor": {"type": null, "tname": "content", "item": null, "assoc": 0},
+                            "head": {"type": null, "tname": "content", "item": null, "assoc": 0}
+                        }
+                    }"##
+                    .to_owned(),
+                },
+            )]),
+        };
+
+        protocol
+            .handle_awareness_update(&mut awareness, update)
+            .expect("Tiptap awareness payload should be accepted");
+
+        assert!(awareness.clients().contains_key(&7));
+    }
+
+    #[test]
+    fn validating_protocol_accepts_empty_y_websocket_awareness() {
+        let protocol = ValidatingProtocol;
+        let mut awareness = Awareness::new(Doc::new());
+        let update = AwarenessUpdate {
+            clients: HashMap::from([(
+                7,
+                AwarenessUpdateEntry {
+                    clock: 1,
+                    json: "{}".to_owned(),
+                },
+            )]),
+        };
+
+        protocol
+            .handle_awareness_update(&mut awareness, update)
+            .expect("empty y-websocket awareness payload should be accepted");
+
+        assert!(awareness.clients().contains_key(&7));
+    }
+
+    #[test]
     fn validating_protocol_allows_disconnect_markers() {
         let protocol = ValidatingProtocol;
         let mut awareness = Awareness::new(Doc::new());

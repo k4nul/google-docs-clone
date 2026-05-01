@@ -3,16 +3,22 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AwarenessState {
-    pub user: AwarenessUser,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<AwarenessUser>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selection: Option<AwarenessSelection>,
-    pub client: AwarenessClient,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client: Option<AwarenessClient>,
 }
 
 impl AwarenessState {
     pub fn validate(&self) -> Result<(), AwarenessValidationError> {
-        self.user.validate()?;
-        self.client.validate()?;
+        if let Some(user) = &self.user {
+            user.validate()?;
+        }
+        if let Some(client) = &self.client {
+            client.validate()?;
+        }
         Ok(())
     }
 }
@@ -114,19 +120,19 @@ mod tests {
     #[test]
     fn awareness_state_serializes_to_frontend_friendly_shape() {
         let state = AwarenessState {
-            user: AwarenessUser {
+            user: Some(AwarenessUser {
                 id: "user-7".to_owned(),
                 name: "Kim".to_owned(),
                 color: "#1f6feb".to_owned(),
-            },
+            }),
             selection: Some(AwarenessSelection {
                 anchor: 3,
                 head: 11,
             }),
-            client: AwarenessClient {
+            client: Some(AwarenessClient {
                 id: "session-3".to_owned(),
                 kind: "editor".to_owned(),
-            },
+            }),
         };
 
         let value = serde_json::to_value(&state).expect("awareness state should serialize");
@@ -143,16 +149,16 @@ mod tests {
     #[test]
     fn awareness_state_validation_rejects_invalid_color() {
         let state = AwarenessState {
-            user: AwarenessUser {
+            user: Some(AwarenessUser {
                 id: "user-7".to_owned(),
                 name: "Kim".to_owned(),
                 color: "blue".to_owned(),
-            },
+            }),
             selection: None,
-            client: AwarenessClient {
+            client: Some(AwarenessClient {
                 id: "session-3".to_owned(),
                 kind: "editor".to_owned(),
-            },
+            }),
         };
 
         let error = state
@@ -169,16 +175,16 @@ mod tests {
     #[test]
     fn awareness_state_validation_rejects_blank_client_kind() {
         let state = AwarenessState {
-            user: AwarenessUser {
+            user: Some(AwarenessUser {
                 id: "user-7".to_owned(),
                 name: "Kim".to_owned(),
                 color: "#1f6feb".to_owned(),
-            },
+            }),
             selection: None,
-            client: AwarenessClient {
+            client: Some(AwarenessClient {
                 id: "session-3".to_owned(),
                 kind: "   ".to_owned(),
-            },
+            }),
         };
 
         let error = state
@@ -187,5 +193,41 @@ mod tests {
 
         assert_eq!(error.field(), "client.kind");
         assert_eq!(error.message(), "must not be empty");
+    }
+
+    #[test]
+    fn awareness_state_accepts_tiptap_collaboration_caret_shape() {
+        let state: AwarenessState = serde_json::from_str(
+            r##"{
+                "user": {
+                    "id": "user-7",
+                    "name": "Kim",
+                    "color": "#1f6feb"
+                },
+                "cursor": {
+                    "anchor": {"type": null, "tname": "content", "item": null, "assoc": 0},
+                    "head": {"type": null, "tname": "content", "item": null, "assoc": 0}
+                }
+            }"##,
+        )
+        .expect("Tiptap awareness state should deserialize");
+
+        state
+            .validate()
+            .expect("Tiptap awareness state should validate");
+        assert!(state.user.is_some());
+        assert!(state.client.is_none());
+    }
+
+    #[test]
+    fn awareness_state_accepts_empty_y_websocket_state() {
+        let state: AwarenessState =
+            serde_json::from_str("{}").expect("empty awareness state should deserialize");
+
+        state
+            .validate()
+            .expect("empty y-websocket awareness state should validate");
+        assert!(state.user.is_none());
+        assert!(state.client.is_none());
     }
 }
