@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   connectCollaborationConnection,
   createCollaborationConnection,
-  destroyCollaborationConnection,
+  scheduleCollaborationConnectionDestroy,
+  type CollaborationConnection,
   type ProviderConnectionStatus,
 } from '@/lib/collab/connection';
 import { createPlaceholderCollaborationUser } from '@/lib/collab/user';
@@ -33,6 +34,14 @@ interface EditorShellProps {
   onCollaborationChange?: (snapshot: CollaborationSnapshot) => void;
 }
 
+type WebsocketTransportStatus = 'connected' | 'connecting' | 'disconnected' | 'disabled';
+
+interface RealtimeDebugState {
+  synced: boolean;
+  transport: WebsocketTransportStatus;
+  url: string | null;
+}
+
 function getConnectionMode(status: ProviderConnectionStatus) {
   if (status === 'local-only') {
     return 'Local-only mode';
@@ -53,15 +62,34 @@ function getConnectionMode(status: ProviderConnectionStatus) {
   return 'Realtime server disconnected';
 }
 
+function getRealtimeDebugState(connection: CollaborationConnection): RealtimeDebugState {
+  const { provider } = connection;
+
+  if (!provider) {
+    return {
+      synced: false,
+      transport: 'disabled',
+      url: null,
+    };
+  }
+
+  return {
+    synced: provider.synced,
+    transport: provider.wsconnected
+      ? 'connected'
+      : provider.wsconnecting
+        ? 'connecting'
+        : 'disconnected',
+    url: provider.url,
+  };
+}
+
 export function EditorShell({
   docId,
   onEditorReady,
   onCollaborationChange,
 }: EditorShellProps) {
   const [user] = useState(() => createPlaceholderCollaborationUser());
-  const [connectionStatus, setConnectionStatus] = useState<ProviderConnectionStatus>(
-    appEnv.wsUrl ? 'connecting' : 'local-only',
-  );
   const [activeCollaborators, setActiveCollaborators] = useState<CollaborationSnapshot['activeCollaborators']>([]);
   const [isCurrentUserTyping, setIsCurrentUserTyping] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
@@ -74,57 +102,10 @@ export function EditorShell({
       }),
     [docId],
   );
-
-  useEffect(() => {
-    if (!connection.provider) {
-      return;
-    }
-
-    const unsubscribeStatus = connection.provider.onStatusChange(setConnectionStatus);
-
-    const updateCollaborators = () => {
-      const collaborators = Array.from(connection.provider?.awareness.getStates().entries() ?? []).map(
-        ([clientId, state]) => {
-          const userState = state.user as { name?: string; color?: string; id?: string } | undefined;
-          return {
-            id: clientId,
-            name: userState?.name ?? 'Anonymous',
-            ...(userState?.color ? { color: userState.color } : {}),
-            isTyping: false,
-            isCurrentUser: userState?.id === user.id,
-          };
-        },
-      );
-
-      setActiveCollaborators(collaborators);
-    };
-
-    connection.provider.awareness.setLocalState({
-      user,
-      client: {
-        id: user.id,
-        kind: 'editor',
-      },
-    });
-    updateCollaborators();
-    connection.provider.awareness.on('change', updateCollaborators);
-
-    return () => {
-      unsubscribeStatus();
-      connection.provider?.awareness.off('change', updateCollaborators);
-    };
-  }, [connection.provider, user]);
-
-  useEffect(() => {
-    connectCollaborationConnection(connection);
-
-    return () => {
-      if (typingTimeoutRef.current !== null) {
-        window.clearTimeout(typingTimeoutRef.current);
-      }
-      destroyCollaborationConnection(connection);
-    };
-  }, [connection]);
+  const [connectionStatus, setConnectionStatus] = useState<ProviderConnectionStatus>(
+    connection.provider ? 'connecting' : 'local-only',
+  );
+  const [realtimeDebug, setRealtimeDebug] = useState(() => getRealtimeDebugState(connection));
 
   const editor = useEditor(
     {
@@ -138,6 +119,66 @@ export function EditorShell({
     },
     [connection.roomId, connection.provider, user.id],
   );
+
+  useEffect(() => {
+    const { provider } = connection;
+
+    if (!provider) {
+      return undefined;
+    }
+
+    const refreshRealtimeDebug = () => {
+      setRealtimeDebug(getRealtimeDebugState(connection));
+    };
+
+    const unsubscribeStatus = provider.onStatusChange((status) => {
+      setConnectionStatus(status);
+      refreshRealtimeDebug();
+    });
+
+    const updateCollaborators = () => {
+      const collaborators = Array.from(provider.awareness.getStates().entries()).map(([clientId, state]) => {
+        const userState = state.user as { name?: string; color?: string; id?: string } | undefined;
+        return {
+          id: clientId,
+          name: userState?.name ?? 'Anonymous',
+          ...(userState?.color ? { color: userState.color } : {}),
+          isTyping: false,
+          isCurrentUser: userState?.id === user.id,
+        };
+      });
+
+      setActiveCollaborators(collaborators);
+      refreshRealtimeDebug();
+    };
+
+    provider.awareness.setLocalState({
+      user,
+      client: {
+        id: user.id,
+        kind: 'editor',
+      },
+    });
+    updateCollaborators();
+    provider.awareness.on('change', updateCollaborators);
+
+    return () => {
+      unsubscribeStatus();
+      provider.awareness.off('change', updateCollaborators);
+    };
+  }, [connection, user]);
+
+  useEffect(() => {
+    connectCollaborationConnection(connection);
+
+    return () => {
+      if (typingTimeoutRef.current !== null) {
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      scheduleCollaborationConnectionDestroy(connection);
+    };
+  }, [connection]);
 
   useEffect(() => {
     if (!editor || !connection.provider) {
@@ -209,7 +250,8 @@ export function EditorShell({
       </div>
 
       <div className="info-list">
-        <span>Presence provider: <code>{appEnv.wsUrl ?? 'disabled'}</code></span>
+        <span>Presence provider: <code>{realtimeDebug.url ?? appEnv.wsUrl ?? 'disabled'}</code></span>
+        <span>Websocket: <code>{realtimeDebug.transport}</code> / synced: <code>{String(realtimeDebug.synced)}</code></span>
         <span>Shared fragment: <code>content</code></span>
         {/* <span>Peers in room: <code>{activeCollaborators.length}</code></span> */}
       </div>

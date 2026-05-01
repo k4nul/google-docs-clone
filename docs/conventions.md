@@ -25,7 +25,7 @@
 ## API Access Rules
 
 - 직접 `fetch`를 분산 호출하지 않고 `src/lib/api`를 경유한다
-- API base URL은 `VITE_API_BASE_URL`만 사용한다
+- API base URL은 `VITE_API_BASE_URL`이 있으면 그 값을 쓰고, 없으면 현재 브라우저 origin에서 자동 계산한다
 - route component는 raw endpoint string을 조합하지 않고 helper를 사용한다
 
 ## CSS Strategy

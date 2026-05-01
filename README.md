@@ -8,7 +8,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - `/docs/:docId` 경로에서 collaborative editor 셸 제공
 - Tiptap 기반 rich text editor 구성
 - Yjs binary sync protocol 기반 실시간 협업 연결 구조 분리
-- `VITE_WS_URL`이 없을 때도 동작하는 local-only collaboration 모드 지원
+- `VITE_WS_URL`이 없으면 현재 브라우저 origin에서 WebSocket URL 자동 계산
 - `.docx`를 HTML로 변환하고 sanitize 하는 import 유틸리티 제공
 - API 연동 확장을 위한 `src/lib/api` 경계 유지
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
@@ -34,7 +34,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 | `src/features/editor` | 에디터 셸, 툴바, extension 조합 | `src/lib/collab`, `src/shared/ui` |
 | `src/features/documents` | 문서 목록 화면 구성 | `src/lib/api`, `src/shared/ui` |
 | `src/lib/collab` | `Y.Doc`, provider 생성과 해제 | `yjs`, `lib0`, `y-protocols` |
-| `src/lib/api` | API URL 생성, fetch helper | `VITE_API_BASE_URL` |
+| `src/lib/api` | API URL 생성, fetch helper | `VITE_API_BASE_URL` 또는 현재 origin |
 | `src/lib/import` | DOCX import와 sanitize | `mammoth`, `dompurify` |
 | `src/shared/config`, `src/shared/types`, `src/shared/ui` | 공용 설정, 타입, UI | 여러 feature에서 공통 사용 |
 
@@ -163,19 +163,20 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ### 환경 변수
 
-`.env.example`를 참고해 `.env` 또는 `.env.local`을 구성합니다.
+API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용합니다. 문서 생성 기능을 쓰려면 `VITE_API_TOKEN`은 별도로 설정해야 합니다.
 
 ```bash
+# optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
 VITE_API_TOKEN=dev-admin-token
-VITE_WS_URL=ws://localhost:4000
+VITE_WS_URL=ws://localhost:4000/ws
 ```
 
-- `VITE_API_BASE_URL`: REST API base URL
+- `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용합니다.
 - `VITE_API_TOKEN`: 문서 생성용 admin API token
-- `VITE_WS_URL`: collaboration websocket base URL. 코드에서 `/ws/:docId`를 자동으로 붙입니다.
+- `VITE_WS_URL`: collaboration websocket base URL. 없으면 `ws(s)://<current-host>/ws`를 사용합니다.
 
-`VITE_WS_URL`이 비어 있으면 editor는 local-only Yjs mode로 동작합니다.
+현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 됩니다.
 
 환경 변수를 수정했다면 `npm run dev`를 반드시 다시 시작해야 합니다.
 

@@ -7,6 +7,8 @@ import * as Y from 'yjs';
 const MSG_SYNC = 0;
 const MSG_AWARENESS = 1;
 const MSG_AWARENESS_QUERY = 3;
+const PROVIDER_RECONNECT_DELAY_MS = 1_500;
+const PROVIDER_RESYNC_INTERVAL_MS = 10_000;
 
 export type ProviderConnectionStatus =
   | 'local-only'
@@ -50,11 +52,13 @@ export class BinaryWebsocketProvider {
   readonly doc: Y.Doc;
   readonly roomId: string;
   readonly serverUrl: string;
+  readonly url: string;
 
   private connectionStatus: ProviderConnectionStatus = 'disconnected';
   private destroyed = false;
   private readonly statusListeners = new Set<(status: ProviderConnectionStatus) => void>();
   private reconnectTimer: number | null = null;
+  private resyncTimer: number | null = null;
   private readonly awarenessUpdateHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
     origin: unknown,
@@ -65,11 +69,13 @@ export class BinaryWebsocketProvider {
   wsconnected = false;
   wsconnecting = false;
   shouldConnect = false;
+  synced = false;
 
   constructor(serverUrl: string, roomId: string, doc: Y.Doc) {
     this.serverUrl = serverUrl;
     this.roomId = roomId;
     this.doc = doc;
+    this.url = buildWsEndpoint(serverUrl, roomId);
     this.awareness = new awarenessProtocol.Awareness(doc);
 
     this.docUpdateHandler = (update, origin) => {
@@ -102,6 +108,31 @@ export class BinaryWebsocketProvider {
     }
   }
 
+  private sendSyncStep1(ws: WebSocket) {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, MSG_SYNC);
+    syncProtocol.writeSyncStep1(encoder, this.doc);
+    ws.send(encoding.toUint8Array(encoder));
+  }
+
+  private startResync() {
+    this.stopResync();
+    this.resyncTimer = window.setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.sendSyncStep1(this.ws);
+      }
+    }, PROVIDER_RESYNC_INTERVAL_MS);
+  }
+
+  private stopResync() {
+    if (this.resyncTimer === null) {
+      return;
+    }
+
+    window.clearInterval(this.resyncTimer);
+    this.resyncTimer = null;
+  }
+
   getStatus() {
     return this.connectionStatus;
   }
@@ -122,23 +153,22 @@ export class BinaryWebsocketProvider {
 
     this.shouldConnect = true;
     this.wsconnecting = true;
+    this.synced = false;
     this.setConnectionStatus(this.reconnectTimer === null ? 'connecting' : 'reconnecting');
-
-    const endpoint = buildWsEndpoint(this.serverUrl, this.roomId);
     logConnectionEvent('websocket connect requested', {
-      endpoint,
+      endpoint: this.url,
       roomId: this.roomId,
       status: this.getStatus(),
     });
 
-    const ws = new WebSocket(endpoint);
+    const ws = new WebSocket(this.url);
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
 
     ws.onopen = () => {
       if (this.destroyed || !this.shouldConnect) {
         logConnectionEvent('websocket opened after cleanup, closing stale socket', {
-          endpoint,
+          endpoint: this.url,
           roomId: this.roomId,
         });
         ws.close();
@@ -148,15 +178,13 @@ export class BinaryWebsocketProvider {
       this.wsconnecting = false;
       this.wsconnected = true;
       this.setConnectionStatus('connected');
+      this.startResync();
       logConnectionEvent('websocket connected', {
-        endpoint,
+        endpoint: this.url,
         roomId: this.roomId,
       });
 
-      const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, MSG_SYNC);
-      syncProtocol.writeSyncStep1(encoder, this.doc);
-      ws.send(encoding.toUint8Array(encoder));
+      this.sendSyncStep1(ws);
 
       const localState = this.awareness.getLocalState();
       if (localState) {
@@ -181,6 +209,7 @@ export class BinaryWebsocketProvider {
         const reply = encoding.createEncoder();
         encoding.writeVarUint(reply, MSG_SYNC);
         syncProtocol.readSyncMessage(decoder, reply, this.doc, this);
+        this.synced = true;
 
         const replyBytes = encoding.toUint8Array(reply);
         if (replyBytes.length > 1 && ws.readyState === WebSocket.OPEN) {
@@ -201,6 +230,8 @@ export class BinaryWebsocketProvider {
     };
 
     ws.onclose = (event) => {
+      this.stopResync();
+      this.synced = false;
       this.wsconnected = false;
       this.wsconnecting = false;
       if (this.ws === ws) {
@@ -208,7 +239,7 @@ export class BinaryWebsocketProvider {
       }
       logConnectionEvent('websocket closed', {
         code: event.code,
-        endpoint,
+        endpoint: this.url,
         roomId: this.roomId,
         wasClean: event.wasClean,
         willReconnect: this.shouldConnect,
@@ -221,7 +252,7 @@ export class BinaryWebsocketProvider {
         this.reconnectTimer = window.setTimeout(() => {
           this.reconnectTimer = null;
           this.connect();
-        }, 1500);
+        }, PROVIDER_RECONNECT_DELAY_MS);
         return;
       }
 
@@ -230,7 +261,7 @@ export class BinaryWebsocketProvider {
 
     ws.onerror = () => {
       logConnectionEvent('websocket error', {
-        endpoint,
+        endpoint: this.url,
         roomId: this.roomId,
         readyState: ws.readyState,
       });
@@ -242,6 +273,8 @@ export class BinaryWebsocketProvider {
 
   disconnect() {
     this.shouldConnect = false;
+    this.stopResync();
+    this.synced = false;
     if (this.reconnectTimer !== null) {
       window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -263,6 +296,10 @@ export class BinaryWebsocketProvider {
   }
 
   destroy() {
+    if (this.destroyed) {
+      return;
+    }
+
     this.destroyed = true;
     this.disconnect();
     this.doc.off('update', this.docUpdateHandler);
@@ -275,6 +312,8 @@ export interface CollaborationConnection {
   roomId: string;
   doc: Y.Doc;
   provider: BinaryWebsocketProvider | null;
+  destroyTimeout: ReturnType<typeof setTimeout> | null;
+  destroyed: boolean;
 }
 
 interface CreateCollaborationConnectionParams {
@@ -294,6 +333,8 @@ export function createCollaborationConnection({
       roomId: normalizedRoomId,
       doc,
       provider: null,
+      destroyTimeout: null,
+      destroyed: false,
     };
   }
 
@@ -303,14 +344,43 @@ export function createCollaborationConnection({
     roomId: normalizedRoomId,
     doc,
     provider,
+    destroyTimeout: null,
+    destroyed: false,
   };
 }
 
 export function connectCollaborationConnection(connection: CollaborationConnection) {
+  cancelScheduledCollaborationConnectionDestroy(connection);
   connection.provider?.connect();
 }
 
 export function destroyCollaborationConnection(connection: CollaborationConnection) {
+  if (connection.destroyed) {
+    return;
+  }
+
+  cancelScheduledCollaborationConnectionDestroy(connection);
   connection.provider?.destroy();
   connection.doc.destroy();
+  connection.destroyed = true;
+}
+
+export function scheduleCollaborationConnectionDestroy(connection: CollaborationConnection) {
+  if (connection.destroyed || connection.destroyTimeout) {
+    return;
+  }
+
+  connection.destroyTimeout = setTimeout(() => {
+    connection.destroyTimeout = null;
+    destroyCollaborationConnection(connection);
+  }, 0);
+}
+
+export function cancelScheduledCollaborationConnectionDestroy(connection: CollaborationConnection) {
+  if (!connection.destroyTimeout) {
+    return;
+  }
+
+  clearTimeout(connection.destroyTimeout);
+  connection.destroyTimeout = null;
 }

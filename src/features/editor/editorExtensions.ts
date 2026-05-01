@@ -12,7 +12,7 @@ export const INITIAL_EDITOR_CONTENT = `
   <p>This document is ready for Yjs-based collaboration wiring.</p>
   <ul>
     <li>Open the route from the document list.</li>
-    <li>Set <code>VITE_WS_URL</code> to enable realtime presence.</li>
+    <li>Realtime presence uses the current browser origin by default.</li>
     <li>Wire imported HTML through <code>@/lib/import/docxImport.ts</code>.</li>
   </ul>
 `;
