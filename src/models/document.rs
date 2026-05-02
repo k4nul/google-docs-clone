@@ -57,3 +57,91 @@ impl Document {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn document_new_uses_provided_title() {
+        let doc = Document::new(Uuid::new_v4(), Some("My Doc".to_owned()));
+        assert_eq!(doc.title, "My Doc");
+    }
+
+    #[test]
+    fn document_new_trims_whitespace_from_title() {
+        let doc = Document::new(Uuid::new_v4(), Some("  Trimmed  ".to_owned()));
+        assert_eq!(doc.title, "Trimmed");
+    }
+
+    #[test]
+    fn document_new_assigns_default_title_when_title_is_none() {
+        let id = Uuid::new_v4();
+        let doc = Document::new(id, None);
+        assert_eq!(doc.title, format!("Document {id}"));
+    }
+
+    #[test]
+    fn document_new_assigns_default_title_when_title_is_empty() {
+        let id = Uuid::new_v4();
+        let doc = Document::new(id, Some(String::new()));
+        assert_eq!(doc.title, format!("Document {id}"));
+    }
+
+    #[test]
+    fn document_new_assigns_default_title_when_title_is_whitespace_only() {
+        let id = Uuid::new_v4();
+        let doc = Document::new(id, Some("   ".to_owned()));
+        assert_eq!(doc.title, format!("Document {id}"));
+    }
+
+    #[test]
+    fn document_new_sets_created_at_and_updated_at_to_same_instant() {
+        let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        assert_eq!(doc.created_at, doc.updated_at);
+    }
+
+    #[test]
+    fn document_access_token_is_not_empty() {
+        let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        assert!(!doc.access_token().is_empty());
+    }
+
+    #[test]
+    fn document_authorize_returns_true_for_correct_token() {
+        let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        assert!(doc.authorize(doc.access_token()));
+    }
+
+    #[test]
+    fn document_authorize_returns_false_for_wrong_token() {
+        let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        assert!(!doc.authorize("wrong-token"));
+    }
+
+    #[test]
+    fn document_touch_advances_updated_at_without_changing_created_at() {
+        let mut doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        let original_created_at = doc.created_at;
+        let original_updated_at = doc.updated_at;
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        doc.touch();
+        assert_eq!(doc.created_at, original_created_at);
+        assert!(doc.updated_at > original_updated_at);
+    }
+
+    #[test]
+    fn document_access_token_is_omitted_from_serialized_json() {
+        let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        let value = serde_json::to_value(&doc).expect("document should serialize");
+        assert!(value.get("access_token").is_none());
+    }
+
+    #[test]
+    fn document_two_instances_with_same_id_have_different_access_tokens() {
+        let id = Uuid::new_v4();
+        let doc_a = Document::new(id, Some("Test".to_owned()));
+        let doc_b = Document::new(id, Some("Test".to_owned()));
+        assert_ne!(doc_a.access_token(), doc_b.access_token());
+    }
+}

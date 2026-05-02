@@ -145,6 +145,133 @@ pub fn file_snapshot_store(
     Ok(Arc::new(FileSnapshotStore::new(root)?))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::document::Document;
+
+    fn make_snapshot(title: &str) -> DocumentSnapshot {
+        let doc = Document::new(Uuid::new_v4(), Some(title.to_owned()));
+        DocumentSnapshot::new(doc, vec![1, 2, 3])
+    }
+
+    #[test]
+    fn in_memory_store_returns_none_for_missing_snapshot() {
+        let store = InMemorySnapshotStore::new();
+        let result = store
+            .load_snapshot(&Uuid::new_v4())
+            .expect("lookup should not error");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn in_memory_store_saves_and_loads_snapshot() {
+        let store = InMemorySnapshotStore::new();
+        let snapshot = make_snapshot("Hello");
+        let doc_id = snapshot.document.id;
+
+        store.save_snapshot(snapshot).expect("save should succeed");
+
+        let loaded = store
+            .load_snapshot(&doc_id)
+            .expect("load should not error")
+            .expect("snapshot should exist after save");
+
+        assert_eq!(loaded.document.id, doc_id);
+        assert_eq!(loaded.update, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn in_memory_store_replaces_existing_snapshot_on_second_save() {
+        let store = InMemorySnapshotStore::new();
+        let doc = Document::new(Uuid::new_v4(), Some("Original".to_owned()));
+        let doc_id = doc.id;
+
+        store
+            .save_snapshot(DocumentSnapshot::new(doc.clone(), vec![1]))
+            .expect("first save should succeed");
+        store
+            .save_snapshot(DocumentSnapshot::new(doc, vec![2]))
+            .expect("second save should succeed");
+
+        let loaded = store
+            .load_snapshot(&doc_id)
+            .expect("load should not error")
+            .expect("snapshot should exist");
+        assert_eq!(loaded.update, vec![2]);
+    }
+
+    #[test]
+    fn in_memory_store_delete_removes_snapshot() {
+        let store = InMemorySnapshotStore::new();
+        let snapshot = make_snapshot("Deletable");
+        let doc_id = snapshot.document.id;
+
+        store.save_snapshot(snapshot).expect("save should succeed");
+        store
+            .delete_snapshot(&doc_id)
+            .expect("delete should succeed");
+
+        let result = store
+            .load_snapshot(&doc_id)
+            .expect("lookup after delete should not error");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn in_memory_store_delete_is_idempotent_for_missing_snapshot() {
+        let store = InMemorySnapshotStore::new();
+        store
+            .delete_snapshot(&Uuid::new_v4())
+            .expect("deleting a non-existent snapshot should not error");
+    }
+
+    #[test]
+    fn in_memory_store_lists_all_saved_documents() {
+        let store = InMemorySnapshotStore::new();
+        let snapshot_a = make_snapshot("Alpha");
+        let snapshot_b = make_snapshot("Beta");
+        let id_a = snapshot_a.document.id;
+        let id_b = snapshot_b.document.id;
+
+        store.save_snapshot(snapshot_a).expect("save A should succeed");
+        store.save_snapshot(snapshot_b).expect("save B should succeed");
+
+        let mut listed = store.list_documents().expect("list should succeed");
+        listed.sort_by_key(|d| d.id);
+
+        let mut expected_ids = vec![id_a, id_b];
+        expected_ids.sort();
+
+        assert_eq!(
+            listed.iter().map(|d| d.id).collect::<Vec<_>>(),
+            expected_ids
+        );
+    }
+
+    #[test]
+    fn in_memory_store_returns_empty_list_when_no_snapshots() {
+        let store = InMemorySnapshotStore::new();
+        let documents = store.list_documents().expect("list should succeed");
+        assert!(documents.is_empty());
+    }
+
+    #[test]
+    fn in_memory_store_excludes_deleted_document_from_list() {
+        let store = InMemorySnapshotStore::new();
+        let snapshot = make_snapshot("Temporary");
+        let doc_id = snapshot.document.id;
+
+        store.save_snapshot(snapshot).expect("save should succeed");
+        store
+            .delete_snapshot(&doc_id)
+            .expect("delete should succeed");
+
+        let documents = store.list_documents().expect("list should succeed");
+        assert!(documents.is_empty());
+    }
+}
+
 pub fn snapshot_store_from_config(config: &Config) -> Result<Arc<dyn SnapshotStore>, StorageError> {
     match config.snapshot_store.trim().to_ascii_lowercase().as_str() {
         "memory" => Ok(in_memory_snapshot_store()),

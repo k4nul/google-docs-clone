@@ -87,4 +87,68 @@ mod tests {
             .handle_awareness_update(&mut awareness, update)
             .expect("disconnect markers should be accepted");
     }
+
+    #[test]
+    fn validating_protocol_accepts_valid_awareness_payload() {
+        let protocol = ValidatingProtocol;
+        let mut awareness = Awareness::new(Doc::new());
+        let update = AwarenessUpdate {
+            clients: HashMap::from([(
+                42,
+                AwarenessUpdateEntry {
+                    clock: 1,
+                    json: r##"{"user":{"id":"user-1","name":"Alice","color":"#1f6feb"},"client":{"id":"session-1","kind":"editor"}}"##.to_owned(),
+                },
+            )]),
+        };
+
+        protocol
+            .handle_awareness_update(&mut awareness, update)
+            .expect("valid awareness payload should be accepted");
+
+        assert!(awareness.clients().contains_key(&42));
+    }
+
+    #[test]
+    fn validating_protocol_accepts_valid_awareness_with_selection() {
+        let protocol = ValidatingProtocol;
+        let mut awareness = Awareness::new(Doc::new());
+        let update = AwarenessUpdate {
+            clients: HashMap::from([(
+                5,
+                AwarenessUpdateEntry {
+                    clock: 1,
+                    json: r##"{"user":{"id":"user-5","name":"Bob","color":"#ff0000"},"selection":{"anchor":3,"head":10},"client":{"id":"session-5","kind":"viewer"}}"##.to_owned(),
+                },
+            )]),
+        };
+
+        protocol
+            .handle_awareness_update(&mut awareness, update)
+            .expect("valid awareness with selection field should be accepted");
+
+        assert!(awareness.clients().contains_key(&5));
+    }
+
+    #[test]
+    fn validating_protocol_rejects_malformed_json() {
+        let protocol = ValidatingProtocol;
+        let mut awareness = Awareness::new(Doc::new());
+        let update = AwarenessUpdate {
+            clients: HashMap::from([(
+                1,
+                AwarenessUpdateEntry {
+                    clock: 1,
+                    json: "not-valid-json".to_owned(),
+                },
+            )]),
+        };
+
+        let error = protocol
+            .handle_awareness_update(&mut awareness, update)
+            .expect_err("malformed JSON should be rejected");
+
+        assert!(matches!(error, SyncError::PermissionDenied { .. }));
+        assert!(awareness.clients().is_empty());
+    }
 }

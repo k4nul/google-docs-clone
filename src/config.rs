@@ -125,3 +125,59 @@ fn env_optional_string(key: &str) -> AppResult<Option<String>> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_config() -> Config {
+        Config {
+            host: "127.0.0.1".to_owned(),
+            port: 4000,
+            frontend_origin: "http://localhost:3000".to_owned(),
+            rust_log: "backend=debug".to_owned(),
+            api_token: "test-token".to_owned(),
+            snapshot_store: "memory".to_owned(),
+            snapshot_dir: "./data/snapshots".to_owned(),
+            room_locator: "local".to_owned(),
+            node_id: "local-node".to_owned(),
+            room_owner_hints_path: None,
+        }
+    }
+
+    #[test]
+    fn bind_address_formats_host_and_port() {
+        assert_eq!(test_config().bind_address(), "127.0.0.1:4000");
+    }
+
+    #[test]
+    fn bind_address_uses_custom_host_and_port() {
+        let config = Config {
+            host: "0.0.0.0".to_owned(),
+            port: 8080,
+            ..test_config()
+        };
+        assert_eq!(config.bind_address(), "0.0.0.0:8080");
+    }
+
+    #[test]
+    fn frontend_origin_header_returns_header_value_matching_origin_string() {
+        let config = test_config();
+        let header = config
+            .frontend_origin_header()
+            .expect("valid origin should produce a header value");
+        assert_eq!(header.to_str().unwrap(), "http://localhost:3000");
+    }
+
+    #[test]
+    fn frontend_origin_header_rejects_origin_containing_newline() {
+        let config = Config {
+            frontend_origin: "http://bad-origin\nX-Injected: evil".to_owned(),
+            ..test_config()
+        };
+        let error = config
+            .frontend_origin_header()
+            .expect_err("origin with newline should be rejected");
+        assert!(matches!(error, AppError::Config(_)));
+    }
+}
