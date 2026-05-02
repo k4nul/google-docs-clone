@@ -1156,6 +1156,484 @@ fn file_snapshot_store_delete_snapshot_removes_matching_stale_temp_files() {
     fs::remove_dir_all(snapshot_dir).expect("test snapshot directory should be cleaned up");
 }
 
+// ── POST /api/documents ──────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn create_document_endpoint_rejects_missing_authorization() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .post("/api/documents")
+        .json(&serde_json::json!({ "title": "Unauthorized" }))
+        .await;
+
+    response.assert_status(StatusCode::UNAUTHORIZED);
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "unauthorized");
+    assert_eq!(payload["message"], "Authorization header is required");
+}
+
+#[tokio::test]
+async fn create_document_endpoint_rejects_wrong_admin_token() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .post("/api/documents")
+        .add_header("Authorization", "Bearer wrong-token")
+        .json(&serde_json::json!({ "title": "Forbidden" }))
+        .await;
+
+    response.assert_status_forbidden();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "forbidden");
+    assert_eq!(
+        payload["message"],
+        "provided API token does not grant this operation"
+    );
+}
+
+#[tokio::test]
+async fn create_document_endpoint_assigns_default_title_when_title_is_absent() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({}))
+        .await;
+
+    response.assert_status(StatusCode::CREATED);
+    let payload = response.json::<Value>();
+    let id = payload["document"]["id"]
+        .as_str()
+        .expect("document id should be returned");
+    let title = payload["document"]["title"]
+        .as_str()
+        .expect("document title should be returned");
+    assert_eq!(title, format!("Document {id}"));
+}
+
+#[tokio::test]
+async fn create_document_endpoint_assigns_default_title_when_title_is_whitespace_only() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({ "title": "   " }))
+        .await;
+
+    response.assert_status(StatusCode::CREATED);
+    let payload = response.json::<Value>();
+    let id = payload["document"]["id"]
+        .as_str()
+        .expect("document id should be returned");
+    let title = payload["document"]["title"]
+        .as_str()
+        .expect("document title should be returned");
+    assert_eq!(title, format!("Document {id}"));
+}
+
+// ── GET /api/documents ───────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn documents_endpoint_rejects_wrong_admin_token() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .get("/api/documents")
+        .add_header("Authorization", "Bearer wrong-admin-token")
+        .await;
+
+    response.assert_status_forbidden();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "forbidden");
+    assert_eq!(
+        payload["message"],
+        "provided API token does not grant this operation"
+    );
+}
+
+#[tokio::test]
+async fn documents_list_is_ordered_by_created_at() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    for title in ["Alpha", "Beta", "Gamma"] {
+        server
+            .post("/api/documents")
+            .add_header("Authorization", admin_auth_header(&config).as_str())
+            .json(&serde_json::json!({ "title": title }))
+            .await
+            .assert_status(StatusCode::CREATED);
+        // ensure distinct created_at timestamps across parallel test runners
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+
+    let response = server
+        .get("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .await;
+    response.assert_status_ok();
+
+    let payload = response.json::<Value>();
+    let documents = payload["documents"]
+        .as_array()
+        .expect("documents should be returned as an array");
+
+    assert_eq!(documents.len(), 3);
+    assert_eq!(documents[0]["title"].as_str(), Some("Alpha"));
+    assert_eq!(documents[1]["title"].as_str(), Some("Beta"));
+    assert_eq!(documents[2]["title"].as_str(), Some("Gamma"));
+}
+
+// ── GET /api/documents/:id ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn document_detail_endpoint_rejects_missing_authorization() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let create_response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({ "title": "Protected" }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+    let created_id = create_response.json::<Value>()["document"]["id"]
+        .as_str()
+        .expect("document id should be returned")
+        .to_owned();
+
+    let response = server
+        .get(&format!("/api/documents/{created_id}"))
+        .await;
+
+    response.assert_status(StatusCode::UNAUTHORIZED);
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "unauthorized");
+    assert_eq!(payload["message"], "Authorization header is required");
+}
+
+// ── DELETE /api/documents/:id ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn delete_document_endpoint_rejects_missing_authorization() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let create_response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({ "title": "Protected" }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+    let created_id = create_response.json::<Value>()["document"]["id"]
+        .as_str()
+        .expect("document id should be returned")
+        .to_owned();
+
+    let response = server
+        .delete(&format!("/api/documents/{created_id}"))
+        .await;
+
+    response.assert_status(StatusCode::UNAUTHORIZED);
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "unauthorized");
+    assert_eq!(payload["message"], "Authorization header is required");
+}
+
+#[tokio::test]
+async fn delete_document_endpoint_rejects_wrong_document_token() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let create_response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({ "title": "Protected" }))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+    let created_id = create_response.json::<Value>()["document"]["id"]
+        .as_str()
+        .expect("document id should be returned")
+        .to_owned();
+
+    let response = server
+        .delete(&format!("/api/documents/{created_id}"))
+        .add_header("Authorization", "Bearer wrong-doc-token")
+        .await;
+
+    response.assert_status_forbidden();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "forbidden");
+    assert_eq!(
+        payload["message"],
+        format!("provided token does not grant access to document `{created_id}`")
+    );
+}
+
+#[tokio::test]
+async fn delete_document_endpoint_rejects_invalid_uuid_with_json_error() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let response = server
+        .delete("/api/documents/not-a-uuid")
+        .add_header("Authorization", "Bearer some-token")
+        .await;
+
+    response.assert_status_bad_request();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "bad_request");
+    assert_eq!(
+        payload["message"],
+        "id must be a valid UUID, received `not-a-uuid`"
+    );
+}
+
+#[tokio::test]
+async fn delete_document_endpoint_returns_not_found_for_missing_document() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::new(app);
+
+    let doc_id = Uuid::nil();
+    let response = server
+        .delete(&format!("/api/documents/{doc_id}"))
+        .add_header("Authorization", "Bearer some-token")
+        .await;
+
+    response.assert_status_not_found();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "not_found");
+    assert_eq!(
+        payload["message"],
+        format!("document `{doc_id}` was not found")
+    );
+}
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn websocket_endpoint_rejects_wrong_document_token() {
+    let config = test_config();
+    let app = build_app(
+        &config,
+        AppState::from_config(&config).expect("state should initialize"),
+    )
+    .expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let create_response = server
+        .post("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .json(&serde_json::json!({}))
+        .await;
+    create_response.assert_status(StatusCode::CREATED);
+    let doc_id = create_response.json::<Value>()["document"]["id"]
+        .as_str()
+        .expect("document id should be returned")
+        .to_owned();
+
+    let response = server
+        .get_websocket(&format!("/ws/{doc_id}"))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header("Authorization", "Bearer wrong-doc-token")
+        .await;
+
+    response.assert_status_forbidden();
+    let payload = response.json::<Value>();
+    assert_eq!(payload["error"], "forbidden");
+    assert_eq!(
+        payload["message"],
+        format!("provided token does not grant access to document `{doc_id}`")
+    );
+}
+
+// ── Snapshot lifecycle ───────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn websocket_endpoint_persists_snapshot_after_session_ends() {
+    let config = test_config();
+    let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+    let state = AppState::with_snapshot_store(
+        config.frontend_origin.clone(),
+        config.api_token.clone(),
+        snapshot_store.clone(),
+    )
+    .expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Persisted via WS".to_owned()))
+        .expect("document should be created");
+
+    let initial_updated_at = snapshot_store
+        .load_snapshot(&document.id)
+        .expect("snapshot lookup should succeed")
+        .expect("initial snapshot should exist after document creation")
+        .document
+        .updated_at;
+
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let websocket = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    websocket.close().await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let final_snapshot = snapshot_store
+        .load_snapshot(&document.id)
+        .expect("snapshot lookup should succeed")
+        .expect("snapshot should be persisted after session ends");
+
+    assert_eq!(final_snapshot.document.id, document.id);
+    assert!(
+        final_snapshot.document.updated_at > initial_updated_at,
+        "snapshot should be re-saved with a newer updated_at after the session ends"
+    );
+}
+
+#[tokio::test]
+async fn websocket_endpoint_restores_evicted_room_from_snapshot() {
+    let config = test_config();
+    let state = AppState::from_config(&config).expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Evicted then reconnected".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have an active room");
+
+    {
+        let doc = room.awareness().write().await.doc().clone();
+        let text = doc.get_or_insert_text("content");
+        let mut txn = doc.transact_mut();
+        text.insert(&mut txn, 0, "evicted content");
+    }
+
+    assert_eq!(room.start_session(), 1);
+    let evicted = state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &room)
+        .expect("room eviction should succeed");
+    assert!(evicted);
+    assert!(state.rooms().get(&document.id).is_none());
+
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::builder().http_transport().build(app);
+
+    let mut client = server
+        .get_websocket(&format!("/ws/{}", document.id))
+        .add_header("Origin", config.frontend_origin.as_str())
+        .add_header(
+            "Authorization",
+            document_auth_header(document.access_token()).as_str(),
+        )
+        .await
+        .into_websocket()
+        .await;
+
+    client
+        .send_message(WsMessage::Binary(
+            Message::Sync(SyncMessage::SyncStep1(StateVector::default()))
+                .encode_v1()
+                .into(),
+        ))
+        .await;
+
+    let sync_reply = decode_sync_message(client.receive_bytes().await);
+    let SyncMessage::SyncStep2(update) = sync_reply else {
+        panic!("expected SyncStep2 after reconnecting to evicted room");
+    };
+
+    let client_doc = Doc::new();
+    let client_text = client_doc.get_or_insert_text("content");
+    let mut txn = client_doc.transact_mut();
+    txn.apply_update(Update::decode_v1(update.as_slice()).expect("sync payload should decode"));
+    drop(txn);
+
+    assert_eq!(
+        client_text.get_string(&client_doc.transact()),
+        "evicted content"
+    );
+
+    client.close().await;
+}
+
 #[cfg(unix)]
 #[test]
 fn file_snapshot_store_preserves_previous_snapshot_when_atomic_replace_cannot_write_temp_file() {

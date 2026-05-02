@@ -188,4 +188,142 @@ mod tests {
         assert_eq!(error.field(), "client.kind");
         assert_eq!(error.message(), "must not be empty");
     }
+
+    #[test]
+    fn awareness_state_validation_accepts_valid_state() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "Alice".to_owned(),
+                color: "#1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        assert!(state.validate().is_ok());
+    }
+
+    #[test]
+    fn awareness_state_validation_rejects_blank_user_id() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "  ".to_owned(),
+                name: "Alice".to_owned(),
+                color: "#1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let error = state
+            .validate()
+            .expect_err("blank user.id should be rejected");
+        assert_eq!(error.field(), "user.id");
+    }
+
+    #[test]
+    fn awareness_state_validation_rejects_blank_user_name() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "   ".to_owned(),
+                color: "#1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let error = state
+            .validate()
+            .expect_err("blank user.name should be rejected");
+        assert_eq!(error.field(), "user.name");
+    }
+
+    #[test]
+    fn awareness_state_validation_rejects_blank_client_id() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "Alice".to_owned(),
+                color: "#1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "  ".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let error = state
+            .validate()
+            .expect_err("blank client.id should be rejected");
+        assert_eq!(error.field(), "client.id");
+    }
+
+    #[test]
+    fn awareness_state_validation_rejects_color_without_hash_prefix() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "Alice".to_owned(),
+                color: "1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let error = state
+            .validate()
+            .expect_err("color without # prefix should be rejected");
+        assert_eq!(error.field(), "user.color");
+    }
+
+    #[test]
+    fn awareness_state_validation_rejects_color_with_wrong_length() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "Alice".to_owned(),
+                color: "#fff".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let error = state
+            .validate()
+            .expect_err("3-char shorthand hex should be rejected");
+        assert_eq!(error.field(), "user.color");
+    }
+
+    #[test]
+    fn awareness_state_serializes_without_selection_key_when_none() {
+        let state = AwarenessState {
+            user: AwarenessUser {
+                id: "user-1".to_owned(),
+                name: "Alice".to_owned(),
+                color: "#1f6feb".to_owned(),
+            },
+            selection: None,
+            client: AwarenessClient {
+                id: "session-1".to_owned(),
+                kind: "editor".to_owned(),
+            },
+        };
+        let value = serde_json::to_value(&state).expect("should serialize");
+        assert!(
+            value.get("selection").is_none(),
+            "selection key should be omitted from JSON when None"
+        );
+    }
 }
