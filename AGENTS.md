@@ -30,6 +30,12 @@
     "frontend_origin": "FRONTEND_ORIGIN",
     "rust_log": "RUST_LOG"
   },
+  "platform_rules": {
+    "windows_sqlite_shim": {
+      "issue": "Windows cargo test failed with PermissionDenied (os error 5) in vendored rusqlite persistence; do not classify it as missing SQLite.",
+      "plan": "Track WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN in docs/checklist.md. Owner C fixes vendor/rusqlite/src/lib.rs and owner D verifies cargo test --locked --lib plus ./scripts/verify.sh core before completion."
+    }
+  },
   "commands": {
     "run": "cargo run",
     "check": "cargo check",

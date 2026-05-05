@@ -47,7 +47,8 @@ mod tests {
     fn require_bearer_token_trims_trailing_whitespace_from_token() {
         let headers = headers_with("Bearer my-token  ");
         assert_eq!(
-            require_bearer_token(&headers).expect("token with trailing whitespace should be trimmed"),
+            require_bearer_token(&headers)
+                .expect("token with trailing whitespace should be trimmed"),
             "my-token"
         );
     }
@@ -62,7 +63,8 @@ mod tests {
     #[test]
     fn require_bearer_token_rejects_non_bearer_scheme() {
         let headers = headers_with("Basic dXNlcjpwYXNz");
-        let error = require_bearer_token(&headers).expect_err("non-bearer scheme should be rejected");
+        let error =
+            require_bearer_token(&headers).expect_err("non-bearer scheme should be rejected");
         assert!(matches!(error, AppError::Unauthorized(_)));
     }
 
@@ -76,14 +78,16 @@ mod tests {
     #[test]
     fn require_bearer_token_rejects_whitespace_only_token() {
         let headers = headers_with("Bearer    ");
-        let error = require_bearer_token(&headers).expect_err("whitespace-only token should be rejected");
+        let error =
+            require_bearer_token(&headers).expect_err("whitespace-only token should be rejected");
         assert!(matches!(error, AppError::Unauthorized(_)));
     }
 
     #[test]
     fn require_bearer_token_rejects_bearer_prefix_without_space() {
         let headers = headers_with("Bearertoken");
-        let error = require_bearer_token(&headers).expect_err("bearer without space separator should be rejected");
+        let error = require_bearer_token(&headers)
+            .expect_err("bearer without space separator should be rejected");
         assert!(matches!(error, AppError::Unauthorized(_)));
     }
 }

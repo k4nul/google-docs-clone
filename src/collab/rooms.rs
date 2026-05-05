@@ -7,7 +7,10 @@ use dashmap::{DashMap, mapref::entry::Entry};
 use std::collections::BTreeMap;
 use tokio::sync::{OnceCell, RwLock};
 use uuid::Uuid;
-use yrs::{Doc, ReadTxn, StateVector, Transact, Update, sync::Awareness, updates::decoder::Decode};
+use yrs::{
+    Doc, ReadTxn, StateVector, Subscription, Transact, Update, sync::Awareness,
+    updates::decoder::Decode,
+};
 use yrs_axum::{AwarenessRef, broadcast::BroadcastGroup};
 
 use crate::{
@@ -16,42 +19,80 @@ use crate::{
 };
 
 pub struct Room {
-    document: StdRwLock<Document>,
+    document: Arc<StdRwLock<Document>>,
     awareness: AwarenessRef,
     broadcast_group: OnceCell<Arc<BroadcastGroup>>,
     active_sessions: AtomicUsize,
+    _update_persistence: Subscription,
 }
 
 impl Room {
-    pub fn new(document: Document) -> Self {
-        let awareness = Arc::new(RwLock::new(Awareness::new(Doc::new())));
+    pub fn new(document: Document, snapshot_store: Arc<dyn SnapshotStore>) -> Self {
+        let document = Arc::new(StdRwLock::new(document));
+        let awareness = Awareness::new(Doc::new());
+        let update_persistence =
+            Self::observe_updates(document.clone(), snapshot_store, awareness.doc());
+        let awareness = Arc::new(RwLock::new(awareness));
 
         Self {
-            document: StdRwLock::new(document),
+            document,
             awareness,
             broadcast_group: OnceCell::new(),
             active_sessions: AtomicUsize::new(0),
+            _update_persistence: update_persistence,
         }
     }
 
-    pub fn from_snapshot(snapshot: DocumentSnapshot) -> Result<Self, StorageError> {
-        let mut awareness = Arc::new(RwLock::new(Awareness::new(Doc::new())));
+    pub fn from_snapshot(
+        snapshot: DocumentSnapshot,
+        snapshot_store: Arc<dyn SnapshotStore>,
+    ) -> Result<Self, StorageError> {
+        let document_id = snapshot.document.id;
+        let document = Arc::new(StdRwLock::new(snapshot.document));
+        let awareness = Awareness::new(Doc::new());
         {
-            let awareness_ref = Arc::get_mut(&mut awareness)
-                .expect("newly created awareness should not have other references");
-            let awareness_guard = awareness_ref.get_mut();
-            let mut txn = awareness_guard.doc().transact_mut();
+            let mut txn = awareness.doc().transact_mut();
             let update = Update::decode_v1(snapshot.update.as_slice())
-                .map_err(|_| StorageError::CorruptSnapshot(snapshot.document.id))?;
+                .map_err(|_| StorageError::CorruptSnapshot(document_id))?;
             txn.apply_update(update);
         }
+        let update_persistence =
+            Self::observe_updates(document.clone(), snapshot_store, awareness.doc());
+        let awareness = Arc::new(RwLock::new(awareness));
 
         Ok(Self {
-            document: StdRwLock::new(snapshot.document),
+            document,
             awareness,
             broadcast_group: OnceCell::new(),
             active_sessions: AtomicUsize::new(0),
+            _update_persistence: update_persistence,
         })
+    }
+
+    fn observe_updates(
+        document: Arc<StdRwLock<Document>>,
+        snapshot_store: Arc<dyn SnapshotStore>,
+        doc: &Doc,
+    ) -> Subscription {
+        doc.observe_update_v1(move |txn, _event| {
+            let mut document = document
+                .write()
+                .expect("room document lock should not be poisoned");
+            document.touch();
+            let update = txn.encode_state_as_update_v1(&StateVector::default());
+            let snapshot = DocumentSnapshot::new(document.clone(), update);
+            drop(document);
+
+            let doc_id = snapshot.document.id;
+            if let Err(error) = snapshot_store.save_snapshot(snapshot) {
+                tracing::warn!(
+                    %doc_id,
+                    %error,
+                    "failed to persist snapshot after Yrs document update"
+                );
+            }
+        })
+        .expect("room Yrs document should allow update observer registration")
     }
 
     pub fn document(&self) -> Document {
@@ -127,6 +168,12 @@ pub struct RoomRegistry {
     snapshot_store: Arc<dyn SnapshotStore>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionTeardown {
+    pub remaining_sessions: usize,
+    pub evicted: bool,
+}
+
 impl RoomRegistry {
     pub fn new(snapshot_store: Arc<dyn SnapshotStore>) -> Self {
         Self {
@@ -141,7 +188,10 @@ impl RoomRegistry {
 
     pub fn create_document(&self, title: Option<String>) -> Result<Document, StorageError> {
         let document = Document::new(Uuid::new_v4(), title);
-        let room = Arc::new(Room::new(document.clone()));
+        let room = Arc::new(Room::new(
+            document.clone(),
+            Arc::clone(&self.snapshot_store),
+        ));
         self.snapshot_store.save_snapshot(room.snapshot()?)?;
 
         self.rooms.insert(document.id, room);
@@ -165,7 +215,7 @@ impl RoomRegistry {
         match self.rooms.entry(document.id) {
             Entry::Occupied(entry) => entry.get().clone(),
             Entry::Vacant(entry) => {
-                let room = Arc::new(Room::new(document));
+                let room = Arc::new(Room::new(document, Arc::clone(&self.snapshot_store)));
                 entry.insert(room.clone());
                 room
             }
@@ -181,7 +231,10 @@ impl RoomRegistry {
             return Ok(None);
         };
 
-        let room = Arc::new(Room::from_snapshot(snapshot)?);
+        let room = Arc::new(Room::from_snapshot(
+            snapshot,
+            Arc::clone(&self.snapshot_store),
+        )?);
         let room_id = room.document().id;
 
         match self.rooms.entry(room_id) {
@@ -197,10 +250,13 @@ impl RoomRegistry {
         &self,
         doc_id: &Uuid,
         room: &Arc<Room>,
-    ) -> Result<bool, StorageError> {
+    ) -> Result<SessionTeardown, StorageError> {
         let remaining_sessions = room.end_session();
         if remaining_sessions > 0 {
-            return Ok(false);
+            return Ok(SessionTeardown {
+                remaining_sessions,
+                evicted: false,
+            });
         }
 
         match self.rooms.entry(*doc_id) {
@@ -209,12 +265,21 @@ impl RoomRegistry {
 
                 if room.active_sessions() == 0 {
                     entry.remove();
-                    Ok(true)
+                    Ok(SessionTeardown {
+                        remaining_sessions: 0,
+                        evicted: true,
+                    })
                 } else {
-                    Ok(false)
+                    Ok(SessionTeardown {
+                        remaining_sessions: room.active_sessions(),
+                        evicted: false,
+                    })
                 }
             }
-            _ => Ok(false),
+            _ => Ok(SessionTeardown {
+                remaining_sessions: room.active_sessions(),
+                evicted: false,
+            }),
         }
     }
 
@@ -305,6 +370,38 @@ mod tests {
     }
 
     #[test]
+    fn registry_persists_document_updates_before_room_teardown() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Autosaved".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        let awareness = room.awareness();
+        {
+            let doc = awareness.blocking_write().doc().clone();
+            let text = doc.get_or_insert_text("content");
+            let mut txn = doc.transact_mut();
+            text.insert(&mut txn, 0, "saved while active");
+        }
+
+        let restored_registry = RoomRegistry::new(snapshot_store);
+        let restored_room = restored_registry
+            .get_or_restore(&document.id)
+            .expect("snapshot lookup should succeed")
+            .expect("document should restore from autosaved snapshot");
+
+        let restored_doc = restored_room.awareness().blocking_read().doc().clone();
+        let restored_text = restored_doc.get_or_insert_text("content");
+        let restored_value = restored_text.get_string(&restored_doc.transact());
+
+        assert_eq!(restored_value, "saved while active");
+    }
+
+    #[test]
     fn registry_evicts_idle_room_after_snapshot_persist() {
         let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
         let registry = RoomRegistry::new(snapshot_store.clone());
@@ -325,11 +422,12 @@ mod tests {
 
         assert_eq!(room.start_session(), 1);
 
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
 
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
         assert!(registry.get(&document.id).is_none());
 
         let restored_room = registry
@@ -357,11 +455,12 @@ mod tests {
         assert_eq!(room.start_session(), 1);
         assert_eq!(room.start_session(), 2);
 
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("room release should succeed");
 
-        assert!(!evicted);
+        assert!(!teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 1);
         assert!(registry.get(&document.id).is_some());
         assert_eq!(room.active_sessions(), 1);
     }
@@ -378,11 +477,12 @@ mod tests {
             .expect("created document should have an active room");
 
         assert_eq!(room.start_session(), 1);
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
 
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
         assert!(registry.get(&document.id).is_none());
 
         let documents = registry
@@ -432,10 +532,11 @@ mod tests {
             .expect("created document should have an active room");
 
         assert_eq!(room.start_session(), 1);
-        let evicted = registry
+        let teardown = registry
             .persist_and_evict_if_idle(&document.id, &room)
             .expect("idle room eviction should succeed");
-        assert!(evicted);
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
 
         let restored_registry = RoomRegistry::new(snapshot_store);
         let hydrated = restored_registry

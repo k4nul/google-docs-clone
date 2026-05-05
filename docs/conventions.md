@@ -41,9 +41,14 @@
 - 요청 단위 기본 추적은 `TraceLayer`를 사용한다.
 - WebSocket 연결 시작/종료, 실패는 문서 ID와 함께 기록한다.
 - 마지막 WebSocket 세션 종료 후 snapshot 저장과 idle room eviction 결과도 문서 ID와 함께 기록한다.
+- 첫 WebSocket 세션 시작과 마지막 세션 종료에 연결되는 `RoomCoordinator` hook 실패도 문서 ID와 함께 warning으로 기록한다.
 - WebSocket origin 거절도 문서 ID와 함께 기록한다.
 - 다중 프로세스 확장 전까지는 "문서당 단일 owner 프로세스" 가정을 깨는 우회 구현을 넣지 않는다.
 - `StaticRoomLocator`의 owner hints는 운영 힌트일 뿐이며, lease/heartbeat 기반 coordination store를 대체하는 것으로 간주하지 않는다.
+- lease/heartbeat 같은 owner coordination side effect는 `RoomCoordinator` 경계 뒤에만 붙이고, snapshot 저장 전 handoff를 허용하지 않는다.
+- authoritative coordination backend는 `lease_id` compare-and-swap과 `epoch` fencing token을 함께 유지해야 한다.
+- stale owner 판단은 `expires_at` 기준으로만 하고, file mtime 같은 로컬 heuristic로 조기 회수를 시도하지 않는다.
+- filesystem 기반 `FileRoomCoordinator`/`FileRoomLocator`는 rehearsal 경계일 뿐이며, sqlite/managed coordination backend와 shared snapshot store를 대체하는 production authority로 간주하지 않는다.
 - 로그 레벨 정책은 `RUST_LOG`로 조정한다.
 
 ## Test Rules
@@ -58,6 +63,7 @@
 
 ## Commit Rules
 
+- Codex 작업 브랜치는 일회성 작업 slug보다 저장소 안에서 실제 개발을 맡는 역할 기준으로 정한다. 현재 백엔드 협업 브랜치는 `backend-realtime-api`와 `qa-docs-devops`다.
 - 커밋 메시지 형식은 `type(scope): subject`를 사용한다.
 - `type`은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 허용한다.
 - `scope`는 백엔드 변경 의도를 드러내도록 `api`, `sync`, `yrs`, `auth`, `db`, `websocket`, `storage`, `config`, `docs`, `repo` 중에서 선택한다.

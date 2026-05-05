@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
+use axum::http::{HeaderValue, Uri};
+
 use crate::{
+    collab::coordinator::{RoomCoordinator, noop_room_coordinator, room_coordinator_from_config},
     collab::locator::{ResolvedRoom, RoomLocator, local_room_locator, room_locator_from_config},
     collab::rooms::RoomRegistry,
-    config::{Config, DEFAULT_FRONTEND_ORIGIN},
+    config::{Config, DEFAULT_FRONTEND_ORIGIN, frontend_origin_allowed},
     errors::{AppError, AppResult},
     storage::{SnapshotStore, in_memory_snapshot_store, snapshot_store_from_config},
 };
@@ -14,15 +17,17 @@ pub struct AppState {
     frontend_origin: Arc<str>,
     api_token: Arc<str>,
     room_locator: Arc<dyn RoomLocator>,
+    room_coordinator: Arc<dyn RoomCoordinator>,
 }
 
 impl AppState {
     pub fn new(frontend_origin: impl Into<String>, api_token: impl Into<String>) -> Self {
-        Self::with_snapshot_store_and_locator(
+        Self::with_snapshot_store_locator_and_coordinator(
             frontend_origin,
             api_token,
             in_memory_snapshot_store(),
             local_room_locator(),
+            noop_room_coordinator(),
         )
         .expect("default in-memory state should initialize")
     }
@@ -32,11 +37,12 @@ impl AppState {
         api_token: impl Into<String>,
         snapshot_store: Arc<dyn SnapshotStore>,
     ) -> AppResult<Self> {
-        Self::with_snapshot_store_and_locator(
+        Self::with_snapshot_store_locator_and_coordinator(
             frontend_origin,
             api_token,
             snapshot_store,
             local_room_locator(),
+            noop_room_coordinator(),
         )
     }
 
@@ -46,33 +52,77 @@ impl AppState {
         snapshot_store: Arc<dyn SnapshotStore>,
         room_locator: Arc<dyn RoomLocator>,
     ) -> AppResult<Self> {
-        let rooms = Arc::new(RoomRegistry::new(snapshot_store));
-        let hydrated_rooms = rooms
-            .hydrate_from_store()
-            .map_err(anyhow::Error::from)
-            .map_err(AppError::from)?;
+        Self::with_snapshot_store_locator_and_coordinator(
+            frontend_origin,
+            api_token,
+            snapshot_store,
+            room_locator,
+            noop_room_coordinator(),
+        )
+    }
 
-        tracing::info!(
-            hydrated_rooms,
-            "initialized room registry from snapshot store"
-        );
+    pub fn with_snapshot_store_locator_and_coordinator(
+        frontend_origin: impl Into<String>,
+        api_token: impl Into<String>,
+        snapshot_store: Arc<dyn SnapshotStore>,
+        room_locator: Arc<dyn RoomLocator>,
+        room_coordinator: Arc<dyn RoomCoordinator>,
+    ) -> AppResult<Self> {
+        Self::with_snapshot_store_locator_and_coordinator_and_hydration(
+            frontend_origin,
+            api_token,
+            snapshot_store,
+            room_locator,
+            room_coordinator,
+            true,
+        )
+    }
+
+    fn with_snapshot_store_locator_and_coordinator_and_hydration(
+        frontend_origin: impl Into<String>,
+        api_token: impl Into<String>,
+        snapshot_store: Arc<dyn SnapshotStore>,
+        room_locator: Arc<dyn RoomLocator>,
+        room_coordinator: Arc<dyn RoomCoordinator>,
+        hydrate_rooms_on_startup: bool,
+    ) -> AppResult<Self> {
+        let rooms = Arc::new(RoomRegistry::new(snapshot_store));
+        if hydrate_rooms_on_startup {
+            let hydrated_rooms = rooms
+                .hydrate_from_store()
+                .map_err(anyhow::Error::from)
+                .map_err(AppError::from)?;
+
+            tracing::info!(
+                hydrated_rooms,
+                "initialized room registry from snapshot store"
+            );
+        } else {
+            tracing::info!(
+                "skipped eager room hydration because distributed room ownership mode is enabled"
+            );
+        }
 
         Ok(Self {
             rooms,
             frontend_origin: Arc::<str>::from(frontend_origin.into()),
             api_token: Arc::<str>::from(api_token.into()),
             room_locator,
+            room_coordinator,
         })
     }
 
     pub fn from_config(config: &Config) -> AppResult<Self> {
-        Self::with_snapshot_store_and_locator(
+        let hydrate_rooms_on_startup = startup_room_hydration_enabled(config);
+        Self::with_snapshot_store_locator_and_coordinator_and_hydration(
             config.frontend_origin.clone(),
             config.api_token.clone(),
             snapshot_store_from_config(config)
                 .map_err(anyhow::Error::from)
                 .map_err(AppError::from)?,
             room_locator_from_config(config)?,
+            room_coordinator_from_config(config)?,
+            hydrate_rooms_on_startup,
         )
     }
 
@@ -88,8 +138,25 @@ impl AppState {
         &self.frontend_origin
     }
 
+    pub fn frontend_origin_allowed(&self, origin: &HeaderValue) -> bool {
+        frontend_origin_allowed(&self.frontend_origin, origin)
+    }
+
     pub fn api_token(&self) -> &str {
         &self.api_token
+    }
+
+    pub fn room_coordinator(&self) -> Arc<dyn RoomCoordinator> {
+        Arc::clone(&self.room_coordinator)
+    }
+
+    pub fn ensure_local_room_owner_for_request(
+        &self,
+        doc_id: &uuid::Uuid,
+        request_uri: &Uri,
+    ) -> AppResult<()> {
+        self.ensure_local_room_owner(doc_id)
+            .map_err(|error| error.with_redirect_from_request(request_uri))
     }
 
     pub fn ensure_local_room_owner(&self, doc_id: &uuid::Uuid) -> AppResult<()> {
@@ -106,6 +173,7 @@ impl AppState {
                     message: format!("document `{doc_id}` is owned by another collaboration node"),
                     owner_node_id: owner.node_id,
                     owner_base_url: owner.base_url,
+                    redirect_url: None,
                 })
             }
             Err(error) => {
@@ -114,6 +182,11 @@ impl AppState {
             }
         }
     }
+}
+
+fn startup_room_hydration_enabled(config: &Config) -> bool {
+    matches!(config.room_locator.trim(), "local")
+        && matches!(config.room_coordinator.trim(), "noop" | "logging")
 }
 
 impl Default for AppState {

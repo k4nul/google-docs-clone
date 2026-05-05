@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    http::StatusCode,
+    http::{HeaderValue, StatusCode, Uri, header::LOCATION},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
@@ -27,6 +27,7 @@ pub enum AppError {
         message: String,
         owner_node_id: String,
         owner_base_url: Option<String>,
+        redirect_url: Option<String>,
     },
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
@@ -45,6 +46,56 @@ struct OwnerBody {
     node_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     base_url: Option<String>,
+}
+
+impl AppError {
+    pub fn with_redirect_from_request(self, request_uri: &Uri) -> Self {
+        match self {
+            AppError::RemoteOwner {
+                message,
+                owner_node_id,
+                owner_base_url,
+                redirect_url,
+            } => {
+                let redirect_url = redirect_url.or_else(|| {
+                    owner_base_url
+                        .as_deref()
+                        .map(|base_url| build_redirect_url(base_url, request_uri))
+                });
+
+                AppError::RemoteOwner {
+                    message,
+                    owner_node_id,
+                    owner_base_url,
+                    redirect_url,
+                }
+            }
+            other => other,
+        }
+    }
+}
+
+fn build_redirect_url(base_url: &str, request_uri: &Uri) -> String {
+    let path_and_query = request_uri
+        .path_and_query()
+        .map(|value| value.as_str())
+        .unwrap_or("/");
+    format!("{base_url}{path_and_query}")
+}
+
+fn header_value_or_log(header_name: &str, value: &str) -> Option<HeaderValue> {
+    match HeaderValue::from_str(value) {
+        Ok(value) => Some(value),
+        Err(error) => {
+            tracing::warn!(
+                header_name,
+                value = %value,
+                %error,
+                "skipped invalid response header value"
+            );
+            None
+        }
+    }
 }
 
 impl IntoResponse for AppError {
@@ -108,18 +159,55 @@ impl IntoResponse for AppError {
                 message,
                 owner_node_id,
                 owner_base_url,
-            } => (
-                StatusCode::CONFLICT,
-                Json(ErrorBody {
-                    error: "conflict",
-                    message,
-                    owner: Some(OwnerBody {
-                        node_id: owner_node_id,
-                        base_url: owner_base_url,
+                redirect_url,
+            } => {
+                let mut response = (
+                    StatusCode::CONFLICT,
+                    Json(ErrorBody {
+                        error: "conflict",
+                        message,
+                        owner: Some(OwnerBody {
+                            node_id: owner_node_id.clone(),
+                            base_url: owner_base_url.clone(),
+                        }),
                     }),
-                }),
-            )
-                .into_response(),
+                )
+                    .into_response();
+
+                if let Some(value) =
+                    header_value_or_log("x-collab-owner-node-id", owner_node_id.as_str())
+                {
+                    response
+                        .headers_mut()
+                        .insert("x-collab-owner-node-id", value);
+                }
+
+                if let Some(owner_base_url) = owner_base_url.as_deref() {
+                    if let Some(value) =
+                        header_value_or_log("x-collab-owner-base-url", owner_base_url)
+                    {
+                        response
+                            .headers_mut()
+                            .insert("x-collab-owner-base-url", value);
+                    }
+                }
+
+                if let Some(redirect_url) = redirect_url.as_deref() {
+                    if let Some(value) =
+                        header_value_or_log("x-collab-redirect-location", redirect_url)
+                    {
+                        response
+                            .headers_mut()
+                            .insert("x-collab-redirect-location", value);
+                    }
+
+                    if let Some(value) = header_value_or_log("location", redirect_url) {
+                        response.headers_mut().insert(LOCATION, value);
+                    }
+                }
+
+                response
+            }
             AppError::Internal(error) => {
                 tracing::error!(%error, "unexpected internal application error");
                 (

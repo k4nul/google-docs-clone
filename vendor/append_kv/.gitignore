@@ -1,0 +1,34 @@
+# Rust/Cargo files
+/target/
+/data/kv.log
+**/*.rs.bk
+**/*.rmeta
+**/*.rlib
+**/*.d
+**/*.lock   # Optional: Cargo.lock is sometimes included for apps but ignored for libraries
+
+# Cargo package manager
+/Cargo.lock
+
+# IDE/editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.swp
+*.bak
+*.tmp
+
+# Logs
+*.log
+
+# Node (if you have frontend React/Node parts like in your Roozgar project)
+node_modules/
+dist/
+.env

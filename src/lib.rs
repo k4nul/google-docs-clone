@@ -3,6 +3,7 @@ pub mod auth;
 pub mod collab;
 pub mod config;
 pub mod errors;
+pub mod http_client;
 pub mod models;
 pub mod routes;
 pub mod state;

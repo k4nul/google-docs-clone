@@ -19,8 +19,7 @@ fn base_url() -> String {
 }
 
 fn admin_auth() -> String {
-    let token =
-        std::env::var("TEST_API_TOKEN").unwrap_or_else(|_| "dev-admin-token".to_owned());
+    let token = std::env::var("TEST_API_TOKEN").unwrap_or_else(|_| "dev-admin-token".to_owned());
     format!("Bearer {token}")
 }
 
@@ -93,7 +92,10 @@ async fn localhost_create_list_get_delete_document() {
         .iter()
         .filter_map(|d| d["id"].as_str())
         .collect();
-    assert!(ids.contains(&doc_id.as_str()), "created document should appear in list");
+    assert!(
+        ids.contains(&doc_id.as_str()),
+        "created document should appear in list"
+    );
 
     let get_resp = client
         .get(format!("{base}/api/documents/{doc_id}"))
@@ -161,7 +163,10 @@ async fn localhost_documents_list_rejects_wrong_admin_token() {
     assert_eq!(resp.status().as_u16(), 403);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["error"], "forbidden");
-    assert_eq!(body["message"], "provided API token does not grant this operation");
+    assert_eq!(
+        body["message"],
+        "provided API token does not grant this operation"
+    );
 }
 
 // ── Validation error cases ────────────────────────────────────────────────────
