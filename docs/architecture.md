@@ -24,8 +24,8 @@
 
 핵심 포인트:
 
-- provider URL은 `VITE_WS_URL`에서 읽는다.
-- websocket provider가 없으면 local-only collaboration shell로 동작한다.
+- provider URL은 `VITE_WS_URL`이 있으면 그 값을 쓰고, 없으면 현재 브라우저 origin에서 `ws(s)://<current-host>/ws`로 자동 계산한다.
+- API base URL도 `VITE_API_BASE_URL`이 없으면 `<current-origin>/api`로 자동 계산한다.
 - collaboration 사용 시 `StarterKit.history`는 비활성화한다.
 
 ## Import Utility

@@ -15,6 +15,6 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', { name: /collaborative document workspace/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open sample editor/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /open mock editor/i })).toBeInTheDocument();
   });
 });

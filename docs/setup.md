@@ -70,14 +70,15 @@ npm run typecheck
 
 `.env.example`를 기준으로 `.env.local`을 구성한다.
 
-- `VITE_API_BASE_URL`: REST API base URL
-- `VITE_WS_URL`: Yjs websocket provider base URL
+- `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용한다.
+- `VITE_WS_URL`: Yjs websocket provider base URL. 없으면 `ws(s)://<current-host>/ws`를 사용한다.
 
 예시:
 
 ```bash
+# optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
-VITE_WS_URL=ws://localhost:1234
+VITE_WS_URL=ws://localhost:4000/ws
 ```
 
-`VITE_WS_URL`이 비어 있으면 editor는 local-only Yjs mode로 렌더링된다.
+현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 된다.
