@@ -1,0 +1,25 @@
+# Agent Rules
+
+- 변경은 항상 작은 단위로 나눈다.
+- 큰 리팩터링은 명시적 합의 없이는 수행하지 않는다.
+- 기존 파일과 계약은 최대한 보존하고 필요한 부분만 수정한다.
+- 문서 경로는 repo root 기준 relative path로 적는다.
+- API, route, import contract를 바꾸면 구현보다 먼저 문서를 갱신한다.
+- PR 전에는 반드시 `npm run build`, `npm run test`, `npm run lint`, `npm run typecheck`를 검증한다.
+- Windows PowerShell 자동화에서 `npm.ps1`이 차단되면 `npm.cmd run <task>`를 사용한다.
+- 동일한 품질 게이트는 CI에서도 유지한다.
+- 커밋 메시지는 반드시 `type(scope): subject` 형식을 따른다.
+- 허용 type은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 사용한다.
+- scope는 front-end 문맥에 맞는 `ui`, `editor`, `auth`, `api`, `state`, `router`, `styles`, `docs`, `repo` 중에서 고른다.
+- 모든 작업 브랜치는 `main`에서 분기한다.
+- 브랜치 하나에는 하나의 작업 목적만 담는다.
+- 브랜치 이름은 기본적으로 `<type>/<scope>-<short-kebab-description>` 형식을 따른다.
+- 실험성 작업은 `wip/` 접두사를 사용할 수 있지만 merge 전에는 목적이 드러나는 이름으로 정리한다.
+- PR 생성 전 최신 `main` 기준으로 충돌을 정리한다.
+- subject는 현재형으로 쓰고, 첫 글자는 소문자, 마침표는 금지하며, 변경 내용을 구체적으로 드러낸다.
+- 한 커밋에는 한 가지 목적만 담고, 기능 추가와 리팩터링은 섞지 않는다.
+- 포맷팅만 한 변경은 별도 커밋으로 분리한다.
+- 문서 변경과 기능 변경이 모두 큰 경우에는 커밋을 분리한다.
+- editor/provider 코드는 기능별로 분리하고, 한 파일에 과도하게 몰아넣지 않는다.
+- backend가 준비되지 않은 상태에서도 compile-safe를 유지한다.
+- 신규 TODO는 빌드를 깨지 않는 범위에서만 남긴다.
