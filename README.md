@@ -1,0 +1,150 @@
+# Google Docs Clone
+
+React 기반 collaborative editor 프론트엔드와 Rust 기반 실시간 협업 백엔드를 함께 둔 Google Docs 스타일 문서 편집기 프로젝트입니다. 프론트엔드는 Tiptap/Yjs로 편집 UI와 협업 provider를 구성하고, 백엔드는 Axum/Tokio/Yrs로 문서 API, WebSocket 협업 세션, snapshot 저장 경계를 제공합니다.
+
+## 핵심 기능
+
+- 문서 목록 화면과 `/docs/:docId` 편집기 라우트
+- Tiptap 기반 rich text editor
+- Yjs/Yrs binary sync protocol 기반 실시간 공동 편집
+- collaborator awareness/caret 상태 전송 구조
+- `.docx` import 후 HTML sanitize 유틸리티
+- 문서 생성, 조회, 삭제 REST API
+- 문서별 `GET /ws/:doc_id` WebSocket 협업 endpoint
+- 파일, 메모리, SQLite, S3, managed service 기반 snapshot store
+- optional `full-snapshot-stores` feature를 통한 다수의 embedded KV snapshot adapter 검증
+
+## 기술 스택
+
+| 영역 | 주요 기술 |
+| --- | --- |
+| Front-End | React 19, TypeScript, Vite, React Router, Tiptap, Yjs, Mammoth, DOMPurify, Vitest |
+| Back-End | Rust 2024, Axum, Tokio, Yrs, yrs-axum, DashMap, tower-http, tracing |
+| Realtime | Yjs/Yrs sync protocol over binary WebSocket frame |
+| Persistence | `SnapshotStore` trait, 기본 `memory`/`file`/`sqlite`/`s3`/`managed`, 확장 adapter inventory |
+
+## 요구 사항
+
+- Node.js 20 이상
+- npm
+- Rust toolchain과 Cargo
+
+## 폴더 구조
+
+```text
+.
+|-- Front-End/   # React + TypeScript + Vite collaborative editor
+`-- Back-End/    # Axum + Tokio + Yrs collaborative server
+```
+
+| 경로 | 설명 |
+| --- | --- |
+| `Front-End/src/app`, `Front-End/src/pages` | 앱 진입점, 라우팅, route-level page |
+| `Front-End/src/features/editor` | Tiptap editor shell, toolbar, extension 조합 |
+| `Front-End/src/lib/collab` | Y.Doc와 binary WebSocket provider lifecycle |
+| `Front-End/src/lib/api` | 백엔드 REST API helper |
+| `Front-End/src/lib/import` | DOCX import 및 sanitize utility |
+| `Back-End/src/routes` | `/api/health`, `/api/documents` REST route |
+| `Back-End/src/collab` | room registry, WebSocket, Yrs protocol boundary |
+| `Back-End/src/storage` | snapshot store trait과 adapter 구현 |
+| `Back-End/vendor` | snapshot adapter 검증을 위한 vendored/patched embedded KV crate |
+| `Back-End/docs`, `Front-End/docs` | 각 영역의 setup, architecture, conventions, checklist 문서 |
+
+## 빠른 실행
+
+### 1. 백엔드 실행
+
+```bash
+cd Back-End
+cp .env.example .env
+cargo run
+```
+
+기본 서버 주소는 `http://127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN=*`라 로컬 개발에서는 Vite dev server origin을 별도 등록하지 않아도 됩니다. 기본 `SNAPSHOT_STORE=file`은 `Back-End/data/snapshots` 아래에 문서 snapshot을 저장합니다.
+
+### 2. 프론트엔드 실행
+
+```bash
+cd Front-End
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+`Front-End/.env.example`의 기본값은 로컬 백엔드에 맞춰져 있습니다.
+
+```bash
+VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_TOKEN=dev-admin-token
+VITE_WS_URL=ws://localhost:4000
+```
+
+백엔드는 현재 로컬 개발용 HTTP/WebSocket 경로에서 토큰을 검증하지 않지만, 프론트엔드의 `Create backend editor` 버튼은 `VITE_API_TOKEN` 설정 여부를 기준으로 노출되고 요청에 `Authorization: Bearer ...` 헤더를 붙입니다.
+
+### 3. 브라우저에서 확인
+
+1. Vite가 출력한 로컬 URL로 접속합니다.
+2. 홈 화면에서 `Create backend editor`를 클릭합니다.
+3. 프론트엔드가 `POST /api/documents`로 UUID 문서를 만들고 `/docs/<uuid>`로 이동합니다.
+4. 편집기는 `ws://localhost:4000/ws/<uuid>`로 WebSocket을 열어 협업 동기화를 시작합니다.
+
+`Open mock editor`는 프론트엔드 placeholder 문서로 들어가는 경로입니다. 실제 백엔드 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
+
+## API / WebSocket 계약
+
+HTTP base path는 `/api`입니다.
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| `GET` | `/api/health` | 서버 상태 확인 |
+| `GET` | `/api/documents` | active room과 persisted snapshot 문서 목록 조회 |
+| `POST` | `/api/documents` | 새 문서 생성 |
+| `GET` | `/api/documents/:id` | UUID 문서 상세 조회 |
+| `DELETE` | `/api/documents/:id` | 문서 삭제. active WebSocket 세션이 있으면 `409 conflict` |
+| `GET` | `/ws/:doc_id` | Yjs/Yrs binary sync WebSocket endpoint |
+
+WebSocket payload는 JSON이 아니라 Yrs v1 binary message입니다. 프론트엔드 provider는 `Sync`, `Awareness`, `AwarenessQuery` 메시지를 인코딩/디코딩하고, 백엔드는 같은 `doc_id` room에 연결된 클라이언트에게 update를 broadcast합니다.
+
+## 검증 명령
+
+프론트엔드:
+
+```bash
+cd Front-End
+npm run build
+npm run lint
+npm run test
+npm run typecheck
+```
+
+백엔드:
+
+```bash
+cd Back-End
+./scripts/verify.sh core
+./scripts/preflight.sh publish
+./scripts/verify.sh websocket
+cargo check --features full-snapshot-stores
+```
+
+기본 백엔드 빌드는 compile fan-out을 줄이기 위해 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 바로 컴파일합니다. 전체 adapter inventory를 점검할 때만 `--features full-snapshot-stores`를 사용합니다.
+
+## 문서 바로가기
+
+| 문서 | 내용 |
+| --- | --- |
+| [Front-End README](Front-End/README.md) | 프론트엔드 기능, 실행 방법, 디버깅 체크리스트 |
+| [Front-End Architecture](Front-End/docs/architecture.md) | 프론트엔드 모듈 구조와 realtime flow |
+| [Front-End Setup](Front-End/docs/setup.md) | 프론트엔드 설치, 실행, 환경변수 |
+| [Back-End README](Back-End/README.md) | 백엔드 기능, API/WS 개요, snapshot store 운영 정보 |
+| [Back-End Architecture](Back-End/docs/architecture.md) | 백엔드 모듈 구조, room registry, persistence 경계 |
+| [Back-End API](Back-End/docs/api.md) | REST API, WebSocket, 에러 응답 계약 |
+| [Back-End Setup](Back-End/docs/setup.md) | 백엔드 빌드, 실행, 환경변수, store 선택 가이드 |
+
+## 개발 규칙 요약
+
+- 커밋 메시지는 `type(scope): subject` 형식을 사용합니다.
+- 프론트엔드 scope는 `ui`, `editor`, `auth`, `api`, `state`, `router`, `styles`, `docs`, `repo`를 기준으로 합니다.
+- 백엔드 scope는 `api`, `sync`, `yrs`, `auth`, `db`, `websocket`, `storage`, `config`, `docs`, `repo`를 기준으로 합니다.
+- API, WebSocket, 환경변수, snapshot store 계약이 바뀌면 코드와 함께 관련 `docs/` 문서를 갱신합니다.
+- 직접 `main`에 누적 작업을 밀어 넣기보다 목적이 분명한 작은 브랜치와 PR 단위를 선호합니다.
