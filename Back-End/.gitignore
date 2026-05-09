@@ -1,3 +1,4 @@
 /target
+data/
 tmp-server-*.log
 cron-prompt.txt
