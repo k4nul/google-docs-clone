@@ -29,10 +29,16 @@ describe('HomePage', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: /collaborative document workspace/i }),
+      screen.getByRole('heading', {
+        name: /collaborative document workspace/i,
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open sample editor/i })).toBeInTheDocument();
-    expect(await screen.findByText(/backend list unavailable: offline/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /open sample editor/i }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/backend list unavailable: offline/i),
+    ).toBeInTheDocument();
   });
 
   it('renders backend documents returned by the list API', async () => {
@@ -58,8 +64,12 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: /backend launch notes/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /backend launch notes/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/1 backend document/i)).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /launch plan/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /launch plan/i }),
+    ).not.toBeInTheDocument();
   });
 });

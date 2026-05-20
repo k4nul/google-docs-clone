@@ -19,12 +19,18 @@ export type ProviderConnectionStatus =
 
 function buildWsEndpoint(serverUrl: string, roomId: string) {
   const normalizedBaseUrl = serverUrl.replace(/\/+$/, '');
-  const endpoint = new URL(`/ws/${encodeURIComponent(roomId)}`, `${normalizedBaseUrl}/`);
+  const endpoint = new URL(
+    `/ws/${encodeURIComponent(roomId)}`,
+    `${normalizedBaseUrl}/`,
+  );
 
   return endpoint.toString();
 }
 
-function logConnectionEvent(message: string, details?: Record<string, unknown>) {
+function logConnectionEvent(
+  message: string,
+  details?: Record<string, unknown>,
+) {
   if (details) {
     console.info(`[collab] ${message}`, details);
     return;
@@ -33,8 +39,15 @@ function logConnectionEvent(message: string, details?: Record<string, unknown>) 
   console.info(`[collab] ${message}`);
 }
 
-function sendAwarenessUpdate(provider: BinaryWebsocketProvider, clientIds: number[]) {
-  if (!provider.ws || provider.ws.readyState !== WebSocket.OPEN || clientIds.length === 0) {
+function sendAwarenessUpdate(
+  provider: BinaryWebsocketProvider,
+  clientIds: number[],
+) {
+  if (
+    !provider.ws ||
+    provider.ws.readyState !== WebSocket.OPEN ||
+    clientIds.length === 0
+  ) {
     return;
   }
 
@@ -56,14 +69,19 @@ export class BinaryWebsocketProvider {
 
   private connectionStatus: ProviderConnectionStatus = 'disconnected';
   private destroyed = false;
-  private readonly statusListeners = new Set<(status: ProviderConnectionStatus) => void>();
+  private readonly statusListeners = new Set<
+    (status: ProviderConnectionStatus) => void
+  >();
   private reconnectTimer: number | null = null;
   private resyncTimer: number | null = null;
   private readonly awarenessUpdateHandler: (
     changes: { added: number[]; updated: number[]; removed: number[] },
     origin: unknown,
   ) => void;
-  private readonly docUpdateHandler: (update: Uint8Array, origin: unknown) => void;
+  private readonly docUpdateHandler: (
+    update: Uint8Array,
+    origin: unknown,
+  ) => void;
 
   ws: WebSocket | null = null;
   wsconnected = false;
@@ -79,7 +97,11 @@ export class BinaryWebsocketProvider {
     this.awareness = new awarenessProtocol.Awareness(doc);
 
     this.docUpdateHandler = (update, origin) => {
-      if (origin === this || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      if (
+        origin === this ||
+        !this.ws ||
+        this.ws.readyState !== WebSocket.OPEN
+      ) {
         return;
       }
 
@@ -154,7 +176,9 @@ export class BinaryWebsocketProvider {
     this.shouldConnect = true;
     this.wsconnecting = true;
     this.synced = false;
-    this.setConnectionStatus(this.reconnectTimer === null ? 'connecting' : 'reconnecting');
+    this.setConnectionStatus(
+      this.reconnectTimer === null ? 'connecting' : 'reconnecting',
+    );
     logConnectionEvent('websocket connect requested', {
       endpoint: this.url,
       roomId: this.roomId,
@@ -167,10 +191,13 @@ export class BinaryWebsocketProvider {
 
     ws.onopen = () => {
       if (this.destroyed || !this.shouldConnect) {
-        logConnectionEvent('websocket opened after cleanup, closing stale socket', {
-          endpoint: this.url,
-          roomId: this.roomId,
-        });
+        logConnectionEvent(
+          'websocket opened after cleanup, closing stale socket',
+          {
+            endpoint: this.url,
+            roomId: this.roomId,
+          },
+        );
         ws.close();
         return;
       }
@@ -225,7 +252,10 @@ export class BinaryWebsocketProvider {
       }
 
       if (messageType === MSG_AWARENESS_QUERY) {
-        sendAwarenessUpdate(this, Array.from(this.awareness.getStates().keys()));
+        sendAwarenessUpdate(
+          this,
+          Array.from(this.awareness.getStates().keys()),
+        );
       }
     };
 
@@ -245,7 +275,11 @@ export class BinaryWebsocketProvider {
         willReconnect: this.shouldConnect,
         ...(event.reason ? { reason: event.reason } : {}),
       });
-      awarenessProtocol.removeAwarenessStates(this.awareness, Array.from(this.awareness.getStates().keys()), this);
+      awarenessProtocol.removeAwarenessStates(
+        this.awareness,
+        Array.from(this.awareness.getStates().keys()),
+        this,
+      );
 
       if (this.shouldConnect && !this.destroyed) {
         this.setConnectionStatus('reconnecting');
@@ -265,7 +299,10 @@ export class BinaryWebsocketProvider {
         roomId: this.roomId,
         readyState: ws.readyState,
       });
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      if (
+        ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING
+      ) {
         ws.close();
       }
     };
@@ -304,7 +341,11 @@ export class BinaryWebsocketProvider {
     this.disconnect();
     this.doc.off('update', this.docUpdateHandler);
     this.awareness.off('update', this.awarenessUpdateHandler);
-    awarenessProtocol.removeAwarenessStates(this.awareness, [this.doc.clientID], this);
+    awarenessProtocol.removeAwarenessStates(
+      this.awareness,
+      [this.doc.clientID],
+      this,
+    );
   }
 }
 
@@ -338,7 +379,11 @@ export function createCollaborationConnection({
     };
   }
 
-  const provider = new BinaryWebsocketProvider(serverUrl, normalizedRoomId, doc);
+  const provider = new BinaryWebsocketProvider(
+    serverUrl,
+    normalizedRoomId,
+    doc,
+  );
 
   return {
     roomId: normalizedRoomId,
@@ -349,12 +394,16 @@ export function createCollaborationConnection({
   };
 }
 
-export function connectCollaborationConnection(connection: CollaborationConnection) {
+export function connectCollaborationConnection(
+  connection: CollaborationConnection,
+) {
   cancelScheduledCollaborationConnectionDestroy(connection);
   connection.provider?.connect();
 }
 
-export function destroyCollaborationConnection(connection: CollaborationConnection) {
+export function destroyCollaborationConnection(
+  connection: CollaborationConnection,
+) {
   if (connection.destroyed) {
     return;
   }
@@ -365,7 +414,9 @@ export function destroyCollaborationConnection(connection: CollaborationConnecti
   connection.destroyed = true;
 }
 
-export function scheduleCollaborationConnectionDestroy(connection: CollaborationConnection) {
+export function scheduleCollaborationConnectionDestroy(
+  connection: CollaborationConnection,
+) {
   if (connection.destroyed || connection.destroyTimeout) {
     return;
   }
@@ -376,7 +427,9 @@ export function scheduleCollaborationConnectionDestroy(connection: Collaboration
   }, 0);
 }
 
-export function cancelScheduledCollaborationConnectionDestroy(connection: CollaborationConnection) {
+export function cancelScheduledCollaborationConnectionDestroy(
+  connection: CollaborationConnection,
+) {
   if (!connection.destroyTimeout) {
     return;
   }

@@ -30,7 +30,10 @@ export function buildApiUrl(path: `/${string}`) {
     return path;
   }
 
-  return new URL(path.slice(1), ensureTrailingSlash(appEnv.apiBaseUrl)).toString();
+  return new URL(
+    path.slice(1),
+    ensureTrailingSlash(appEnv.apiBaseUrl),
+  ).toString();
 }
 
 async function readErrorPayload(response: Response) {
@@ -47,13 +50,19 @@ async function readErrorPayload(response: Response) {
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new ApiRequestError(response.status, await readErrorPayload(response));
+    throw new ApiRequestError(
+      response.status,
+      await readErrorPayload(response),
+    );
   }
 
   return (await response.json()) as T;
 }
 
-export async function apiGet<T>(path: `/${string}`, init?: RequestInit): Promise<T> {
+export async function apiGet<T>(
+  path: `/${string}`,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetch(buildApiUrl(path), {
     ...init,
     headers: {
@@ -79,7 +88,9 @@ export async function apiPost<T>(
       ...(init?.headers ?? {}),
     },
     ...(body === undefined
-      ? (init?.body !== undefined ? { body: init.body } : {})
+      ? init?.body !== undefined
+        ? { body: init.body }
+        : {}
       : { body: JSON.stringify(body) }),
   };
 

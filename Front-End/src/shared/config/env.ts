@@ -39,7 +39,10 @@ function getRuntimeWebsocketUrl() {
 }
 
 export const appEnv = {
-  apiBaseUrl: normalizeEnvValue(import.meta.env.VITE_API_BASE_URL) ?? getRuntimeApiBaseUrl(),
+  apiBaseUrl:
+    normalizeEnvValue(import.meta.env.VITE_API_BASE_URL) ??
+    getRuntimeApiBaseUrl(),
   apiToken: normalizeEnvValue(import.meta.env.VITE_API_TOKEN),
-  wsUrl: normalizeEnvValue(import.meta.env.VITE_WS_URL) ?? getRuntimeWebsocketUrl(),
+  wsUrl:
+    normalizeEnvValue(import.meta.env.VITE_WS_URL) ?? getRuntimeWebsocketUrl(),
 } as const;

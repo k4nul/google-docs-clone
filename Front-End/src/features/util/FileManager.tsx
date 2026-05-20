@@ -89,7 +89,10 @@ function htmlToDocxParagraphs(html: string): Paragraph[] {
   const doc = parser.parseFromString(html, 'text/html');
   const blocks: Paragraph[] = [];
 
-  const pushParagraph = (textRuns: InlineRun[], options?: Partial<IParagraphOptions>) => {
+  const pushParagraph = (
+    textRuns: InlineRun[],
+    options?: Partial<IParagraphOptions>,
+  ) => {
     if (textRuns.length === 0) {
       blocks.push(new Paragraph({ text: '', ...(options ?? {}) }));
       return;
@@ -157,7 +160,9 @@ function htmlToDocxParagraphs(html: string): Paragraph[] {
         if (li.tagName !== 'LI') continue;
         pushParagraph(getInlineRuns(li), {
           ...(tag === 'UL' ? { bullet: { level: 0 } } : {}),
-          ...(tag === 'OL' ? { numbering: { reference: 'numbered-list', level: 0 } } : {}),
+          ...(tag === 'OL'
+            ? { numbering: { reference: 'numbered-list', level: 0 } }
+            : {}),
         });
       }
       continue;
@@ -252,7 +257,9 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
           return;
         }
 
-        onNotice('지원하지 않는 파일 형식입니다. JSON 또는 DOCX 파일을 선택하세요.');
+        onNotice(
+          '지원하지 않는 파일 형식입니다. JSON 또는 DOCX 파일을 선택하세요.',
+        );
       } catch {
         onNotice('파일 불러오기 중 오류가 발생했습니다.');
       } finally {
@@ -264,13 +271,28 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
 
   return (
     <div className="pill-row">
-      <button className="button-ghost" disabled={!editor} type="button" onClick={openImportDialog}>
+      <button
+        className="button-ghost"
+        disabled={!editor}
+        type="button"
+        onClick={openImportDialog}
+      >
         Import file
       </button>
-      <button className="button-link" disabled={!editor} type="button" onClick={exportJson}>
+      <button
+        className="button-link"
+        disabled={!editor}
+        type="button"
+        onClick={exportJson}
+      >
         Export JSON
       </button>
-      <button className="button-link" disabled={!editor} type="button" onClick={exportDocx}>
+      <button
+        className="button-link"
+        disabled={!editor}
+        type="button"
+        onClick={exportDocx}
+      >
         Export DOCX
       </button>
       <input

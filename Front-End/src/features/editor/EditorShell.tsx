@@ -12,7 +12,10 @@ import {
 import { createPlaceholderCollaborationUser } from '@/lib/collab/user';
 import { appEnv } from '@/shared/config/env';
 
-import { createEditorExtensions, INITIAL_EDITOR_CONTENT } from './editorExtensions';
+import {
+  createEditorExtensions,
+  INITIAL_EDITOR_CONTENT,
+} from './editorExtensions';
 import { EditorToolbar } from './EditorToolbar';
 
 export interface CollaborationSnapshot {
@@ -35,7 +38,11 @@ interface EditorShellProps {
   realtimeServerUrl?: string | null;
 }
 
-type WebsocketTransportStatus = 'connected' | 'connecting' | 'disconnected' | 'disabled';
+type WebsocketTransportStatus =
+  | 'connected'
+  | 'connecting'
+  | 'disconnected'
+  | 'disabled';
 
 interface RealtimeDebugState {
   synced: boolean;
@@ -63,7 +70,9 @@ function getConnectionMode(status: ProviderConnectionStatus) {
   return 'Realtime server disconnected';
 }
 
-function getRealtimeDebugState(connection: CollaborationConnection): RealtimeDebugState {
+function getRealtimeDebugState(
+  connection: CollaborationConnection,
+): RealtimeDebugState {
   const { provider } = connection;
 
   if (!provider) {
@@ -92,7 +101,9 @@ export function EditorShell({
   realtimeServerUrl = appEnv.wsUrl,
 }: EditorShellProps) {
   const [user] = useState(() => createPlaceholderCollaborationUser());
-  const [activeCollaborators, setActiveCollaborators] = useState<CollaborationSnapshot['activeCollaborators']>([]);
+  const [activeCollaborators, setActiveCollaborators] = useState<
+    CollaborationSnapshot['activeCollaborators']
+  >([]);
   const [isCurrentUserTyping, setIsCurrentUserTyping] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -104,10 +115,13 @@ export function EditorShell({
       }),
     [docId, realtimeServerUrl],
   );
-  const [connectionStatus, setConnectionStatus] = useState<ProviderConnectionStatus>(
-    connection.provider ? 'connecting' : 'local-only',
+  const [connectionStatus, setConnectionStatus] =
+    useState<ProviderConnectionStatus>(
+      connection.provider ? 'connecting' : 'local-only',
+    );
+  const [realtimeDebug, setRealtimeDebug] = useState(() =>
+    getRealtimeDebugState(connection),
   );
-  const [realtimeDebug, setRealtimeDebug] = useState(() => getRealtimeDebugState(connection));
 
   const editor = useEditor(
     {
@@ -139,8 +153,12 @@ export function EditorShell({
     });
 
     const updateCollaborators = () => {
-      const collaborators = Array.from(provider.awareness.getStates().entries()).map(([clientId, state]) => {
-        const userState = state.user as { name?: string; color?: string; id?: string } | undefined;
+      const collaborators = Array.from(
+        provider.awareness.getStates().entries(),
+      ).map(([clientId, state]) => {
+        const userState = state.user as
+          | { name?: string; color?: string; id?: string }
+          | undefined;
         return {
           id: clientId,
           name: userState?.name ?? 'Anonymous',
@@ -240,22 +258,42 @@ export function EditorShell({
       isCurrentUserTyping,
       lastSyncedAt,
     });
-  }, [activeCollaborators, connectionStatus, isCurrentUserTyping, lastSyncedAt, onCollaborationChange]);
+  }, [
+    activeCollaborators,
+    connectionStatus,
+    isCurrentUserTyping,
+    lastSyncedAt,
+    onCollaborationChange,
+  ]);
 
   return (
     <section className="card editor-shell">
       <div className="pill-row">
-        <span className="pill pill--accent">{getConnectionMode(connectionStatus)}</span>
+        <span className="pill pill--accent">
+          {getConnectionMode(connectionStatus)}
+        </span>
         <span className="pill">Room: {docId}</span>
         <span className="pill">User: {user.name}</span>
-        <span className="pill">{isCurrentUserTyping ? 'You are typing' : 'Idle'}</span>
+        <span className="pill">
+          {isCurrentUserTyping ? 'You are typing' : 'Idle'}
+        </span>
       </div>
 
       <div className="info-list">
-        <span>Presence provider: <code>{realtimeDebug.url ?? appEnv.wsUrl ?? 'disabled'}</code></span>
-        <span>Websocket: <code>{realtimeDebug.transport}</code> / synced: <code>{String(realtimeDebug.synced)}</code></span>
-        <span>Shared fragment: <code>content</code></span>
-        <span>Peers in room: <code>{activeCollaborators.length}</code></span>
+        <span>
+          Presence provider:{' '}
+          <code>{realtimeDebug.url ?? appEnv.wsUrl ?? 'disabled'}</code>
+        </span>
+        <span>
+          Websocket: <code>{realtimeDebug.transport}</code> / synced:{' '}
+          <code>{String(realtimeDebug.synced)}</code>
+        </span>
+        <span>
+          Shared fragment: <code>content</code>
+        </span>
+        <span>
+          Peers in room: <code>{activeCollaborators.length}</code>
+        </span>
       </div>
 
       <EditorToolbar editor={editor} />

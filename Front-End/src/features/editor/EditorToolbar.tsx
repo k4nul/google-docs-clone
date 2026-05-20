@@ -6,7 +6,10 @@ interface EditorToolbarProps {
 
 function toggleLink(editor: Editor) {
   const previousHref = editor.getAttributes('link').href as string | undefined;
-  const nextHref = window.prompt('Enter a link URL', previousHref ?? 'https://');
+  const nextHref = window.prompt(
+    'Enter a link URL',
+    previousHref ?? 'https://',
+  );
 
   if (nextHref === null) {
     return;
@@ -17,7 +20,12 @@ function toggleLink(editor: Editor) {
     return;
   }
 
-  editor.chain().focus().extendMarkRange('link').setLink({ href: nextHref }).run();
+  editor
+    .chain()
+    .focus()
+    .extendMarkRange('link')
+    .setLink({ href: nextHref })
+    .run();
 }
 
 export function EditorToolbar({ editor }: EditorToolbarProps) {

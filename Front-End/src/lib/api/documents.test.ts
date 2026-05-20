@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createBackendDocument, getBackendDocument, listBackendDocuments } from './documents';
+import {
+  createBackendDocument,
+  getBackendDocument,
+  listBackendDocuments,
+} from './documents';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -61,7 +65,10 @@ describe('document API client', () => {
         source: 'backend',
       },
     ]);
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/documents'), expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/documents'),
+      expect.any(Object),
+    );
   });
 
   it('fetches one backend document by encoded id', async () => {
@@ -77,14 +84,18 @@ describe('document API client', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(getBackendDocument('33333333-3333-4333-8333-333333333333')).resolves.toEqual({
+    await expect(
+      getBackendDocument('33333333-3333-4333-8333-333333333333'),
+    ).resolves.toEqual({
       id: '33333333-3333-4333-8333-333333333333',
       title: 'Loaded document',
       createdAt: '2026-04-03T10:00:00.000Z',
       updatedAt: '2026-04-03T10:05:00.000Z',
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/documents/33333333-3333-4333-8333-333333333333'),
+      expect.stringContaining(
+        '/api/documents/33333333-3333-4333-8333-333333333333',
+      ),
       expect.any(Object),
     );
   });

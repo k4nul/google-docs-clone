@@ -21,7 +21,9 @@ interface CreateDocumentResponse {
   document: BackendDocumentResponse;
 }
 
-function mapBackendDocument(document: BackendDocumentResponse): BackendDocument {
+function mapBackendDocument(
+  document: BackendDocumentResponse,
+): BackendDocument {
   return {
     id: document.id,
     title: document.title,
@@ -48,7 +50,9 @@ function getTimestamp(value: string) {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
-export function documentSummaryFromBackend(document: BackendDocument): DocumentSummary {
+export function documentSummaryFromBackend(
+  document: BackendDocument,
+): DocumentSummary {
   return {
     id: document.id,
     title: document.title,
@@ -67,7 +71,10 @@ export async function listBackendDocuments() {
   return response.documents
     .map(mapBackendDocument)
     .map(documentSummaryFromBackend)
-    .sort((left, right) => getTimestamp(right.updatedAt) - getTimestamp(left.updatedAt));
+    .sort(
+      (left, right) =>
+        getTimestamp(right.updatedAt) - getTimestamp(left.updatedAt),
+    );
 }
 
 export async function getBackendDocument(documentId: string) {

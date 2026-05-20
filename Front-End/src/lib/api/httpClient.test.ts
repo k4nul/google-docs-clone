@@ -23,7 +23,9 @@ describe('HTTP API client', () => {
   });
 
   it('builds runtime API URLs from the browser location', () => {
-    expect(buildApiUrl('/documents')).toBe('http://localhost:3000/api/documents');
+    expect(buildApiUrl('/documents')).toBe(
+      'http://localhost:3000/api/documents',
+    );
     expect(buildApiUrl('/documents/first%20draft')).toBe(
       'http://localhost:3000/api/documents/first%20draft',
     );
@@ -33,7 +35,9 @@ describe('HTTP API client', () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(apiGet<{ ok: boolean }>('/documents')).resolves.toEqual({ ok: true });
+    await expect(apiGet<{ ok: boolean }>('/documents')).resolves.toEqual({
+      ok: true,
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/documents'),
@@ -46,7 +50,9 @@ describe('HTTP API client', () => {
   });
 
   it('POSTs JSON bodies while preserving caller-provided headers', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ created: true }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ created: true }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
@@ -103,7 +109,11 @@ describe('HTTP API client', () => {
   it('throws ApiRequestError with a null payload for non-JSON failures', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(textResponse('service unavailable', { status: 503 })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          textResponse('service unavailable', { status: 503 }),
+        ),
     );
 
     await expect(apiGet('/documents')).rejects.toMatchObject({

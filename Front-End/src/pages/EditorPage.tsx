@@ -20,7 +20,9 @@ function formatMetadataError(error: unknown) {
     }
   }
 
-  return error instanceof Error ? error.message : '문서 메타데이터를 불러오지 못했습니다.';
+  return error instanceof Error
+    ? error.message
+    : '문서 메타데이터를 불러오지 못했습니다.';
 }
 
 function formatDateTime(value: string) {
@@ -114,9 +116,16 @@ export function EditorPage() {
   }, [decodedDocId]);
 
   const isMetadataCurrent = metadataState.docId === decodedDocId;
-  const document = isMetadataCurrent && metadataState.status === 'loaded' ? metadataState.document : null;
-  const documentError = isMetadataCurrent && metadataState.status === 'error' ? metadataState.error : null;
-  const isDocumentLoading = !isMetadataCurrent || metadataState.status === 'loading';
+  const document =
+    isMetadataCurrent && metadataState.status === 'loaded'
+      ? metadataState.document
+      : null;
+  const documentError =
+    isMetadataCurrent && metadataState.status === 'error'
+      ? metadataState.error
+      : null;
+  const isDocumentLoading =
+    !isMetadataCurrent || metadataState.status === 'loading';
 
   if (!docId) {
     return <Navigate replace to="/" />;
@@ -131,7 +140,11 @@ export function EditorPage() {
       description="Backend document metadata gates the realtime connection, then the editor joins the matching Yjs room with reconnect and presence status visible."
       actions={
         <div className="pill-row">
-          <FileManager editor={editor} docId={decodedDocId} onNotice={setNotice} />
+          <FileManager
+            editor={editor}
+            docId={decodedDocId}
+            onNotice={setNotice}
+          />
           <Link className="button-ghost" to="/">
             Back to document list
           </Link>
@@ -165,10 +178,18 @@ export function EditorPage() {
             <h3>Backend integration points</h3>
             <div className="info-list">
               <span>
-                Document fetch: <code>{buildApiUrl(`/documents/${decodedDocId}`)}</code>
+                Document fetch:{' '}
+                <code>{buildApiUrl(`/documents/${decodedDocId}`)}</code>
               </span>
               <span>
-                Metadata: <code>{isDocumentLoading ? 'loading' : document ? 'loaded' : 'unavailable'}</code>
+                Metadata:{' '}
+                <code>
+                  {isDocumentLoading
+                    ? 'loading'
+                    : document
+                      ? 'loaded'
+                      : 'unavailable'}
+                </code>
               </span>
               {document ? (
                 <>
@@ -181,7 +202,10 @@ export function EditorPage() {
                 </>
               ) : null}
               <span>
-                Revision sync: <code>{realtimeServerUrl ?? 'disabled until metadata loads'}</code>
+                Revision sync:{' '}
+                <code>
+                  {realtimeServerUrl ?? 'disabled until metadata loads'}
+                </code>
               </span>
               <span>
                 Import ingest: <code>@/lib/import/docxImport.ts</code>
@@ -203,10 +227,14 @@ export function EditorPage() {
                 Connection state: <code>{collaboration.connectionStatus}</code>
               </span>
               <span>
-                My activity: <code>{collaboration.isCurrentUserTyping ? 'typing' : 'idle'}</code>
+                My activity:{' '}
+                <code>
+                  {collaboration.isCurrentUserTyping ? 'typing' : 'idle'}
+                </code>
               </span>
               <span>
-                Last sync event: <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
+                Last sync event:{' '}
+                <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
               </span>
               {/* <span>
                 Active users: <code>{collaboration.activeCollaborators.length}</code>

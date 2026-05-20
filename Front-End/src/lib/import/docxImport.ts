@@ -14,7 +14,9 @@ function extractPlainText(html: string) {
   return document.body.textContent?.trim() ?? '';
 }
 
-function normalizeMessages(messages: readonly ImportedDocumentMessage[]): ImportedDocumentMessage[] {
+function normalizeMessages(
+  messages: readonly ImportedDocumentMessage[],
+): ImportedDocumentMessage[] {
   return messages.map((message) => ({
     message: message.message,
     type: message.type,
@@ -29,13 +31,17 @@ export function sanitizeImportedHtml(html: string) {
   });
 }
 
-export async function importDocxToHtml(arrayBuffer: ArrayBuffer): Promise<ImportedDocumentContent> {
+export async function importDocxToHtml(
+  arrayBuffer: ArrayBuffer,
+): Promise<ImportedDocumentContent> {
   const result = await mammoth.convertToHtml({ arrayBuffer });
   const html = sanitizeImportedHtml(result.value);
-  const messages: ImportedDocumentMessage[] = result.messages.map((message) => ({
-    message: message.message,
-    type: message.type,
-  }));
+  const messages: ImportedDocumentMessage[] = result.messages.map(
+    (message) => ({
+      message: message.message,
+      type: message.type,
+    }),
+  );
 
   return {
     html,

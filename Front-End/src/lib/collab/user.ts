@@ -16,8 +16,10 @@ function createCollaborationUserId() {
 }
 
 export function createPlaceholderCollaborationUser(): CollaborationUser {
-  const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)] ?? '#0f8b8d';
-  const name = USER_NAMES[Math.floor(Math.random() * USER_NAMES.length)] ?? 'Atlas';
+  const color =
+    USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)] ?? '#0f8b8d';
+  const name =
+    USER_NAMES[Math.floor(Math.random() * USER_NAMES.length)] ?? 'Atlas';
 
   return {
     id: createCollaborationUserId(),

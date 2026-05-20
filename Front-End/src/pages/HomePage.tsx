@@ -1,7 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 
-import { createBackendDocument, listBackendDocuments } from '@/lib/api/documents';
+import {
+  createBackendDocument,
+  listBackendDocuments,
+} from '@/lib/api/documents';
 import { mockDocuments } from '@/features/documents/mockDocuments';
 import { appEnv } from '@/shared/config/env';
 import type { DocumentSummary } from '@/shared/types/document';
@@ -67,7 +70,9 @@ export function HomePage() {
         }
 
         setDocuments(mockDocuments);
-        setListError(getErrorMessage(error, '문서 목록을 불러오지 못했습니다.'));
+        setListError(
+          getErrorMessage(error, '문서 목록을 불러오지 못했습니다.'),
+        );
         setListStatus('fallback');
       }
     }
@@ -84,10 +89,16 @@ export function HomePage() {
     setIsCreating(true);
 
     try {
-      const { document } = await createBackendDocument('Realtime collaboration draft');
+      const { document } = await createBackendDocument(
+        'Realtime collaboration draft',
+      );
       navigate(`/docs/${document.id}`);
     } catch (error) {
-      setCreateError(error instanceof Error ? error.message : '백엔드 문서 생성에 실패했습니다.');
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : '백엔드 문서 생성에 실패했습니다.',
+      );
     } finally {
       setIsCreating(false);
     }
@@ -101,7 +112,12 @@ export function HomePage() {
       actions={
         <div className="pill-row">
           {canCreateBackendDocument ? (
-            <button className="button-link" disabled={isCreating} type="button" onClick={handleCreateBackendDocument}>
+            <button
+              className="button-link"
+              disabled={isCreating}
+              type="button"
+              onClick={handleCreateBackendDocument}
+            >
               {isCreating ? 'Creating backend doc...' : 'Create backend editor'}
             </button>
           ) : null}
@@ -123,9 +139,13 @@ export function HomePage() {
       <section className="card document-list-header">
         <div>
           <h2>Documents</h2>
-          {listError ? <p className="muted">Backend list unavailable: {listError}</p> : null}
+          {listError ? (
+            <p className="muted">Backend list unavailable: {listError}</p>
+          ) : null}
         </div>
-        <span className={`pill ${listStatus === 'backend' ? 'pill--accent' : ''}`}>
+        <span
+          className={`pill ${listStatus === 'backend' ? 'pill--accent' : ''}`}
+        >
           {listStatusLabel}
         </span>
       </section>
@@ -135,7 +155,9 @@ export function HomePage() {
           <article className="card document-card">
             <div>
               <h2>No backend documents</h2>
-              <p className="muted">Create a backend document to start a realtime room.</p>
+              <p className="muted">
+                Create a backend document to start a realtime room.
+              </p>
             </div>
           </article>
         ) : null}
@@ -146,7 +168,9 @@ export function HomePage() {
               <span className="pill pill--accent">
                 {document.source === 'backend' ? 'backend' : document.status}
               </span>
-              <span className="pill">{document.collaborators} collaborators</span>
+              <span className="pill">
+                {document.collaborators} collaborators
+              </span>
             </div>
             <div>
               <h2>{document.title}</h2>
@@ -154,8 +178,13 @@ export function HomePage() {
             </div>
             <div className="document-card__meta">
               <span>Last updated: {formatUpdatedAt(document.updatedAt)}</span>
-              {document.createdAt ? <span>Created: {formatUpdatedAt(document.createdAt)}</span> : null}
-              <span>Source: {document.source === 'backend' ? 'Backend API' : 'Local sample'}</span>
+              {document.createdAt ? (
+                <span>Created: {formatUpdatedAt(document.createdAt)}</span>
+              ) : null}
+              <span>
+                Source:{' '}
+                {document.source === 'backend' ? 'Backend API' : 'Local sample'}
+              </span>
             </div>
             <div>
               <Link className="button-ghost" to={`/docs/${document.id}`}>
@@ -170,19 +199,36 @@ export function HomePage() {
         <section className="card">
           <h3>Runtime wiring</h3>
           <div className="info-list">
-            <span>API base: <code>{appEnv.apiBaseUrl ?? '(not configured)'}</code></span>
-            <span>API auth: <code>{appEnv.apiToken ? 'legacy token configured' : 'not required'}</code></span>
-            <span>WS provider: <code>{appEnv.wsUrl ?? '(local-only mode)'}</code></span>
-            <span>Import path: <code>@/lib/import/docxImport.ts</code></span>
+            <span>
+              API base: <code>{appEnv.apiBaseUrl ?? '(not configured)'}</code>
+            </span>
+            <span>
+              API auth:{' '}
+              <code>
+                {appEnv.apiToken ? 'legacy token configured' : 'not required'}
+              </code>
+            </span>
+            <span>
+              WS provider: <code>{appEnv.wsUrl ?? '(local-only mode)'}</code>
+            </span>
+            <span>
+              Import path: <code>@/lib/import/docxImport.ts</code>
+            </span>
           </div>
         </section>
 
         <section className="card">
           <h3>Current scope</h3>
           <div className="info-list">
-            <span>Backend document list route at <code>/</code></span>
-            <span>Collaborative editor route at <code>/docs/:docId</code></span>
-            <span>Compile-safe Yjs document/provider shell for backend hookup</span>
+            <span>
+              Backend document list route at <code>/</code>
+            </span>
+            <span>
+              Collaborative editor route at <code>/docs/:docId</code>
+            </span>
+            <span>
+              Compile-safe Yjs document/provider shell for backend hookup
+            </span>
           </div>
         </section>
       </div>
