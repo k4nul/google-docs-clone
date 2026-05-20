@@ -1,6 +1,6 @@
 # Roles
 
-A/B/C/D는 현재 GitHub owner 핸들이 아니라 책임 구간 역할 문서다. 실제 owner enforcement는 `.github/CODEOWNERS`에서 관리하며, dedicated GitHub 팀/사용자 핸들이 준비되기 전까지는 `@System-Docs-H`가 baseline owner를 맡는다.
+A/B/C/D는 현재 GitHub owner 핸들이 아니라 책임 구간 역할 문서다. 실제 owner mapping은 `Front-End/.github/CODEOWNERS`에서 관리하며, dedicated GitHub 팀/사용자 핸들이 준비되기 전까지는 `@System-Docs-H`가 baseline owner를 맡는다.
 
 ## A: PM / Integration
 

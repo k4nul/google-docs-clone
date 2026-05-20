@@ -4,7 +4,7 @@
 - 모든 변경은 `cargo check`, `cargo fmt --check`, `cargo test`가 녹색인 상태를 유지하도록 마무리한다.
 - API, route, 환경변수, WebSocket 계약이 바뀌면 `README.md`와 `docs/api.md`를 함께 동기화한다.
 - `src/app.rs`, `src/config.rs`, `src/state.rs`, `src/errors.rs`, `src/routes`, `src/collab`의 책임 경계를 존중한다.
-- persistence가 아직 없으므로 상태 저장이 필요해 보이는 기능은 먼저 확장 포인트로 설계하고 문서에 명시한다.
+- persistence 변경은 `SnapshotStore` 경계를 통해 연결하고, store 동작이나 복구 계약이 바뀌면 `README.md`, `docs/setup.md`, `docs/api.md`, `docs/architecture.md`를 함께 갱신한다.
 - broken integration이 의심되는 실험 코드는 바로 route에 넣지 않고 경계 모듈로 격리한다.
 - 커밋 메시지는 반드시 `type(scope): subject` 형식을 사용한다.
 - 허용되는 `type`은 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`, `rename`, `remove`만 사용한다.

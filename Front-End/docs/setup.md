@@ -59,7 +59,7 @@ npm run typecheck
 
 ## CI Quality Gates
 
-같은 검증은 `.github/workflows/ci.yml`에서 자동 실행한다.
+같은 검증은 `Front-End/.github/workflows/ci.yml`의 frontend workflow에 정의되어 있다. 현재 루트에는 별도 통합 workflow가 없다.
 
 - `build`
 - `lint`
@@ -71,7 +71,7 @@ npm run typecheck
 `.env.example`를 기준으로 `.env.local`을 구성한다.
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용한다.
-- `VITE_WS_URL`: Yjs websocket provider base URL. 없으면 `ws(s)://<current-host>/ws`를 사용한다.
+- `VITE_WS_URL`: Yjs websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용한다. provider는 이 값에서 `/ws/:docId` endpoint를 구성한다.
 - `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않다.
 
 예시:
@@ -79,7 +79,7 @@ npm run typecheck
 ```bash
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
-VITE_WS_URL=ws://localhost:4000/ws
+VITE_WS_URL=ws://localhost:4000
 # optional legacy compatibility only
 # VITE_API_TOKEN=dev-admin-token
 ```

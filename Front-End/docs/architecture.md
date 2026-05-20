@@ -24,7 +24,7 @@
 
 핵심 포인트:
 
-- provider URL은 `VITE_WS_URL`이 있으면 그 값을 쓰고, 없으면 현재 브라우저 origin에서 `ws(s)://<current-host>/ws`로 자동 계산한다.
+- provider base는 `VITE_WS_URL`이 있으면 그 값을 쓰고, 없으면 현재 브라우저 origin에서 `ws(s)://<current-host>/ws`로 자동 계산한다. 실제 room endpoint는 `/ws/:docId`로 구성한다.
 - API base URL도 `VITE_API_BASE_URL`이 없으면 `<current-origin>/api`로 자동 계산한다.
 - browser WebSocket은 임의의 `Authorization` 헤더를 붙일 수 없으므로 프론트엔드는 backend UUID 문서와 origin 정책에 맞춰 연결한다.
 - 문서 detail 조회가 실패하면 editor는 local-only provider로 열리고 realtime endpoint는 비활성 상태로 표시된다.

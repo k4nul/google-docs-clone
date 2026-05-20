@@ -155,7 +155,7 @@ const MSG_AWARENESS = 1;
 
 const doc = new Y.Doc();
 const awareness = new awarenessProtocol.Awareness(doc);
-const ws = new WebSocket(`ws://localhost:3000/ws/${docId}`);
+const ws = new WebSocket(`ws://localhost:4000/ws/${docId}`);
 ws.binaryType = "arraybuffer";
 
 ws.onopen = () => {

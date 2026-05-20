@@ -131,7 +131,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
   - `npm run lint`
   - `npm run test`
   - `npm run typecheck`
-- 같은 품질 게이트가 `.github/workflows/ci.yml`에서도 통과되어야 한다.
+- 같은 품질 게이트가 `Front-End/.github/workflows/ci.yml`의 frontend workflow에서도 통과되어야 한다. 현재 루트에는 별도 통합 workflow가 없다.
 - UI 변경이 있으면 PR 설명에 변경 화면이나 동작 요약을 함께 남긴다.
 - API, route, provider 계약이 바뀌면 관련 `docs/` 문서도 함께 포함한다.
 - README나 운영 규칙 변경도 PR 설명에 이유를 명확히 적는다.
@@ -168,14 +168,14 @@ API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용�
 ```bash
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
-VITE_WS_URL=ws://localhost:4000/ws
+VITE_WS_URL=ws://localhost:4000
 # optional legacy compatibility only
 # VITE_API_TOKEN=dev-admin-token
 ```
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용합니다.
 - `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않습니다.
-- `VITE_WS_URL`: collaboration websocket base URL. 없으면 `ws(s)://<current-host>/ws`를 사용합니다.
+- `VITE_WS_URL`: collaboration websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용합니다. provider는 이 값에서 `/ws/:docId` endpoint를 구성합니다.
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 됩니다.
 
