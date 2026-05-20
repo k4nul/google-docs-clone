@@ -4,13 +4,13 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ## 핵심 기능
 
-- 문서 목록 placeholder 페이지 제공
+- 백엔드 `GET /api/documents` 기반 문서 목록과 local sample fallback 제공
 - `/docs/:docId` 경로에서 collaborative editor 셸 제공
 - Tiptap 기반 rich text editor 구성
 - Yjs binary sync protocol 기반 실시간 협업 연결 구조 분리
 - `VITE_WS_URL`이 없으면 현재 브라우저 origin에서 WebSocket URL 자동 계산
 - `.docx`를 HTML로 변환하고 sanitize 하는 import 유틸리티 제공
-- API 연동 확장을 위한 `src/lib/api` 경계 유지
+- `src/lib/api` 경계에서 documents list/detail/create 응답 변환
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
 
 ## 모듈 의존성
@@ -64,9 +64,9 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ### 2주차
 
-- documents list/detail API 연동을 진행하고 데이터 흐름을 실제 화면에 연결한다.
-- websocket auth, reconnect 정책, connection 상태 처리 기준을 정리한다.
-- presence UI와 collaboration 상태 표시 등 실시간 협업 경험을 보강한다.
+- documents list/detail API 연동으로 데이터 흐름을 실제 화면에 연결했다.
+- browser WebSocket 제약에 맞춰 auth 없이 backend UUID와 origin 정책으로 연결하고 reconnect/status 기준을 정리했다.
+- presence UI와 collaboration 상태 표시 등 실시간 협업 경험을 보강했다.
 
 ### 3주차
 
@@ -163,17 +163,18 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ### 환경 변수
 
-API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용합니다. 문서 생성 기능을 쓰려면 `VITE_API_TOKEN`은 별도로 설정해야 합니다.
+API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용합니다. `VITE_API_TOKEN`은 현재 local backend contract에서 필요하지 않으며, 설정된 경우 legacy compatibility header로만 전달됩니다.
 
 ```bash
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
-VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000/ws
+# optional legacy compatibility only
+# VITE_API_TOKEN=dev-admin-token
 ```
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용합니다.
-- `VITE_API_TOKEN`: 문서 생성용 admin API token
+- `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않습니다.
 - `VITE_WS_URL`: collaboration websocket base URL. 없으면 `ws(s)://<current-host>/ws`를 사용합니다.
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 됩니다.
@@ -210,7 +211,7 @@ npm run preview
 
 ### 기본 라우트
 
-- `/`: 문서 목록 placeholder 페이지
+- `/`: 백엔드 문서 목록 페이지와 local sample fallback
 - `/docs/:docId`: collaborative editor 페이지
 
 ## 백엔드 연동 흐름
@@ -218,12 +219,13 @@ npm run preview
 현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다.
 
 1. 홈 화면에서 `Create backend editor`를 클릭합니다.
-2. 프런트가 `POST /api/documents`를 `Authorization: Bearer <VITE_API_TOKEN>` 헤더와 함께 호출합니다.
+2. 프런트가 `POST /api/documents`를 호출합니다. `VITE_API_TOKEN`이 있으면 legacy compatibility header만 추가합니다.
 3. 백엔드가 문서를 만들고 `document.id`를 응답합니다.
 4. 프런트는 `/docs/:docId`로 이동합니다.
-5. 협업 연결은 `ws://host/ws/:docId` 형태로 열립니다.
+5. 프런트가 `GET /api/documents/:id`로 detail metadata를 확인합니다.
+6. 협업 연결은 `ws://host/ws/:docId` 형태로 열립니다.
 
-즉, mock 문서 경로가 아니라 백엔드가 생성한 UUID 문서 경로로 들어가야 실제 협업이 연결됩니다.
+백엔드 목록을 불러올 수 없으면 홈 화면은 local sample 문서를 표시합니다. 실제 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
 ## 이번 문제와 해결
 
@@ -285,12 +287,11 @@ npm run preview
 
 ```bash
 VITE_API_BASE_URL=http://localhost:4000/api
-VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000
 ```
 
 3. 프런트 dev 서버를 재시작
-4. 홈 화면에서 `Open mock editor`가 아니라 `Create backend editor`를 클릭
+4. 홈 화면에서 백엔드 문서 목록을 확인하거나 `Create backend editor`를 클릭
 5. 브라우저 URL이 `/docs/<uuid>` 형태인지 확인
 6. 콘솔에 아래 로그가 찍히는지 확인
 

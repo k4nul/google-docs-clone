@@ -1,18 +1,69 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { EditorShell } from '@/features/editor/EditorShell';
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
 import { FileManager } from '@/features/util/FileManager';
-import { buildApiUrl } from '@/lib/api/httpClient';
+import { getBackendDocument } from '@/lib/api/documents';
+import { ApiRequestError, buildApiUrl } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
+import type { BackendDocument } from '@/shared/types/document';
 import { PageLayout } from '@/shared/ui/PageLayout';
+
+function formatMetadataError(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    const owner = error.payload?.owner;
+
+    if (owner?.node_id) {
+      return `${error.message} Owner: ${owner.node_id}${owner.base_url ? ` (${owner.base_url})` : ''}`;
+    }
+  }
+
+  return error instanceof Error ? error.message : '문서 메타데이터를 불러오지 못했습니다.';
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
+type DocumentMetadataState =
+  | {
+      docId: string | null;
+      status: 'loading';
+      document: null;
+      error: null;
+    }
+  | {
+      docId: string;
+      status: 'loaded';
+      document: BackendDocument;
+      error: null;
+    }
+  | {
+      docId: string;
+      status: 'error';
+      document: null;
+      error: string;
+    };
 
 export function EditorPage() {
   const { docId } = useParams<{ docId: string }>();
+  const decodedDocId = docId ? decodeURIComponent(docId) : '';
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [metadataState, setMetadataState] = useState<DocumentMetadataState>({
+    docId: null,
+    status: 'loading',
+    document: null,
+    error: null,
+  });
   const [collaboration, setCollaboration] = useState<CollaborationSnapshot>({
     activeCollaborators: [],
     connectionStatus: appEnv.wsUrl ? 'connecting' : 'local-only',
@@ -20,16 +71,64 @@ export function EditorPage() {
     lastSyncedAt: null,
   });
 
+  useEffect(() => {
+    if (!decodedDocId) {
+      return undefined;
+    }
+
+    let isCurrent = true;
+
+    async function loadDocument() {
+      try {
+        const backendDocument = await getBackendDocument(decodedDocId);
+
+        if (!isCurrent) {
+          return;
+        }
+
+        setMetadataState({
+          docId: decodedDocId,
+          status: 'loaded',
+          document: backendDocument,
+          error: null,
+        });
+      } catch (error) {
+        if (!isCurrent) {
+          return;
+        }
+
+        setMetadataState({
+          docId: decodedDocId,
+          status: 'error',
+          document: null,
+          error: formatMetadataError(error),
+        });
+      }
+    }
+
+    void loadDocument();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [decodedDocId]);
+
+  const isMetadataCurrent = metadataState.docId === decodedDocId;
+  const document = isMetadataCurrent && metadataState.status === 'loaded' ? metadataState.document : null;
+  const documentError = isMetadataCurrent && metadataState.status === 'error' ? metadataState.error : null;
+  const isDocumentLoading = !isMetadataCurrent || metadataState.status === 'loading';
+
   if (!docId) {
     return <Navigate replace to="/" />;
   }
 
-  const decodedDocId = decodeURIComponent(docId);
+  const realtimeServerUrl = document && !documentError ? appEnv.wsUrl : null;
+
   return (
     <PageLayout
       eyebrow="Realtime Document"
-      title={`Editor room: ${decodedDocId}`}
-      description="Yjs document와 websocket provider를 분리된 초기화 로직으로 연결한 최소 협업 에디터 페이지입니다. 백엔드가 없어도 로컬 모드로 안전하게 렌더링됩니다."
+      title={document?.title ?? `Editor room: ${decodedDocId}`}
+      description="Backend document metadata gates the realtime connection, then the editor joins the matching Yjs room with reconnect and presence status visible."
       actions={
         <div className="pill-row">
           <FileManager editor={editor} docId={decodedDocId} onNotice={setNotice} />
@@ -41,11 +140,18 @@ export function EditorPage() {
     >
       <div className="page-grid">
         <div className="aside-stack">
-          <EditorShell
-            docId={decodedDocId}
-            onCollaborationChange={setCollaboration}
-            onEditorReady={setEditor}
-          />
+          {isDocumentLoading ? (
+            <section className="card editor-loading">
+              <p>Loading document metadata...</p>
+            </section>
+          ) : (
+            <EditorShell
+              docId={decodedDocId}
+              realtimeServerUrl={realtimeServerUrl}
+              onCollaborationChange={setCollaboration}
+              onEditorReady={setEditor}
+            />
+          )}
           {notice ? (
             <section className="card">
               <h3>Import / Export status</h3>
@@ -62,13 +168,33 @@ export function EditorPage() {
                 Document fetch: <code>{buildApiUrl(`/documents/${decodedDocId}`)}</code>
               </span>
               <span>
-                Revision sync: <code>{appEnv.wsUrl ?? 'VITE_WS_URL not set'}</code>
+                Metadata: <code>{isDocumentLoading ? 'loading' : document ? 'loaded' : 'unavailable'}</code>
+              </span>
+              {document ? (
+                <>
+                  <span>
+                    Created: <code>{formatDateTime(document.createdAt)}</code>
+                  </span>
+                  <span>
+                    Updated: <code>{formatDateTime(document.updatedAt)}</code>
+                  </span>
+                </>
+              ) : null}
+              <span>
+                Revision sync: <code>{realtimeServerUrl ?? 'disabled until metadata loads'}</code>
               </span>
               <span>
                 Import ingest: <code>@/lib/import/docxImport.ts</code>
               </span>
             </div>
           </section>
+
+          {documentError ? (
+            <section className="card">
+              <h3>Document metadata status</h3>
+              <p className="muted">{documentError}</p>
+            </section>
+          ) : null}
 
           <section className="card">
             <h3>Realtime collaboration</h3>

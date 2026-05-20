@@ -30,8 +30,8 @@ npm.cmd run dev
 
 기본 라우트:
 
-- `/` 문서 목록 placeholder
-- `/docs/:docId` collaborative editor shell
+- `/` backend 문서 목록과 local sample fallback
+- `/docs/:docId` backend detail lookup 이후 collaborative editor shell
 
 ## Build
 
@@ -72,6 +72,7 @@ npm run typecheck
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용한다.
 - `VITE_WS_URL`: Yjs websocket provider base URL. 없으면 `ws(s)://<current-host>/ws`를 사용한다.
+- `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않다.
 
 예시:
 
@@ -79,6 +80,8 @@ npm run typecheck
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
 VITE_WS_URL=ws://localhost:4000/ws
+# optional legacy compatibility only
+# VITE_API_TOKEN=dev-admin-token
 ```
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 된다.

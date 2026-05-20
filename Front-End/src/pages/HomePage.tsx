@@ -1,29 +1,83 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { createBackendDocument } from '@/lib/api/documents';
+import { createBackendDocument, listBackendDocuments } from '@/lib/api/documents';
 import { mockDocuments } from '@/features/documents/mockDocuments';
-import { buildApiUrl } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
+import type { DocumentSummary } from '@/shared/types/document';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
 function formatUpdatedAt(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+type DocumentListStatus = 'loading' | 'backend' | 'fallback';
+
 export function HomePage() {
   const navigate = useNavigate();
+  const [documents, setDocuments] = useState<DocumentSummary[]>(mockDocuments);
+  const [listStatus, setListStatus] = useState<DocumentListStatus>('loading');
+  const [listError, setListError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const sampleDocument = mockDocuments[0];
   const canCreateBackendDocument = useMemo(
-    () => Boolean(appEnv.apiBaseUrl && appEnv.apiToken && appEnv.wsUrl),
+    () => Boolean(appEnv.apiBaseUrl && appEnv.wsUrl),
     [],
   );
+  const listStatusLabel = {
+    loading: 'Loading backend documents',
+    backend: `${documents.length} backend document${documents.length === 1 ? '' : 's'}`,
+    fallback: 'Showing local samples',
+  }[listStatus];
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadDocuments() {
+      setListStatus('loading');
+
+      try {
+        const backendDocuments = await listBackendDocuments();
+
+        if (!isCurrent) {
+          return;
+        }
+
+        setDocuments(backendDocuments);
+        setListError(null);
+        setListStatus('backend');
+      } catch (error) {
+        if (!isCurrent) {
+          return;
+        }
+
+        setDocuments(mockDocuments);
+        setListError(getErrorMessage(error, '문서 목록을 불러오지 못했습니다.'));
+        setListStatus('fallback');
+      }
+    }
+
+    void loadDocuments();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   async function handleCreateBackendDocument() {
     setCreateError(null);
@@ -53,7 +107,7 @@ export function HomePage() {
           ) : null}
           {sampleDocument ? (
             <Link className="button-ghost" to={`/docs/${sampleDocument.id}`}>
-              Open mock editor
+              Open sample editor
             </Link>
           ) : null}
         </div>
@@ -66,11 +120,32 @@ export function HomePage() {
         </section>
       ) : null}
 
+      <section className="card document-list-header">
+        <div>
+          <h2>Documents</h2>
+          {listError ? <p className="muted">Backend list unavailable: {listError}</p> : null}
+        </div>
+        <span className={`pill ${listStatus === 'backend' ? 'pill--accent' : ''}`}>
+          {listStatusLabel}
+        </span>
+      </section>
+
       <div className="card-grid">
-        {mockDocuments.map((document) => (
+        {documents.length === 0 ? (
+          <article className="card document-card">
+            <div>
+              <h2>No backend documents</h2>
+              <p className="muted">Create a backend document to start a realtime room.</p>
+            </div>
+          </article>
+        ) : null}
+
+        {documents.map((document) => (
           <article key={document.id} className="card document-card">
             <div className="pill-row">
-              <span className="pill pill--accent">{document.status}</span>
+              <span className="pill pill--accent">
+                {document.source === 'backend' ? 'backend' : document.status}
+              </span>
               <span className="pill">{document.collaborators} collaborators</span>
             </div>
             <div>
@@ -79,9 +154,8 @@ export function HomePage() {
             </div>
             <div className="document-card__meta">
               <span>Last updated: {formatUpdatedAt(document.updatedAt)}</span>
-              <span>
-                Future API path: <code>{buildApiUrl(`/documents/${document.id}`)}</code>
-              </span>
+              {document.createdAt ? <span>Created: {formatUpdatedAt(document.createdAt)}</span> : null}
+              <span>Source: {document.source === 'backend' ? 'Backend API' : 'Local sample'}</span>
             </div>
             <div>
               <Link className="button-ghost" to={`/docs/${document.id}`}>
@@ -97,7 +171,7 @@ export function HomePage() {
           <h3>Runtime wiring</h3>
           <div className="info-list">
             <span>API base: <code>{appEnv.apiBaseUrl ?? '(not configured)'}</code></span>
-            <span>API token: <code>{appEnv.apiToken ?? '(not configured)'}</code></span>
+            <span>API auth: <code>{appEnv.apiToken ? 'legacy token configured' : 'not required'}</code></span>
             <span>WS provider: <code>{appEnv.wsUrl ?? '(local-only mode)'}</code></span>
             <span>Import path: <code>@/lib/import/docxImport.ts</code></span>
           </div>
@@ -106,7 +180,7 @@ export function HomePage() {
         <section className="card">
           <h3>Current scope</h3>
           <div className="info-list">
-            <span>Document list placeholder route at <code>/</code></span>
+            <span>Backend document list route at <code>/</code></span>
             <span>Collaborative editor route at <code>/docs/:docId</code></span>
             <span>Compile-safe Yjs document/provider shell for backend hookup</span>
           </div>

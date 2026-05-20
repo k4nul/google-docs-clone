@@ -32,6 +32,7 @@ interface EditorShellProps {
   docId: string;
   onEditorReady?: (editor: Editor | null) => void;
   onCollaborationChange?: (snapshot: CollaborationSnapshot) => void;
+  realtimeServerUrl?: string | null;
 }
 
 type WebsocketTransportStatus = 'connected' | 'connecting' | 'disconnected' | 'disabled';
@@ -88,6 +89,7 @@ export function EditorShell({
   docId,
   onEditorReady,
   onCollaborationChange,
+  realtimeServerUrl = appEnv.wsUrl,
 }: EditorShellProps) {
   const [user] = useState(() => createPlaceholderCollaborationUser());
   const [activeCollaborators, setActiveCollaborators] = useState<CollaborationSnapshot['activeCollaborators']>([]);
@@ -98,9 +100,9 @@ export function EditorShell({
     () =>
       createCollaborationConnection({
         roomId: docId,
-        serverUrl: appEnv.wsUrl,
+        serverUrl: realtimeServerUrl,
       }),
-    [docId],
+    [docId, realtimeServerUrl],
   );
   const [connectionStatus, setConnectionStatus] = useState<ProviderConnectionStatus>(
     connection.provider ? 'connecting' : 'local-only',
@@ -253,7 +255,7 @@ export function EditorShell({
         <span>Presence provider: <code>{realtimeDebug.url ?? appEnv.wsUrl ?? 'disabled'}</code></span>
         <span>Websocket: <code>{realtimeDebug.transport}</code> / synced: <code>{String(realtimeDebug.synced)}</code></span>
         <span>Shared fragment: <code>content</code></span>
-        {/* <span>Peers in room: <code>{activeCollaborators.length}</code></span> */}
+        <span>Peers in room: <code>{activeCollaborators.length}</code></span>
       </div>
 
       <EditorToolbar editor={editor} />

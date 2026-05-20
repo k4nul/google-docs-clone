@@ -15,9 +15,9 @@
 
 ## Next TODO
 
-- [ ] 실제 documents list/detail API 연동
-- [ ] websocket auth와 reconnect 정책 정의
+- [x] 실제 documents list/detail API 연동
+- [x] websocket auth와 reconnect 정책 정의
 - [ ] import UI에서 `.docx` 업로드 후 editor ingest 연결
-- [ ] presence participant list와 connection status indicator 고도화
+- [x] presence participant list와 connection status indicator 고도화
 - [ ] persisted draft/save mutation 및 error handling 추가
 - [ ] dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결
