@@ -2,3 +2,12 @@
 data/
 tmp-server-*.log
 cron-prompt.txt
+
+# Local environment files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
