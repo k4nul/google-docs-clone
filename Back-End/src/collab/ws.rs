@@ -27,6 +27,7 @@ use crate::{
     collab::protocol::ValidatingProtocol,
     collab::rooms::{Room, RoomRegistry},
     errors::{AppError, AppResult},
+    http_params::parse_uuid_param,
     state::AppState,
 };
 
@@ -189,14 +190,6 @@ fn socket_message_payload(message: Message) -> SocketMessagePayload {
         Message::Close(_) => SocketMessagePayload::Close,
         Message::Text(_) | Message::Ping(_) | Message::Pong(_) => SocketMessagePayload::Ignore,
     }
-}
-
-fn parse_uuid_param(parameter: &str, raw_value: &str) -> AppResult<Uuid> {
-    Uuid::parse_str(raw_value).map_err(|_| {
-        AppError::BadRequest(format!(
-            "{parameter} must be a valid UUID, received `{raw_value}`"
-        ))
-    })
 }
 
 fn resolve_websocket_room(

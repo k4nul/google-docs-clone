@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::{
     collab::rooms::Room,
     errors::{AppError, AppResult},
+    http_params::parse_uuid_param,
     models::access::DocumentCredentials,
     models::document::Document,
     state::AppState,
@@ -116,12 +117,4 @@ fn accessible_room(
         .ok_or_else(|| AppError::NotFound(format!("document `{id}` was not found")))?;
 
     Ok(room)
-}
-
-fn parse_uuid_param(parameter: &str, raw_value: &str) -> AppResult<Uuid> {
-    Uuid::parse_str(raw_value).map_err(|_| {
-        AppError::BadRequest(format!(
-            "{parameter} must be a valid UUID, received `{raw_value}`"
-        ))
-    })
 }
