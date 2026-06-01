@@ -35,7 +35,8 @@
 
 - 위치: `src/lib/import/docxImport.ts`
 - 목적: DOCX 파일을 Mammoth로 HTML 변환 후 DOMPurify로 sanitize
-- 출력: 향후 editor content ingest에 연결 가능한 typed payload
+- `src/features/util/FileManager.tsx`는 DOCX 업로드 결과를 editor에 넣기 전에 같은 sanitize 경계를 통과시킨다.
+- 출력: editor content ingest에 연결 가능한 typed payload
 
 ## API Boundary
 

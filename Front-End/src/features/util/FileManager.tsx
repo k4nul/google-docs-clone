@@ -5,6 +5,7 @@ import mammoth from 'mammoth/mammoth.browser';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import type { IParagraphOptions, IRunOptions } from 'docx';
 
+import { sanitizeImportedHtml } from '@/lib/import/docxImport';
 import { Button } from '@/shared/ui/DesignSystem';
 
 interface FileManagerProps {
@@ -254,7 +255,7 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
         if (fileName.endsWith('.docx')) {
           const arrayBuffer = await selectedFile.arrayBuffer();
           const result = await mammoth.convertToHtml({ arrayBuffer });
-          editor.commands.setContent(result.value);
+          editor.commands.setContent(sanitizeImportedHtml(result.value));
           onNotice(`Imported DOCX file: ${selectedFile.name}`);
           return;
         }
