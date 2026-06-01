@@ -18,7 +18,12 @@ function buttonClassName(
   size: ButtonSize = 'md',
   className?: string,
 ) {
-  return cx('ui-button', `ui-button--${variant}`, `ui-button--${size}`, className);
+  return cx(
+    'ui-button',
+    `ui-button--${variant}`,
+    `ui-button--${size}`,
+    className,
+  );
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -55,10 +60,7 @@ export function LinkButton({
   ...props
 }: LinkButtonProps) {
   return (
-    <Link
-      className={buttonClassName(variant, size, className)}
-      {...props}
-    />
+    <Link className={buttonClassName(variant, size, className)} {...props} />
   );
 }
 
@@ -72,7 +74,11 @@ export function IconButton({
   ...props
 }: IconButtonProps) {
   return (
-    <button className={cx('ui-icon-button', className)} type={type} {...props} />
+    <button
+      className={cx('ui-icon-button', className)}
+      type={type}
+      {...props}
+    />
   );
 }
 
@@ -94,17 +100,11 @@ export function SearchInput({ className, label, ...props }: SearchInputProps) {
   );
 }
 
-export function Card({
-  className,
-  ...props
-}: HTMLAttributes<HTMLElement>) {
+export function Card({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return <article className={cx('ui-card', className)} {...props} />;
 }
 
-export function Panel({
-  className,
-  ...props
-}: HTMLAttributes<HTMLElement>) {
+export function Panel({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return <section className={cx('ui-panel', className)} {...props} />;
 }
 
@@ -142,7 +142,10 @@ export function ErrorState({
   title,
 }: StateProps) {
   return (
-    <div className={cx('state-card state-card--error', className)} role="status">
+    <div
+      className={cx('state-card state-card--error', className)}
+      role="status"
+    >
       <div aria-hidden="true" className="state-card__mark">
         !
       </div>

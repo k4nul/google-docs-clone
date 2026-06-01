@@ -41,7 +41,9 @@ export function PageLayout({
           <p className="page-heading__description">{description}</p>
         </div>
 
-        {actions ? <div className="page-heading__actions">{actions}</div> : null}
+        {actions ? (
+          <div className="page-heading__actions">{actions}</div>
+        ) : null}
       </section>
 
       <section className="page-content">{children}</section>

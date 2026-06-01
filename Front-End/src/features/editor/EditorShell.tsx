@@ -313,9 +313,7 @@ export function EditorShell({
       </div>
 
       <div className="sr-only" aria-live="polite">
-        <span>
-          {getConnectionMode(connectionStatus)}
-        </span>
+        <span>{getConnectionMode(connectionStatus)}</span>
       </div>
 
       <EditorToolbar editor={editor} />

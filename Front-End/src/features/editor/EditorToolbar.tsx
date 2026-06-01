@@ -56,7 +56,11 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         </button>
       </div>
 
-      <div aria-label="Insert and structure" className="toolbar-group" role="group">
+      <div
+        aria-label="Insert and structure"
+        className="toolbar-group"
+        role="group"
+      >
         <button
           aria-label="Toggle bullet list"
           aria-pressed={editor?.isActive('bulletList') ?? false}

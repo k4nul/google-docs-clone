@@ -100,9 +100,7 @@ export function HomePage() {
         }
 
         setDocuments(mockDocuments);
-        setListError(
-          getErrorMessage(error, 'Unable to load documents.'),
-        );
+        setListError(getErrorMessage(error, 'Unable to load documents.'));
         setListStatus('fallback');
       }
     }
@@ -123,9 +121,7 @@ export function HomePage() {
       navigate(`/docs/${document.id}`);
     } catch (error) {
       setCreateError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to create a document.',
+        error instanceof Error ? error.message : 'Unable to create a document.',
       );
     } finally {
       setIsCreating(false);
@@ -219,9 +215,7 @@ export function HomePage() {
               ? 'No documents match the current search. Try a different title or status.'
               : 'Create a document to start a shared workspace, or open the sample editor to review the editing flow.'
           }
-          title={
-            searchQuery ? 'No matching documents' : 'No documents yet'
-          }
+          title={searchQuery ? 'No matching documents' : 'No documents yet'}
         />
       ) : (
         <section className="document-grid" aria-label="Document list">
@@ -295,7 +289,9 @@ export function HomePage() {
           <div className="info-list">
             <span>Open a document from the dashboard.</span>
             <span>Review metadata before realtime sync starts.</span>
-            <span>Use the editor toolbar for formatting and export actions.</span>
+            <span>
+              Use the editor toolbar for formatting and export actions.
+            </span>
           </div>
         </Panel>
       </div>

@@ -259,9 +259,7 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
           return;
         }
 
-        onNotice(
-          'Unsupported file type. Choose a JSON or DOCX file.',
-        );
+        onNotice('Unsupported file type. Choose a JSON or DOCX file.');
       } catch {
         onNotice('Unable to import the selected file.');
       } finally {
