@@ -132,6 +132,7 @@ cargo check --features full-snapshot-stores
 
 | 문서 | 내용 |
 | --- | --- |
+| [Product Direction](docs/product-direction.md) | 다음 자동화 작업에서 반영할 제품 방향성 변경 지시사항 |
 | [Onboarding](docs/onboarding.md) | 루트 기준 프론트엔드/백엔드 로컬 실행 흐름 |
 | [Testing](docs/testing.md) | 프론트엔드, 백엔드 검증 명령과 CI 상태 |
 | [Troubleshooting](docs/troubleshooting.md) | 로컬 API/WS 연동과 validation 문제 해결 |

@@ -5,6 +5,8 @@ import mammoth from 'mammoth/mammoth.browser';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import type { IParagraphOptions, IRunOptions } from 'docx';
 
+import { Button } from '@/shared/ui/DesignSystem';
+
 interface FileManagerProps {
   editor: Editor | null;
   docId: string;
@@ -186,7 +188,7 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
 
   const exportJson = useCallback(() => {
     if (!editor) {
-      onNotice('에디터가 아직 준비되지 않았습니다.');
+      onNotice('The editor is not ready yet.');
       return;
     }
 
@@ -197,15 +199,15 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
       });
 
       downloadBlob(fileBlob, `${docId}-export.json`);
-      onNotice('현재 문서를 JSON 파일로 내보냈습니다.');
+      onNotice('The current document was exported as JSON.');
     } catch {
-      onNotice('JSON 파일 내보내기 중 오류가 발생했습니다.');
+      onNotice('Unable to export the document as JSON.');
     }
   }, [docId, editor, onNotice]);
 
   const exportDocx = useCallback(async () => {
     if (!editor) {
-      onNotice('에디터가 아직 준비되지 않았습니다.');
+      onNotice('The editor is not ready yet.');
       return;
     }
 
@@ -219,22 +221,22 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
 
       const blob = await Packer.toBlob(doc);
       downloadBlob(blob, `${docId}-export.docx`);
-      onNotice('현재 문서를 DOCX 파일로 내보냈습니다.');
+      onNotice('The current document was exported as DOCX.');
     } catch {
-      onNotice('DOCX 파일 내보내기 중 오류가 발생했습니다.');
+      onNotice('Unable to export the document as DOCX.');
     }
   }, [docId, editor, onNotice]);
 
   const handleImportFile = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       if (!editor) {
-        onNotice('에디터가 아직 준비되지 않았습니다.');
+        onNotice('The editor is not ready yet.');
         return;
       }
 
       const selectedFile = event.target.files?.[0];
       if (!selectedFile) {
-        onNotice('가져올 파일을 선택하지 않았습니다.');
+        onNotice('No file was selected.');
         return;
       }
 
@@ -245,7 +247,7 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
           const fileText = await selectedFile.text();
           const parsed = JSON.parse(fileText) as JSONContent;
           editor.commands.setContent(parsed);
-          onNotice(`JSON 파일을 불러왔습니다: ${selectedFile.name}`);
+          onNotice(`Imported JSON file: ${selectedFile.name}`);
           return;
         }
 
@@ -253,15 +255,15 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
           const arrayBuffer = await selectedFile.arrayBuffer();
           const result = await mammoth.convertToHtml({ arrayBuffer });
           editor.commands.setContent(result.value);
-          onNotice(`DOCX 파일을 불러왔습니다: ${selectedFile.name}`);
+          onNotice(`Imported DOCX file: ${selectedFile.name}`);
           return;
         }
 
         onNotice(
-          '지원하지 않는 파일 형식입니다. JSON 또는 DOCX 파일을 선택하세요.',
+          'Unsupported file type. Choose a JSON or DOCX file.',
         );
       } catch {
-        onNotice('파일 불러오기 중 오류가 발생했습니다.');
+        onNotice('Unable to import the selected file.');
       } finally {
         event.target.value = '';
       }
@@ -270,35 +272,36 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
   );
 
   return (
-    <div className="pill-row">
-      <button
-        className="button-ghost"
+    <div className="file-actions">
+      <Button
         disabled={!editor}
+        variant="secondary"
         type="button"
         onClick={openImportDialog}
       >
         Import file
-      </button>
-      <button
-        className="button-link"
+      </Button>
+      <Button
         disabled={!editor}
+        variant="primary"
         type="button"
         onClick={exportJson}
       >
         Export JSON
-      </button>
-      <button
-        className="button-link"
+      </Button>
+      <Button
         disabled={!editor}
+        variant="primary"
         type="button"
         onClick={exportDocx}
       >
         Export DOCX
-      </button>
+      </Button>
       <input
         ref={importInputRef}
         accept="application/json,.json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
-        style={{ display: 'none' }}
+        aria-label="Import JSON or DOCX file"
+        className="visually-hidden-file-input"
         type="file"
         onChange={handleImportFile}
       />

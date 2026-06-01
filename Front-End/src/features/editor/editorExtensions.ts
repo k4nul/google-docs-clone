@@ -8,12 +8,12 @@ import type { CollaborationConnection } from '@/lib/collab/connection';
 import type { CollaborationUser } from '@/shared/types/collaboration';
 
 export const INITIAL_EDITOR_CONTENT = `
-  <h2>Collaborative editor shell</h2>
-  <p>This document is ready for Yjs-based collaboration wiring.</p>
+  <h2>Project brief</h2>
+  <p>Use this canvas to draft decisions, capture review notes, and align the team before handoff.</p>
   <ul>
-    <li>Open the route from the document list.</li>
-    <li>Realtime presence uses the current browser origin by default.</li>
-    <li>Wire imported HTML through <code>@/lib/import/docxImport.ts</code>.</li>
+    <li>Add the current objective and owner.</li>
+    <li>Keep open questions visible for collaborators.</li>
+    <li>Export the document when the review is ready to share.</li>
   </ul>
 `;
 

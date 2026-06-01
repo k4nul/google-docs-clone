@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
 import { useEffect, useState } from 'react';
 
@@ -9,6 +9,13 @@ import { getBackendDocument } from '@/lib/api/documents';
 import { ApiRequestError, buildApiUrl } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument } from '@/shared/types/document';
+import {
+  ErrorState,
+  LinkButton,
+  LoadingState,
+  Panel,
+  StatusPill,
+} from '@/shared/ui/DesignSystem';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
 function formatMetadataError(error: unknown) {
@@ -22,7 +29,7 @@ function formatMetadataError(error: unknown) {
 
   return error instanceof Error
     ? error.message
-    : '문서 메타데이터를 불러오지 못했습니다.';
+    : 'Unable to load document metadata.';
 }
 
 function formatDateTime(value: string) {
@@ -132,53 +139,66 @@ export function EditorPage() {
   }
 
   const realtimeServerUrl = document && !documentError ? appEnv.wsUrl : null;
+  const pageTitle = document?.title ?? 'Untitled document';
+  const pageDescription = document
+    ? 'Review document metadata, manage import/export actions, and continue editing with realtime presence.'
+    : documentError
+      ? 'The editor is available in a protected local mode while document metadata is unavailable.'
+      : 'Document metadata is loading before the editor joins the realtime workspace.';
 
   return (
     <PageLayout
       eyebrow="Realtime Document"
-      title={document?.title ?? `Editor room: ${decodedDocId}`}
-      description="Backend document metadata gates the realtime connection, then the editor joins the matching Yjs room with reconnect and presence status visible."
+      title={pageTitle}
+      description={pageDescription}
       actions={
-        <div className="pill-row">
+        <>
           <FileManager
             editor={editor}
             docId={decodedDocId}
             onNotice={setNotice}
           />
-          <Link className="button-ghost" to="/">
+          <LinkButton variant="secondary" to="/">
             Back to document list
-          </Link>
-        </div>
+          </LinkButton>
+        </>
       }
     >
-      <div className="page-grid">
-        <div className="aside-stack">
+      <div className="editor-layout">
+        <div className="editor-main-stack">
           {isDocumentLoading ? (
-            <section className="card editor-loading">
-              <p>Loading document metadata...</p>
-            </section>
+            <Panel>
+              <LoadingState rows={2} title="Loading document metadata" />
+            </Panel>
           ) : (
             <EditorShell
               docId={decodedDocId}
+              documentTitle={pageTitle}
+              lastEditedAt={
+                document?.updatedAt ? formatDateTime(document.updatedAt) : null
+              }
               realtimeServerUrl={realtimeServerUrl}
               onCollaborationChange={setCollaboration}
               onEditorReady={setEditor}
             />
           )}
           {notice ? (
-            <section className="card">
-              <h3>Import / Export status</h3>
+            <Panel>
+              <h2>Import and export status</h2>
               <p className="muted">{notice}</p>
-            </section>
+            </Panel>
           ) : null}
         </div>
 
-        <aside className="aside-stack">
-          <section className="card">
-            <h3>Backend integration points</h3>
+        <aside className="editor-side-stack" aria-label="Document details">
+          <section className="editor-side-card">
+            <div>
+              <p className="section-kicker">Document status</p>
+              <h2>Metadata</h2>
+            </div>
             <div className="info-list">
               <span>
-                Document fetch:{' '}
+                API endpoint:{' '}
                 <code>{buildApiUrl(`/documents/${decodedDocId}`)}</code>
               </span>
               <span>
@@ -202,26 +222,29 @@ export function EditorPage() {
                 </>
               ) : null}
               <span>
-                Revision sync:{' '}
+                Realtime sync:{' '}
                 <code>
                   {realtimeServerUrl ?? 'disabled until metadata loads'}
                 </code>
               </span>
               <span>
-                Import ingest: <code>@/lib/import/docxImport.ts</code>
+                Import formats: <code>JSON, DOCX</code>
               </span>
             </div>
           </section>
 
           {documentError ? (
-            <section className="card">
-              <h3>Document metadata status</h3>
-              <p className="muted">{documentError}</p>
-            </section>
+            <ErrorState
+              description={documentError}
+              title="Document metadata unavailable"
+            />
           ) : null}
 
-          <section className="card">
-            <h3>Realtime collaboration</h3>
+          <section className="editor-side-card">
+            <div>
+              <p className="section-kicker">Collaboration</p>
+              <h2>Realtime presence</h2>
+            </div>
             <div className="info-list">
               <span>
                 Connection state: <code>{collaboration.connectionStatus}</code>
@@ -236,25 +259,26 @@ export function EditorPage() {
                 Last sync event:{' '}
                 <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
               </span>
-              {/* <span>
-                Active users: <code>{collaboration.activeCollaborators.length}</code>
-              </span> */}
+              <span>
+                Active users:{' '}
+                <code>{collaboration.activeCollaborators.length}</code>
+              </span>
             </div>
-            <div className="pill-row" style={{ marginTop: '12px' }}>
+            <div className="presence-list">
               {collaboration.activeCollaborators.length > 0 ? (
                 collaboration.activeCollaborators.map((collaborator) => (
-                  <span
+                  <StatusPill
                     key={collaborator.id}
-                    className={`pill ${collaborator.isTyping ? 'pill--accent' : ''}`}
+                    tone={collaborator.isTyping ? 'success' : 'neutral'}
                     title={collaborator.color}
                   >
                     {collaborator.name}
                     {collaborator.isCurrentUser ? ' (me)' : ''}
                     {collaborator.isTyping ? ' - typing' : ''}
-                  </span>
+                  </StatusPill>
                 ))
               ) : (
-                <span className="pill">No active collaborators yet</span>
+                <StatusPill>No active collaborators yet</StatusPill>
               )}
             </div>
           </section>

@@ -11,6 +11,7 @@ import {
 } from '@/lib/collab/connection';
 import { createPlaceholderCollaborationUser } from '@/lib/collab/user';
 import { appEnv } from '@/shared/config/env';
+import { StatusPill } from '@/shared/ui/DesignSystem';
 
 import {
   createEditorExtensions,
@@ -33,6 +34,8 @@ export interface CollaborationSnapshot {
 
 interface EditorShellProps {
   docId: string;
+  documentTitle?: string;
+  lastEditedAt?: string | null;
   onEditorReady?: (editor: Editor | null) => void;
   onCollaborationChange?: (snapshot: CollaborationSnapshot) => void;
   realtimeServerUrl?: string | null;
@@ -96,6 +99,8 @@ function getRealtimeDebugState(
 
 export function EditorShell({
   docId,
+  documentTitle = 'Untitled document',
+  lastEditedAt = null,
   onEditorReady,
   onCollaborationChange,
   realtimeServerUrl = appEnv.wsUrl,
@@ -267,43 +272,62 @@ export function EditorShell({
   ]);
 
   return (
-    <section className="card editor-shell">
-      <div className="pill-row">
-        <span className="pill pill--accent">
-          {getConnectionMode(connectionStatus)}
+    <section className="editor-shell-card" aria-label="Document editor">
+      <header className="editor-topbar">
+        <div className="editor-title-group">
+          <p className="section-kicker">Document editor</p>
+          <h2>{documentTitle}</h2>
+          <p>
+            {lastEditedAt
+              ? `Last edited ${lastEditedAt}`
+              : 'Local editing surface is ready for collaboration.'}
+          </p>
+        </div>
+        <div className="editor-status-group">
+          <StatusPill
+            tone={connectionStatus === 'connected' ? 'success' : 'warning'}
+          >
+            {getConnectionMode(connectionStatus)}
+          </StatusPill>
+          <StatusPill>{isCurrentUserTyping ? 'Typing' : 'Idle'}</StatusPill>
+        </div>
+      </header>
+
+      <div className="editor-status-strip" aria-label="Realtime status">
+        <span className="editor-status-item">
+          Room
+          <strong>{docId}</strong>
         </span>
-        <span className="pill">Room: {docId}</span>
-        <span className="pill">User: {user.name}</span>
-        <span className="pill">
-          {isCurrentUserTyping ? 'You are typing' : 'Idle'}
+        <span className="editor-status-item">
+          User
+          <strong>{user.name}</strong>
+        </span>
+        <span className="editor-status-item">
+          Transport
+          <strong>{realtimeDebug.transport}</strong>
+        </span>
+        <span className="editor-status-item">
+          Peers
+          <strong>{activeCollaborators.length}</strong>
         </span>
       </div>
 
-      <div className="info-list">
+      <div className="sr-only" aria-live="polite">
         <span>
-          Presence provider:{' '}
-          <code>{realtimeDebug.url ?? appEnv.wsUrl ?? 'disabled'}</code>
-        </span>
-        <span>
-          Websocket: <code>{realtimeDebug.transport}</code> / synced:{' '}
-          <code>{String(realtimeDebug.synced)}</code>
-        </span>
-        <span>
-          Shared fragment: <code>content</code>
-        </span>
-        <span>
-          Peers in room: <code>{activeCollaborators.length}</code>
+          {getConnectionMode(connectionStatus)}
         </span>
       </div>
 
       <EditorToolbar editor={editor} />
 
-      <div className="editor-stage">
-        {editor ? (
-          <EditorContent editor={editor} />
-        ) : (
-          <div className="editor-loading">Preparing editor surface...</div>
-        )}
+      <div className="editor-workspace">
+        <div className="document-canvas">
+          {editor ? (
+            <EditorContent editor={editor} />
+          ) : (
+            <div className="editor-loading">Preparing editor surface...</div>
+          )}
+        </div>
       </div>
     </section>
   );

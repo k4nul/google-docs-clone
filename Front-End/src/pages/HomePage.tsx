@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import {
   createBackendDocument,
@@ -8,6 +8,17 @@ import {
 import { mockDocuments } from '@/features/documents/mockDocuments';
 import { appEnv } from '@/shared/config/env';
 import type { DocumentSummary } from '@/shared/types/document';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  LinkButton,
+  LoadingState,
+  MetricTile,
+  Panel,
+  SearchInput,
+  StatusPill,
+} from '@/shared/ui/DesignSystem';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
 function formatUpdatedAt(value: string) {
@@ -32,21 +43,40 @@ type DocumentListStatus = 'loading' | 'backend' | 'fallback';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const [documents, setDocuments] = useState<DocumentSummary[]>(mockDocuments);
+  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [listStatus, setListStatus] = useState<DocumentListStatus>('loading');
   const [listError, setListError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const sampleDocument = mockDocuments[0];
   const canCreateBackendDocument = useMemo(
     () => Boolean(appEnv.apiBaseUrl && appEnv.wsUrl),
     [],
   );
+  const filteredDocuments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return documents;
+    }
+
+    return documents.filter((document) =>
+      [document.title, document.summary, document.status, document.source]
+        .join(' ')
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [documents, searchQuery]);
   const listStatusLabel = {
-    loading: 'Loading backend documents',
+    loading: 'Loading documents',
     backend: `${documents.length} backend document${documents.length === 1 ? '' : 's'}`,
-    fallback: 'Showing local samples',
+    fallback: 'Showing local sample documents',
   }[listStatus];
+  const backendModeLabel = appEnv.apiBaseUrl
+    ? 'Backend connected'
+    : 'Local preview';
+  const realtimeModeLabel = appEnv.wsUrl ? 'Realtime enabled' : 'Local editing';
 
   useEffect(() => {
     let isCurrent = true;
@@ -71,7 +101,7 @@ export function HomePage() {
 
         setDocuments(mockDocuments);
         setListError(
-          getErrorMessage(error, '문서 목록을 불러오지 못했습니다.'),
+          getErrorMessage(error, 'Unable to load documents.'),
         );
         setListStatus('fallback');
       }
@@ -89,15 +119,13 @@ export function HomePage() {
     setIsCreating(true);
 
     try {
-      const { document } = await createBackendDocument(
-        'Realtime collaboration draft',
-      );
+      const { document } = await createBackendDocument('Untitled document');
       navigate(`/docs/${document.id}`);
     } catch (error) {
       setCreateError(
         error instanceof Error
           ? error.message
-          : '백엔드 문서 생성에 실패했습니다.',
+          : 'Unable to create a document.',
       );
     } finally {
       setIsCreating(false);
@@ -108,96 +136,141 @@ export function HomePage() {
     <PageLayout
       eyebrow="Collaborative Editor"
       title="Collaborative document workspace"
-      description="React + Vite + Tiptap + Yjs 기반의 최소 협업 에디터 프론트엔드입니다. 현재는 문서 목록과 협업 에디터 셸을 연결해 둔 상태이며, 백엔드가 준비되면 바로 실시간 문서 흐름을 붙일 수 있습니다."
+      description="A production-oriented workspace for drafting, reviewing, and exporting shared documents with realtime presence and backend document metadata."
       actions={
-        <div className="pill-row">
+        <>
           {canCreateBackendDocument ? (
-            <button
-              className="button-link"
+            <Button
               disabled={isCreating}
               type="button"
               onClick={handleCreateBackendDocument}
             >
-              {isCreating ? 'Creating backend doc...' : 'Create backend editor'}
-            </button>
+              {isCreating ? 'Creating document...' : 'Create document'}
+            </Button>
           ) : null}
           {sampleDocument ? (
-            <Link className="button-ghost" to={`/docs/${sampleDocument.id}`}>
+            <LinkButton variant="secondary" to={`/docs/${sampleDocument.id}`}>
               Open sample editor
-            </Link>
+            </LinkButton>
           ) : null}
-        </div>
+        </>
       }
     >
-      {createError ? (
-        <section className="card">
-          <h3>Backend create error</h3>
-          <p className="muted">{createError}</p>
-        </section>
-      ) : null}
-
-      <section className="card document-list-header">
-        <div>
-          <h2>Documents</h2>
-          {listError ? (
-            <p className="muted">Backend list unavailable: {listError}</p>
-          ) : null}
-        </div>
-        <span
-          className={`pill ${listStatus === 'backend' ? 'pill--accent' : ''}`}
-        >
-          {listStatusLabel}
-        </span>
+      <section className="dashboard-metrics" aria-label="Workspace summary">
+        <MetricTile label="Documents" value={documents.length} />
+        <MetricTile label="Data source" value={backendModeLabel} />
+        <MetricTile label="Collaboration" value={realtimeModeLabel} />
       </section>
 
-      <div className="card-grid">
-        {documents.length === 0 ? (
-          <article className="card document-card">
-            <div>
-              <h2>No backend documents</h2>
-              <p className="muted">
-                Create a backend document to start a realtime room.
-              </p>
-            </div>
-          </article>
-        ) : null}
+      {createError ? (
+        <ErrorState
+          description={createError}
+          title="Unable to create document"
+        />
+      ) : null}
 
-        {documents.map((document) => (
-          <article key={document.id} className="card document-card">
-            <div className="pill-row">
-              <span className="pill pill--accent">
-                {document.source === 'backend' ? 'backend' : document.status}
-              </span>
-              <span className="pill">
-                {document.collaborators} collaborators
-              </span>
-            </div>
-            <div>
-              <h2>{document.title}</h2>
-              <p className="muted">{document.summary}</p>
-            </div>
-            <div className="document-card__meta">
-              <span>Last updated: {formatUpdatedAt(document.updatedAt)}</span>
-              {document.createdAt ? (
-                <span>Created: {formatUpdatedAt(document.createdAt)}</span>
-              ) : null}
-              <span>
-                Source:{' '}
-                {document.source === 'backend' ? 'Backend API' : 'Local sample'}
-              </span>
-            </div>
-            <div>
-              <Link className="button-ghost" to={`/docs/${document.id}`}>
-                Open editor
-              </Link>
-            </div>
-          </article>
-        ))}
-      </div>
+      <Panel className="document-toolbar">
+        <div>
+          <p className="section-kicker">Documents</p>
+          <h2>Recent workspace files</h2>
+          <p className="muted">
+            Search, open, and continue editing shared documents from one
+            dashboard.
+          </p>
+        </div>
+        <div className="document-toolbar__controls">
+          <SearchInput
+            aria-label="Search documents"
+            label="Search"
+            placeholder="Search by title, status, or source"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          <StatusPill tone={listStatus === 'backend' ? 'success' : 'warning'}>
+            {listStatusLabel}
+          </StatusPill>
+        </div>
+      </Panel>
 
-      <div className="card-grid">
-        <section className="card">
-          <h3>Runtime wiring</h3>
+      {listError ? (
+        <ErrorState
+          description={`Backend list unavailable: ${listError}`}
+          title="Using local sample documents"
+        />
+      ) : null}
+
+      {listStatus === 'loading' ? (
+        <LoadingState rows={3} title="Loading documents" />
+      ) : filteredDocuments.length === 0 ? (
+        <EmptyState
+          action={
+            searchQuery ? (
+              <Button variant="secondary" onClick={() => setSearchQuery('')}>
+                Clear search
+              </Button>
+            ) : canCreateBackendDocument ? (
+              <Button onClick={handleCreateBackendDocument}>
+                Create document
+              </Button>
+            ) : null
+          }
+          description={
+            searchQuery
+              ? 'No documents match the current search. Try a different title or status.'
+              : 'Create a document to start a shared workspace, or open the sample editor to review the editing flow.'
+          }
+          title={
+            searchQuery ? 'No matching documents' : 'No documents yet'
+          }
+        />
+      ) : (
+        <section className="document-grid" aria-label="Document list">
+          {filteredDocuments.map((document) => (
+            <Link
+              key={document.id}
+              className="document-card"
+              to={`/docs/${document.id}`}
+            >
+              <span className="document-card__topline">
+                <StatusPill
+                  tone={document.source === 'backend' ? 'success' : 'neutral'}
+                >
+                  {document.source === 'backend' ? 'Backend' : document.status}
+                </StatusPill>
+                <span className="status-pill">
+                  {document.collaborators} collaborators
+                </span>
+              </span>
+              <span className="document-card__body">
+                <h2 className="document-card__title">{document.title}</h2>
+                <span className="document-card__summary">
+                  {document.summary}
+                </span>
+              </span>
+              <span className="document-card__meta">
+                <span>Updated {formatUpdatedAt(document.updatedAt)}</span>
+                {document.createdAt ? (
+                  <span>Created {formatUpdatedAt(document.createdAt)}</span>
+                ) : null}
+                <span>
+                  Source:{' '}
+                  {document.source === 'backend'
+                    ? 'Backend API'
+                    : 'Local sample'}
+                </span>
+              </span>
+              <span className="document-card__footer">
+                <span>Open editor</span>
+                <span aria-hidden="true">→</span>
+              </span>
+            </Link>
+          ))}
+        </section>
+      )}
+
+      <div className="secondary-grid">
+        <Panel>
+          <h3>Workspace configuration</h3>
           <div className="info-list">
             <span>
               API base: <code>{appEnv.apiBaseUrl ?? '(not configured)'}</code>
@@ -212,25 +285,19 @@ export function HomePage() {
               WS provider: <code>{appEnv.wsUrl ?? '(local-only mode)'}</code>
             </span>
             <span>
-              Import path: <code>@/lib/import/docxImport.ts</code>
+              Import formats: <code>JSON, DOCX</code>
             </span>
           </div>
-        </section>
+        </Panel>
 
-        <section className="card">
-          <h3>Current scope</h3>
+        <Panel>
+          <h3>Editing flow</h3>
           <div className="info-list">
-            <span>
-              Backend document list route at <code>/</code>
-            </span>
-            <span>
-              Collaborative editor route at <code>/docs/:docId</code>
-            </span>
-            <span>
-              Compile-safe Yjs document/provider shell for backend hookup
-            </span>
+            <span>Open a document from the dashboard.</span>
+            <span>Review metadata before realtime sync starts.</span>
+            <span>Use the editor toolbar for formatting and export actions.</span>
           </div>
-        </section>
+        </Panel>
       </div>
     </PageLayout>
   );

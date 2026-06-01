@@ -66,6 +66,7 @@ VITE_WS_URL=ws://localhost:4000
 | 문서 | 용도 |
 | --- | --- |
 | `README.md` | 프로젝트 개요와 빠른 실행 |
+| `docs/product-direction.md` | 다음 자동화 작업에서 반영할 제품 방향성 변경 지시사항 |
 | `docs/testing.md` | 루트 기준 검증 명령과 CI 상태 |
 | `docs/troubleshooting.md` | 로컬 API/WS 연동과 validation 문제 해결 |
 | `Front-End/README.md` | 프론트엔드 기능, 개발 규칙, 실행 방법 |
