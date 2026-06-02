@@ -22,6 +22,8 @@ npm run typecheck
 | `npm run test` | `Front-End/package.json`, `Front-End/vite.config.ts` | Vitest with jsdom and `src/test/setup.ts` |
 | `npm run typecheck` | `Front-End/package.json` | `tsc -b --pretty false` |
 
+Frontend unit and component tests use Vitest/jsdom and mocked `fetch` boundaries, so they do not require a live backend. Run the local backend and Vite dev server only for manual cross-stack create/open/edit checks.
+
 `Front-End/.github/workflows/ci.yml` mirrors these frontend gates, but it is stored under the frontend subdirectory. From the current repository root there is no root `.github/workflows/ci.yml` dispatcher.
 
 ## Backend

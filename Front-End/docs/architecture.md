@@ -9,6 +9,7 @@
 - `src/lib/collab`: Yjs document/provider 생성과 해제 로직
 - `src/lib/api`: backend API helper
 - `src/lib/import`: DOCX import utility
+- `src/lib/export`: DOCX export utility
 - `src/shared/config`: 환경변수 파싱
 - `src/shared/types`: 공용 타입
 - `src/shared/ui`: 공용 레이아웃
@@ -31,12 +32,15 @@
 - connection state, sync 여부, participant count, awareness participant list는 editor 화면에서 확인한다.
 - collaboration 사용 시 `StarterKit.history`는 비활성화한다.
 
-## Import Utility
+## Import / Export Utilities
 
 - 위치: `src/lib/import/docxImport.ts`
 - 목적: DOCX 파일을 Mammoth로 HTML 변환 후 DOMPurify로 sanitize
 - `src/features/util/FileManager.tsx`는 DOCX 업로드 결과를 editor에 넣기 전에 같은 sanitize 경계를 통과시킨다.
 - 출력: editor content ingest에 연결 가능한 typed payload
+- 위치: `src/lib/export/documentExport.ts`
+- 목적: editor HTML을 `docx` 패키지의 paragraph/run model로 변환한 뒤 DOCX blob으로 pack
+- `src/features/util/FileManager.tsx`는 editor가 준비된 뒤 `Import DOCX`와 `Export DOCX` action을 제공한다.
 
 ## API Boundary
 

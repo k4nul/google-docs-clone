@@ -85,3 +85,4 @@ VITE_WS_URL=ws://localhost:4000
 ```
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 된다.
+Vite dev server에서는 환경변수를 생략했을 때의 `/api`와 `/ws` current-origin 요청이 `vite.config.ts`의 proxy를 통해 `127.0.0.1:4000` 백엔드로 전달된다. `.env.example`의 direct backend URL을 쓰는 방식도 같은 로컬 계약을 명시적으로 고정한다.

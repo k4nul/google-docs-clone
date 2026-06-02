@@ -9,7 +9,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - Tiptap 기반 rich text editor 구성
 - Yjs binary sync protocol 기반 실시간 협업 연결 구조 분리
 - `VITE_WS_URL`이 없으면 현재 브라우저 origin에서 WebSocket URL 자동 계산
-- `.docx`를 HTML로 변환하고 sanitize 하는 import 유틸리티 제공
+- DOCX import/export와 HTML sanitize 유틸리티 제공
 - `src/lib/api` 경계에서 documents list/detail/create 응답 변환
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
 
@@ -23,7 +23,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 | 번들링 / 언어 | `vite`, `typescript` | 개발 서버, 번들링, 타입 안정성 |
 | 에디터 | `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/pm` | 에디터 UI와 기본 편집 기능 |
 | 협업 | `@tiptap/extension-collaboration`, `@tiptap/extension-collaboration-caret`, `@tiptap/y-tiptap`, `yjs`, `lib0`, `y-protocols` | 공동 편집 상태 동기화와 커서 표시 |
-| 문서 import | `mammoth`, `dompurify` | DOCX -> HTML 변환, sanitize |
+| 문서 import/export | `mammoth`, `dompurify`, `docx` | DOCX -> HTML 변환, sanitize, editor HTML -> DOCX 변환 |
 | 품질 도구 | `eslint`, `prettier`, `vitest`, `@testing-library/react`, `jsdom` | 정적 검사, 포맷, 테스트 |
 
 ### 내부 모듈 의존성
@@ -36,6 +36,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 | `src/lib/collab` | `Y.Doc`, provider 생성과 해제 | `yjs`, `lib0`, `y-protocols` |
 | `src/lib/api` | API URL 생성, fetch helper | `VITE_API_BASE_URL` 또는 현재 origin |
 | `src/lib/import` | DOCX import와 sanitize | `mammoth`, `dompurify` |
+| `src/lib/export` | editor HTML을 DOCX blob으로 변환 | `docx` |
 | `src/shared/config`, `src/shared/types`, `src/shared/ui` | 공용 설정, 타입, UI | 여러 feature에서 공통 사용 |
 
 ## 역할 분담
@@ -240,9 +241,9 @@ npm run preview
 - `VITE_WS_URL`을 `ws://localhost:4000`으로 수정
 - 프런트 dev 서버 재시작
 
-### 2. mock 문서 ID 사용
+### 2. backend에 없는 fallback 문서 사용
 
-홈 화면에서 사용하던 `launch-plan` 같은 mock 문서 ID는 백엔드 WebSocket이 요구하는 UUID 문서가 아니었습니다. 백엔드는 `/ws/:doc_id`에서 UUID 형식 문서만 허용합니다.
+홈 화면의 fallback 문서 카드는 백엔드 문서 목록을 불러오지 못할 때 개발용으로 렌더링될 수 있지만, 백엔드 persisted document라고 보장하지 않습니다. WebSocket 협업은 UUID 형식뿐 아니라 `POST /api/documents`로 생성되어 백엔드 catalog에 존재하는 문서에서 정상 동작합니다.
 
 해결:
 

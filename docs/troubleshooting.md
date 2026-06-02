@@ -4,8 +4,8 @@
 
 Symptoms:
 
-- Home page shows `Showing local samples`.
-- Runtime wiring shows `API base` but document list has a backend error.
+- Home page shows `Documents are temporarily unavailable`.
+- The document toolbar stays on fallback content or the retry action keeps returning a backend error.
 
 Checks:
 
@@ -21,13 +21,13 @@ If the frontend is served from Vite, `Front-End/vite.config.ts` proxies `/api` t
 
 ## WebSocket Stays Disconnected
 
-The frontend should connect only after `GET /api/documents/:id` succeeds. A local sample ID such as `launch-plan` is not a backend UUID document and will not open a real collaboration room.
+The frontend should connect only after `GET /api/documents/:id` succeeds. A fallback document card is not guaranteed to exist in the backend snapshot catalog, so it may open the editor in protected local mode instead of joining a realtime room.
 
 Use this flow:
 
 1. Start the backend on port `4000`.
 2. Start the frontend dev server.
-3. Click `Create backend editor` from the home page.
+3. Click `New document` from the home page.
 4. Confirm the editor route uses a UUID.
 5. Confirm the provider endpoint is `ws://localhost:4000/ws/<uuid>` or the equivalent proxied `/ws/<uuid>` URL.
 

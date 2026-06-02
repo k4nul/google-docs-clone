@@ -8,7 +8,7 @@ React 기반 collaborative editor 프론트엔드와 Rust 기반 실시간 협�
 - Tiptap 기반 rich text editor
 - Yjs/Yrs binary sync protocol 기반 실시간 공동 편집
 - collaborator awareness/caret 상태 전송 구조
-- `.docx` import 후 HTML sanitize 유틸리티
+- DOCX import/export와 HTML sanitize 유틸리티
 - 문서 생성, 조회, 삭제 REST API
 - 문서별 `GET /ws/:doc_id` WebSocket 협업 endpoint
 - 파일, 메모리, SQLite, S3, managed service 기반 snapshot store
@@ -44,6 +44,7 @@ React 기반 collaborative editor 프론트엔드와 Rust 기반 실시간 협�
 | `Front-End/src/lib/collab` | Y.Doc와 binary WebSocket provider lifecycle |
 | `Front-End/src/lib/api` | 백엔드 REST API helper |
 | `Front-End/src/lib/import` | DOCX import 및 sanitize utility |
+| `Front-End/src/lib/export` | editor HTML을 DOCX blob으로 변환하는 export utility |
 | `Back-End/src/routes` | `/api/health`, `/api/documents` REST route |
 | `Back-End/src/collab` | room registry, WebSocket, Yrs protocol boundary |
 | `Back-End/src/storage` | snapshot store trait과 adapter 구현 |
