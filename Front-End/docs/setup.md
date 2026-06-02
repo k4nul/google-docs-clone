@@ -59,7 +59,7 @@ npm run typecheck
 
 ## CI Quality Gates
 
-같은 검증은 `Front-End/.github/workflows/ci.yml`의 frontend workflow에 정의되어 있다. 현재 루트에는 별도 통합 workflow가 없다.
+같은 검증은 루트 `.github/workflows/ci.yml`에서 `Front-End/` 기준으로 실행된다. `Front-End/.github/workflows/ci.yml`은 package-local mirror로 남아 있다.
 
 - `build`
 - `lint`
