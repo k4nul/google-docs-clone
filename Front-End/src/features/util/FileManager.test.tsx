@@ -1,17 +1,22 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
-import mammoth from 'mammoth/mammoth.browser';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { readEditorImportFile } from '@/lib/import/documentImport';
 
 import { FileManager } from './FileManager';
 
-vi.mock('mammoth/mammoth.browser', () => ({
-  default: {
-    convertToHtml: vi.fn(),
-  },
+vi.mock('@/lib/import/documentImport', () => ({
+  readEditorImportFile: vi.fn(),
 }));
 
-const convertToHtmlMock = vi.mocked(mammoth.convertToHtml);
+const readEditorImportFileMock = vi.mocked(readEditorImportFile);
 
 function createEditor() {
   return {
@@ -26,21 +31,19 @@ function createEditor() {
 describe('FileManager', () => {
   afterEach(() => {
     cleanup();
-    convertToHtmlMock.mockReset();
+    readEditorImportFileMock.mockReset();
   });
 
-  it('sanitizes converted DOCX HTML before inserting it into the editor', async () => {
+  it('inserts resolved import content into the editor', async () => {
     const editor = createEditor();
     const onNotice = vi.fn();
-    convertToHtmlMock.mockResolvedValue({
-      value:
-        '<p>Imported draft</p><img src="x" onerror="alert(1)"><script>alert("xss")</script>',
-      messages: [],
+    readEditorImportFileMock.mockResolvedValue({
+      content: '<p>Imported draft</p>',
+      kind: 'docx',
+      notice: 'Imported DOCX file: draft.docx',
     });
 
-    render(
-      <FileManager editor={editor} docId="doc-1" onNotice={onNotice} />,
-    );
+    render(<FileManager editor={editor} docId="doc-1" onNotice={onNotice} />);
 
     fireEvent.change(screen.getByLabelText(/import json or docx file/i), {
       target: {
@@ -54,15 +57,38 @@ describe('FileManager', () => {
 
     await waitFor(() => {
       expect(editor.commands.setContent).toHaveBeenCalledWith(
-        expect.not.stringContaining('<script>'),
+        '<p>Imported draft</p>',
       );
     });
-    expect(editor.commands.setContent).toHaveBeenCalledWith(
-      expect.not.stringContaining('onerror'),
-    );
-    expect(editor.commands.setContent).toHaveBeenCalledWith(
-      expect.stringContaining('<p>Imported draft</p>'),
-    );
+    expect(readEditorImportFileMock).toHaveBeenCalledWith(expect.any(File));
     expect(onNotice).toHaveBeenCalledWith('Imported DOCX file: draft.docx');
+  });
+
+  it('reports unsupported imports without changing editor content', async () => {
+    const editor = createEditor();
+    const onNotice = vi.fn();
+    readEditorImportFileMock.mockResolvedValue({
+      kind: 'unsupported',
+      notice: 'Unsupported file type. Choose a JSON or DOCX file.',
+    });
+
+    render(<FileManager editor={editor} docId="doc-1" onNotice={onNotice} />);
+
+    fireEvent.change(screen.getByLabelText(/import json or docx file/i), {
+      target: {
+        files: [
+          new File(['plain text'], 'notes.txt', {
+            type: 'text/plain',
+          }),
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(onNotice).toHaveBeenCalledWith(
+        'Unsupported file type. Choose a JSON or DOCX file.',
+      );
+    });
+    expect(editor.commands.setContent).not.toHaveBeenCalled();
   });
 });
