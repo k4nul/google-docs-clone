@@ -25,7 +25,7 @@ React 기반 collaborative editor 프론트엔드와 Rust 기반 실시간 협�
 
 ## 요구 사항
 
-- Node.js 20 이상
+- Node.js 20.19+, 22.12+, or 24+
 - npm
 - Rust toolchain과 Cargo
 

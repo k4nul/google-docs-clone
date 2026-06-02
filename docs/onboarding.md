@@ -18,7 +18,7 @@
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 20.19+, 22.12+, or 24+
 - npm
 - Rust toolchain and Cargo
 

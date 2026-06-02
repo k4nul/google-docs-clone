@@ -158,7 +158,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ### 요구 사항
 
-- Node.js 20 이상
+- Node.js 20.19+, 22.12+, or 24+
 - npm
 
 ### 환경 변수
