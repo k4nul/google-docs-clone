@@ -149,12 +149,6 @@ export function htmlToDocxParagraphs(html: string): Paragraph[] {
   return blocks.length > 0 ? blocks : [new Paragraph('')];
 }
 
-export function createJsonExportBlob(content: unknown) {
-  return new Blob([JSON.stringify(content, null, 2)], {
-    type: 'application/json;charset=utf-8',
-  });
-}
-
 export async function createDocxExportBlob(html: string) {
   const doc = new Document({
     sections: [{ children: htmlToDocxParagraphs(html) }],

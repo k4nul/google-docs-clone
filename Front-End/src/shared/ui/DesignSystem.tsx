@@ -198,17 +198,3 @@ export function StatusPill({
     </span>
   );
 }
-
-interface MetricTileProps {
-  label: string;
-  value: string | number;
-}
-
-export function MetricTile({ label, value }: MetricTileProps) {
-  return (
-    <span className="metric-tile">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </span>
-  );
-}

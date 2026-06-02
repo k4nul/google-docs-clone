@@ -4,7 +4,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ## 핵심 기능
 
-- 백엔드 `GET /api/documents` 기반 문서 목록과 local sample fallback 제공
+- 백엔드 `GET /api/documents` 기반 최근 문서 목록과 사용자용 unavailable 상태 제공
 - `/docs/:docId` 경로에서 collaborative editor 셸 제공
 - Tiptap 기반 rich text editor 구성
 - Yjs binary sync protocol 기반 실시간 협업 연결 구조 분리
@@ -211,21 +211,21 @@ npm run preview
 
 ### 기본 라우트
 
-- `/`: 백엔드 문서 목록 페이지와 local sample fallback
+- `/`: 최근 문서 목록 페이지
 - `/docs/:docId`: collaborative editor 페이지
 
 ## 백엔드 연동 흐름
 
 현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다.
 
-1. 홈 화면에서 `Create backend editor`를 클릭합니다.
+1. 홈 화면에서 `New document`를 클릭합니다.
 2. 프런트가 `POST /api/documents`를 호출합니다. `VITE_API_TOKEN`이 있으면 legacy compatibility header만 추가합니다.
 3. 백엔드가 문서를 만들고 `document.id`를 응답합니다.
 4. 프런트는 `/docs/:docId`로 이동합니다.
 5. 프런트가 `GET /api/documents/:id`로 detail metadata를 확인합니다.
 6. 협업 연결은 `ws://host/ws/:docId` 형태로 열립니다.
 
-백엔드 목록을 불러올 수 없으면 홈 화면은 local sample 문서를 표시합니다. 실제 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
+문서 목록을 불러올 수 없으면 홈 화면은 사용자용 unavailable 상태와 재시도 버튼을 표시합니다. 실제 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
 ## 이번 문제와 해결
 
@@ -246,7 +246,7 @@ npm run preview
 
 해결:
 
-- 홈 화면에 `Create backend editor` 버튼 추가
+- 홈 화면에 `New document` 버튼 추가
 - `POST /api/documents`로 실제 문서를 생성한 뒤 해당 UUID로 이동
 
 ### 3. 문서 경로 전달 정리
@@ -291,7 +291,7 @@ VITE_WS_URL=ws://localhost:4000
 ```
 
 3. 프런트 dev 서버를 재시작
-4. 홈 화면에서 백엔드 문서 목록을 확인하거나 `Create backend editor`를 클릭
+4. 홈 화면에서 문서 목록을 확인하거나 `New document`를 클릭
 5. 브라우저 URL이 `/docs/<uuid>` 형태인지 확인
 6. 콘솔에 아래 로그가 찍히는지 확인
 

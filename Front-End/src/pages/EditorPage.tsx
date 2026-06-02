@@ -6,7 +6,7 @@ import { EditorShell } from '@/features/editor/EditorShell';
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
 import { FileManager } from '@/features/util/FileManager';
 import { getBackendDocument } from '@/lib/api/documents';
-import { ApiRequestError, buildApiUrl } from '@/lib/api/httpClient';
+import { ApiRequestError } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument } from '@/shared/types/document';
 import {
@@ -141,7 +141,7 @@ export function EditorPage() {
   const realtimeServerUrl = document && !documentError ? appEnv.wsUrl : null;
   const pageTitle = document?.title ?? 'Untitled document';
   const pageDescription = document
-    ? 'Review document metadata, manage import/export actions, and continue editing with realtime presence.'
+    ? 'Continue editing this document with realtime presence.'
     : documentError
       ? 'The editor is available in a protected local mode while document metadata is unavailable.'
       : 'Document metadata is loading before the editor joins the realtime workspace.';
@@ -184,7 +184,7 @@ export function EditorPage() {
           )}
           {notice ? (
             <Panel>
-              <h2>Import and export status</h2>
+              <h2>File status</h2>
               <p className="muted">{notice}</p>
             </Panel>
           ) : null}
@@ -193,21 +193,17 @@ export function EditorPage() {
         <aside className="editor-side-stack" aria-label="Document details">
           <section className="editor-side-card">
             <div>
-              <p className="section-kicker">Document status</p>
-              <h2>Metadata</h2>
+              <p className="section-kicker">Document</p>
+              <h2>Details</h2>
             </div>
             <div className="info-list">
               <span>
-                API endpoint:{' '}
-                <code>{buildApiUrl(`/documents/${decodedDocId}`)}</code>
-              </span>
-              <span>
-                Metadata:{' '}
+                Document details:{' '}
                 <code>
                   {isDocumentLoading
                     ? 'loading'
                     : document
-                      ? 'loaded'
+                      ? 'ready'
                       : 'unavailable'}
                 </code>
               </span>
@@ -222,13 +218,12 @@ export function EditorPage() {
                 </>
               ) : null}
               <span>
-                Realtime sync:{' '}
+                Collaboration:{' '}
                 <code>
-                  {realtimeServerUrl ?? 'disabled until metadata loads'}
+                  {realtimeServerUrl
+                    ? 'ready'
+                    : 'available after document details load'}
                 </code>
-              </span>
-              <span>
-                Import formats: <code>JSON, DOCX</code>
               </span>
             </div>
           </section>

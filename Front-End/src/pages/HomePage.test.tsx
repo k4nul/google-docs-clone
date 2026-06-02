@@ -19,7 +19,7 @@ describe('HomePage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders local sample documents when the backend list is unavailable', async () => {
+  it('renders fallback documents with user-facing unavailable messaging', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
 
     render(
@@ -34,14 +34,22 @@ describe('HomePage', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /open sample editor/i }),
+      await screen.findByRole('heading', {
+        name: /documents are temporarily unavailable/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/offline/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /moonlit recipe notes/i }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText(/backend list unavailable: offline/i),
-    ).toBeInTheDocument();
+      screen.queryByRole('link', { name: /open sample editor/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/using local sample/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/source:/i)).not.toBeInTheDocument();
   });
 
-  it('renders backend documents returned by the list API', async () => {
+  it('renders documents returned by the list API without source labels', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -49,9 +57,10 @@ describe('HomePage', () => {
           documents: [
             {
               id: '55555555-5555-4555-8555-555555555555',
-              title: 'Backend launch notes',
+              title: 'Budget notes',
               created_at: '2026-04-05T10:00:00.000Z',
               updated_at: '2026-04-05T10:30:00.000Z',
+              preview: 'Quarterly planning notes and edits.',
             },
           ],
         }),
@@ -65,11 +74,16 @@ describe('HomePage', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /backend launch notes/i }),
+      await screen.findByRole('heading', { name: /budget notes/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/1 backend document/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 document/i)).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: /launch plan/i }),
+      screen.getByText(/quarterly planning notes and edits/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /moonlit recipe notes/i }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Backend$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/source:/i)).not.toBeInTheDocument();
   });
 });

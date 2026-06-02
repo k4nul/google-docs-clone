@@ -16,22 +16,6 @@ describe('readEditorImportFile', () => {
     convertToHtmlMock.mockReset();
   });
 
-  it('reads JSON imports as editor content', async () => {
-    const content = {
-      content: [{ type: 'paragraph' }],
-      type: 'doc',
-    };
-    const file = new File([JSON.stringify(content)], 'draft.json', {
-      type: 'application/json',
-    });
-
-    await expect(readEditorImportFile(file)).resolves.toEqual({
-      content,
-      kind: 'json',
-      notice: 'Imported JSON file: draft.json',
-    });
-  });
-
   it('sanitizes DOCX imports before returning editor content', async () => {
     convertToHtmlMock.mockResolvedValue({
       messages: [],
@@ -59,7 +43,7 @@ describe('readEditorImportFile', () => {
 
     await expect(readEditorImportFile(file)).resolves.toEqual({
       kind: 'unsupported',
-      notice: 'Unsupported file type. Choose a JSON or DOCX file.',
+      notice: 'Unsupported file type. Choose a DOCX file.',
     });
     expect(convertToHtmlMock).not.toHaveBeenCalled();
   });

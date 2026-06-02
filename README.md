@@ -83,11 +83,11 @@ VITE_WS_URL=ws://localhost:4000
 ### 3. 브라우저에서 확인
 
 1. Vite가 출력한 로컬 URL로 접속합니다.
-2. 홈 화면에서 백엔드 문서 목록을 확인하거나 `Create backend editor`를 클릭합니다.
+2. 홈 화면에서 문서 목록을 확인하거나 `New document`를 클릭합니다.
 3. 프론트엔드가 `POST /api/documents`로 UUID 문서를 만들고 `/docs/<uuid>`로 이동합니다.
 4. 편집기는 `GET /api/documents/:id`로 문서 메타데이터를 확인한 뒤 `ws://localhost:4000/ws/<uuid>`로 WebSocket을 열어 협업 동기화를 시작합니다.
 
-백엔드를 사용할 수 없을 때 홈 화면은 로컬 sample 문서를 fallback으로 표시합니다. 실제 백엔드 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
+문서 목록을 불러올 수 없을 때 홈 화면은 사용자용 unavailable 상태와 재시도 버튼을 표시합니다. 실제 백엔드 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
 ## API / WebSocket 계약
 

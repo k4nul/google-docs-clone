@@ -12,6 +12,4 @@ export interface DocumentSummary {
   updatedAt: string;
   createdAt?: string;
   collaborators: number;
-  status: 'active' | 'draft';
-  source: 'backend' | 'sample';
 }

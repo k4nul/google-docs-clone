@@ -2,10 +2,7 @@ import { useCallback, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import type { Editor } from '@tiptap/core';
 
-import {
-  createDocxExportBlob,
-  createJsonExportBlob,
-} from '@/lib/export/documentExport';
+import { createDocxExportBlob } from '@/lib/export/documentExport';
 import { readEditorImportFile } from '@/lib/import/documentImport';
 import { Button } from '@/shared/ui/DesignSystem';
 
@@ -34,24 +31,6 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
   const openImportDialog = useCallback(() => {
     importInputRef.current?.click();
   }, []);
-
-  const exportJson = useCallback(() => {
-    if (!editor) {
-      onNotice('The editor is not ready yet.');
-      return;
-    }
-
-    try {
-      const currentContent = editor.getJSON();
-      downloadBlob(
-        createJsonExportBlob(currentContent),
-        `${docId}-export.json`,
-      );
-      onNotice('The current document was exported as JSON.');
-    } catch {
-      onNotice('Unable to export the document as JSON.');
-    }
-  }, [docId, editor, onNotice]);
 
   const exportDocx = useCallback(async () => {
     if (!editor) {
@@ -110,15 +89,7 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
         type="button"
         onClick={openImportDialog}
       >
-        Import file
-      </Button>
-      <Button
-        disabled={!editor}
-        variant="primary"
-        type="button"
-        onClick={exportJson}
-      >
-        Export JSON
+        Import DOCX
       </Button>
       <Button
         disabled={!editor}
@@ -130,8 +101,8 @@ export function FileManager({ editor, docId, onNotice }: FileManagerProps) {
       </Button>
       <input
         ref={importInputRef}
-        accept="application/json,.json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
-        aria-label="Import JSON or DOCX file"
+        accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
+        aria-label="Import DOCX file"
         className="visually-hidden-file-input"
         type="file"
         onChange={handleImportFile}

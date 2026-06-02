@@ -7,6 +7,12 @@ interface BackendDocumentResponse {
   title: string;
   created_at: string;
   updated_at: string;
+  collaborator_count?: number | null;
+  collaborators?: number | null;
+  hide_preview?: boolean | null;
+  preview?: string | null;
+  preview_hidden?: boolean | null;
+  summary?: string | null;
 }
 
 interface DocumentsResponse {
@@ -50,18 +56,43 @@ function getTimestamp(value: string) {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
+function normalizePreviewText(value: string | null | undefined) {
+  const preview = value?.replace(/\s+/g, ' ').trim();
+
+  if (!preview) {
+    return null;
+  }
+
+  return preview.length > 180 ? `${preview.slice(0, 177)}...` : preview;
+}
+
+function getDocumentPreview(document: BackendDocumentResponse) {
+  if (document.preview_hidden || document.hide_preview) {
+    return 'Preview hidden';
+  }
+
+  return (
+    normalizePreviewText(document.preview) ??
+    normalizePreviewText(document.summary) ??
+    'No preview available'
+  );
+}
+
+function getCollaboratorCount(document: BackendDocumentResponse) {
+  return document.collaborators ?? document.collaborator_count ?? 0;
+}
+
 export function documentSummaryFromBackend(
   document: BackendDocument,
+  rawDocument?: BackendDocumentResponse,
 ): DocumentSummary {
   return {
     id: document.id,
     title: document.title,
-    summary: `Backend document ${document.id}`,
+    summary: rawDocument ? getDocumentPreview(rawDocument) : 'No preview available',
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
-    collaborators: 0,
-    status: 'active',
-    source: 'backend',
+    collaborators: rawDocument ? getCollaboratorCount(rawDocument) : 0,
   };
 }
 
@@ -69,8 +100,9 @@ export async function listBackendDocuments() {
   const response = await apiGet<DocumentsResponse>('/documents');
 
   return response.documents
-    .map(mapBackendDocument)
-    .map(documentSummaryFromBackend)
+    .map((document) =>
+      documentSummaryFromBackend(mapBackendDocument(document), document),
+    )
     .sort(
       (left, right) =>
         getTimestamp(right.updatedAt) - getTimestamp(left.updatedAt),

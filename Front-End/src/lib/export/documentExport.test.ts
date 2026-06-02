@@ -32,20 +32,11 @@ const docxMock = vi.hoisted(() => {
 
 vi.mock('docx', () => docxMock);
 
-import { createDocxExportBlob, createJsonExportBlob } from './documentExport';
+import { createDocxExportBlob } from './documentExport';
 
 describe('document export helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('creates formatted JSON export blobs', async () => {
-    const blob = createJsonExportBlob({ content: [{ type: 'paragraph' }] });
-
-    await expect(blob.text()).resolves.toBe(
-      JSON.stringify({ content: [{ type: 'paragraph' }] }, null, 2),
-    );
-    expect(blob.type).toBe('application/json;charset=utf-8');
   });
 
   it('maps common HTML blocks to DOCX paragraphs', async () => {

@@ -30,7 +30,7 @@ npm.cmd run dev
 
 기본 라우트:
 
-- `/` backend 문서 목록과 local sample fallback
+- `/` backend 문서 목록과 사용자용 unavailable 상태
 - `/docs/:docId` backend detail lookup 이후 collaborative editor shell
 
 ## Build

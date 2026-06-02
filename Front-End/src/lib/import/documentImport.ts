@@ -1,13 +1,6 @@
-import type { JSONContent } from '@tiptap/core';
-
 import { importDocxToHtml } from './docxImport';
 
 export type EditorImportResult =
-  | {
-      content: JSONContent;
-      kind: 'json';
-      notice: string;
-    }
   | {
       content: string;
       kind: 'docx';
@@ -23,16 +16,6 @@ export async function readEditorImportFile(
 ): Promise<EditorImportResult> {
   const fileName = file.name.toLowerCase();
 
-  if (fileName.endsWith('.json')) {
-    const fileText = await file.text();
-
-    return {
-      content: JSON.parse(fileText) as JSONContent,
-      kind: 'json',
-      notice: `Imported JSON file: ${file.name}`,
-    };
-  }
-
   if (fileName.endsWith('.docx')) {
     const content = await importDocxToHtml(await file.arrayBuffer());
 
@@ -45,6 +28,6 @@ export async function readEditorImportFile(
 
   return {
     kind: 'unsupported',
-    notice: 'Unsupported file type. Choose a JSON or DOCX file.',
+    notice: 'Unsupported file type. Choose a DOCX file.',
   };
 }

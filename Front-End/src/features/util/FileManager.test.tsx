@@ -24,7 +24,6 @@ function createEditor() {
       setContent: vi.fn(),
     },
     getHTML: vi.fn(),
-    getJSON: vi.fn(),
   } as unknown as Editor;
 }
 
@@ -45,7 +44,7 @@ describe('FileManager', () => {
 
     render(<FileManager editor={editor} docId="doc-1" onNotice={onNotice} />);
 
-    fireEvent.change(screen.getByLabelText(/import json or docx file/i), {
+    fireEvent.change(screen.getByLabelText(/import docx file/i), {
       target: {
         files: [
           new File(['docx bytes'], 'draft.docx', {
@@ -69,12 +68,12 @@ describe('FileManager', () => {
     const onNotice = vi.fn();
     readEditorImportFileMock.mockResolvedValue({
       kind: 'unsupported',
-      notice: 'Unsupported file type. Choose a JSON or DOCX file.',
+      notice: 'Unsupported file type. Choose a DOCX file.',
     });
 
     render(<FileManager editor={editor} docId="doc-1" onNotice={onNotice} />);
 
-    fireEvent.change(screen.getByLabelText(/import json or docx file/i), {
+    fireEvent.change(screen.getByLabelText(/import docx file/i), {
       target: {
         files: [
           new File(['plain text'], 'notes.txt', {
@@ -86,7 +85,7 @@ describe('FileManager', () => {
 
     await waitFor(() => {
       expect(onNotice).toHaveBeenCalledWith(
-        'Unsupported file type. Choose a JSON or DOCX file.',
+        'Unsupported file type. Choose a DOCX file.',
       );
     });
     expect(editor.commands.setContent).not.toHaveBeenCalled();
