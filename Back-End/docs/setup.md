@@ -44,7 +44,7 @@ cargo test --features full-snapshot-stores
 - `PORT`: 서버 포트
 - `FRONTEND_ORIGIN`: CORS 허용 origin
 - `RUST_LOG`: tracing subscriber 필터
-- `API_TOKEN`: 현재 로컬 개발용 HTTP/WS 경로에서는 검증하지 않는 legacy 관리 토큰 설정
+- `API_TOKEN`: 문서 목록 조회와 문서 생성 API에 필요한 관리 bearer token
 - `SNAPSHOT_STORE`: `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, 또는 `managed`
 - 기본 feature 없는 빌드에서 즉시 사용할 수 있는 값은 `memory`, `file`, `sqlite`, `s3`, `managed`다. 나머지 backend는 `--features full-snapshot-stores` 활성화가 필요하다.
 - `SNAPSHOT_STORE=append_kv`: append_kv append-only 단일 파일 store도 지원한다.
@@ -727,9 +727,9 @@ backend별 운영 차이를 빠르게 확인하려면 아래 매트릭스를 기
 1. `.env.example`을 기준으로 로컬 환경값을 준비한다.
 2. `cargo check`로 의존성과 컴파일 상태를 먼저 확인한다.
 3. `cargo run`으로 서버를 올리고 `/api/health`를 확인한다.
-4. `POST /api/documents`를 인증 헤더 없이 호출해 문서를 만든다. 응답의 `access_token`은 현재 클라이언트 플로우에서 재사용하지 않는다.
-5. 문서 상세 조회, 삭제, WebSocket 연결도 인증 헤더 없이 호출한다.
-6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞춰 `/ws/:doc_id`에 접속한다.
+4. `POST /api/documents`를 `Authorization: Bearer <API_TOKEN>` 헤더와 함께 호출해 문서를 만든다. 응답의 `credentials.access_token`은 문서별 credential로 저장한다.
+5. 문서 상세 조회, 제목 변경, 삭제는 `Authorization: Bearer <document-access-token>` 헤더로 호출한다.
+6. WebSocket 접속 시 `Origin` 헤더를 `FRONTEND_ORIGIN`과 맞추고 브라우저에서는 `/ws/:doc_id?access_token=<document-token>`에 접속한다.
 7. 작업 시작 전에 `./scripts/verify.sh core`로 코드 경로를 먼저 검증하고, publish 전에는 `./scripts/preflight.sh publish`, WebSocket 검증 전에는 `./scripts/preflight.sh websocket`로 환경 차단을 확인한다.
 8. 작업 마무리 전 `./scripts/verify.sh core`를 다시 실행하고, socket bind 가능한 러너에서는 `./scripts/verify.sh websocket`까지 실행한다.
 9. `ROOM_LOCATOR=static`을 쓰는 경우에는 `NODE_ID`와 `ROOM_OWNER_HINTS_PATH`를 함께 맞추고, non-local owner 문서에 대해 `409 conflict`, `owner` metadata, `x-collab-owner-node-id` 헤더가 반환되는지 확인한다. `ROOM_LOCATOR=file`을 쓰는 경우에는 `ROOM_COORDINATOR_STATE_DIR/<doc_id>.json` state를 준비하고, `ROOM_LOCATOR=sqlite`를 쓰는 경우에는 `ROOM_COORDINATOR_SQLITE_PATH`의 `room_leases` row를 준비한다. `ROOM_LOCATOR=managed`를 쓰는 경우에는 managed lease service `GET /v1/leases/:doc_id`가 current lease record를 반환하도록 준비한 뒤 같은 응답이 `owner.node_id`, optional `owner.base_url`, optional `x-collab-redirect-location`/`Location` 기준으로 반환되는지 확인한다.

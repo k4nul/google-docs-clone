@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    http::{HeaderValue, Method},
+    http::{HeaderValue, Method, Request},
     routing::get,
 };
 use tower_http::{
@@ -16,7 +16,15 @@ pub fn build_app(config: &Config, state: AppState) -> AppResult<Router> {
     Ok(Router::new()
         .nest("/api", routes::api_router())
         .route("/ws/{doc_id}", get(ws::ws_handler))
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                tracing::debug_span!(
+                    "http_request",
+                    method = %request.method(),
+                    path = %request.uri().path()
+                )
+            }),
+        )
         .layer(cors)
         .with_state(state))
 }
@@ -31,6 +39,6 @@ fn build_cors(config: &Config) -> AppResult<CorsLayer> {
 
     Ok(CorsLayer::new()
         .allow_origin(allowed_origin)
-        .allow_methods([Method::GET, Method::POST, Method::DELETE])
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_headers(Any))
 }

@@ -76,17 +76,18 @@ npm run dev
 
 ```bash
 VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000
 ```
 
-백엔드는 현재 로컬 개발용 HTTP/WebSocket 경로에서 토큰을 검증하지 않습니다. 프론트엔드는 `GET /api/documents`로 홈 화면 문서 목록을 불러오고, `GET /api/documents/:id` 메타데이터가 확인된 문서만 realtime WebSocket 연결을 활성화합니다.
+프론트엔드는 `VITE_API_TOKEN`으로 문서 목록/생성 API를 호출하고, 문서 생성 응답의 `credentials.access_token`을 브라우저 `localStorage`에 저장합니다. 편집기 상세 조회, 제목 변경, 삭제, realtime WebSocket 연결은 이 문서별 credential이 있어야 열립니다.
 
 ### 3. 브라우저에서 확인
 
 1. Vite가 출력한 로컬 URL로 접속합니다.
 2. 홈 화면에서 문서 목록을 확인하거나 `New document`를 클릭합니다.
 3. 프론트엔드가 `POST /api/documents`로 UUID 문서를 만들고 `/docs/<uuid>`로 이동합니다.
-4. 편집기는 `GET /api/documents/:id`로 문서 메타데이터를 확인한 뒤 `ws://localhost:4000/ws/<uuid>`로 WebSocket을 열어 협업 동기화를 시작합니다.
+4. 편집기는 저장된 문서 credential으로 `GET /api/documents/:id` 메타데이터를 확인한 뒤 `ws://localhost:4000/ws/<uuid>?access_token=<token>`으로 WebSocket을 열어 협업 동기화를 시작합니다.
 
 문서 목록을 불러올 수 없을 때 홈 화면은 사용자용 unavailable 상태와 재시도 버튼을 표시합니다. 실제 백엔드 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
@@ -100,10 +101,11 @@ HTTP base path는 `/api`입니다.
 | `GET` | `/api/documents` | active room과 persisted snapshot 문서 목록 조회 |
 | `POST` | `/api/documents` | 새 문서 생성 |
 | `GET` | `/api/documents/:id` | UUID 문서 상세 조회 |
+| `PATCH` | `/api/documents/:id` | UUID 문서 제목 변경 |
 | `DELETE` | `/api/documents/:id` | 문서 삭제. active WebSocket 세션이 있으면 `409 conflict` |
 | `GET` | `/ws/:doc_id` | Yjs/Yrs binary sync WebSocket endpoint |
 
-WebSocket payload는 JSON이 아니라 Yrs v1 binary message입니다. 프론트엔드 provider는 `Sync`, `Awareness`, `AwarenessQuery` 메시지를 인코딩/디코딩하고, 백엔드는 같은 `doc_id` room에 연결된 클라이언트에게 update를 broadcast합니다.
+문서 목록/생성은 `Authorization: Bearer <API_TOKEN>`을 사용하고, 상세/제목 변경/삭제는 `Authorization: Bearer <document-access-token>`을 사용합니다. 브라우저 WebSocket은 임의 헤더를 보낼 수 없으므로 문서 credential을 `access_token` query parameter로 전달합니다. WebSocket payload는 JSON이 아니라 Yrs v1 binary message입니다. 프론트엔드 provider는 `Sync`, `Awareness`, `AwarenessQuery` 메시지를 인코딩/디코딩하고, 백엔드는 같은 `doc_id` room에 연결된 클라이언트에게 update를 broadcast합니다.
 
 ## 검증 명령
 

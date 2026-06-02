@@ -14,6 +14,8 @@ pub fn api_router() -> Router<AppState> {
         )
         .route(
             "/documents/{id}",
-            get(documents::get_document).delete(documents::delete_document),
+            get(documents::get_document)
+                .patch(documents::update_document)
+                .delete(documents::delete_document),
         )
 }

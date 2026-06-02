@@ -11,6 +11,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - `VITE_WS_URL`이 없으면 현재 브라우저 origin에서 WebSocket URL 자동 계산
 - DOCX import/export와 HTML sanitize 유틸리티 제공
 - `src/lib/api` 경계에서 documents list/detail/create 응답 변환
+- 문서 생성 응답의 credential을 저장하고 상세 조회, 제목 변경, WebSocket 연결에 재사용
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
 
 ## 모듈 의존성
@@ -66,7 +67,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 ### 2주차
 
 - documents list/detail API 연동으로 데이터 흐름을 실제 화면에 연결했다.
-- browser WebSocket 제약에 맞춰 auth 없이 backend UUID와 origin 정책으로 연결하고 reconnect/status 기준을 정리했다.
+- browser WebSocket 제약에 맞춰 문서 credential을 `access_token` query parameter로 전달하고 reconnect/status 기준을 정리했다.
 - presence UI와 collaboration 상태 표시 등 실시간 협업 경험을 보강했다.
 
 ### 3주차
@@ -164,18 +165,17 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ### 환경 변수
 
-API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용합니다. `VITE_API_TOKEN`은 현재 local backend contract에서 필요하지 않으며, 설정된 경우 legacy compatibility header로만 전달됩니다.
+API와 WebSocket 기본값은 현재 브라우저가 접속한 origin을 사용합니다. `VITE_API_TOKEN`은 backend `API_TOKEN`과 같은 값이며, 문서 목록과 문서 생성 요청에 사용됩니다. 문서 생성 뒤에는 응답의 `credentials.access_token`을 브라우저 `localStorage`에 저장하고, 상세 조회/제목 변경/WebSocket 연결에 재사용합니다.
 
 ```bash
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000
-# optional legacy compatibility only
-# VITE_API_TOKEN=dev-admin-token
 ```
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용합니다.
-- `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않습니다.
+- `VITE_API_TOKEN`: 문서 목록/생성을 위한 backend admin API token입니다.
 - `VITE_WS_URL`: collaboration websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용합니다. provider는 이 값에서 `/ws/:docId` endpoint를 구성합니다.
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 됩니다.
@@ -217,14 +217,14 @@ npm run preview
 
 ## 백엔드 연동 흐름
 
-현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다.
+현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다. `POST /api/documents` 응답 credential을 저장한 뒤 `GET /api/documents/:id`, `PATCH /api/documents/:id`, `/ws/:docId?access_token=<token>`에 재사용합니다. 저장된 credential이 없으면 편집기 페이지는 문서 내용을 열지 않고 access token 입력을 요구합니다.
 
 1. 홈 화면에서 `New document`를 클릭합니다.
-2. 프런트가 `POST /api/documents`를 호출합니다. `VITE_API_TOKEN`이 있으면 legacy compatibility header만 추가합니다.
-3. 백엔드가 문서를 만들고 `document.id`를 응답합니다.
-4. 프런트는 `/docs/:docId`로 이동합니다.
-5. 프런트가 `GET /api/documents/:id`로 detail metadata를 확인합니다.
-6. 협업 연결은 `ws://host/ws/:docId` 형태로 열립니다.
+2. 프런트가 `VITE_API_TOKEN`을 bearer token으로 사용해 `POST /api/documents`를 호출합니다.
+3. 백엔드가 문서를 만들고 `document.id`와 `credentials.access_token`을 응답합니다.
+4. 프런트는 credential을 `localStorage`에 저장하고 `/docs/:docId`로 이동합니다.
+5. 프런트가 저장된 credential로 `GET /api/documents/:id` detail metadata를 확인합니다.
+6. 협업 연결은 `ws://host/ws/:docId?access_token=<document-token>` 형태로 열립니다.
 
 문서 목록을 불러올 수 없으면 홈 화면은 사용자용 unavailable 상태와 재시도 버튼을 표시합니다. 실제 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
@@ -258,7 +258,7 @@ npm run preview
 
 - 프런트 문서 생성 응답에서 `document.id`만 사용
 - 프런트 라우팅을 `/docs/:docId` 형태로 고정
-- WebSocket endpoint를 `ws://host/ws/:docId`로 단순화
+- WebSocket endpoint는 `ws://host/ws/:docId?access_token=<document-token>`로 구성하고, browser route에는 token을 붙이지 않음
 
 ### 4. awareness payload shape 불일치
 

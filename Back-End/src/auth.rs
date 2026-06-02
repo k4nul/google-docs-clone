@@ -1,6 +1,10 @@
 use axum::http::{HeaderMap, header::AUTHORIZATION};
+use uuid::Uuid;
 
-use crate::errors::{AppError, AppResult};
+use crate::{
+    collab::rooms::Room,
+    errors::{AppError, AppResult},
+};
 
 pub fn require_bearer_token(headers: &HeaderMap) -> AppResult<&str> {
     let header = headers
@@ -18,6 +22,33 @@ pub fn require_bearer_token(headers: &HeaderMap) -> AppResult<&str> {
         .ok_or_else(|| {
             AppError::Unauthorized("Authorization header must use Bearer token format".to_owned())
         })
+}
+
+pub fn require_admin_token(headers: &HeaderMap, expected_token: &str) -> AppResult<()> {
+    let token = require_bearer_token(headers)?;
+
+    if token != expected_token {
+        return Err(AppError::Forbidden(
+            "provided API token does not grant this operation".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn require_document_access(headers: &HeaderMap, room: &Room, doc_id: Uuid) -> AppResult<()> {
+    let token = require_bearer_token(headers)?;
+    authorize_document_token(token, room, doc_id)
+}
+
+pub fn authorize_document_token(token: &str, room: &Room, doc_id: Uuid) -> AppResult<()> {
+    if room.authorizes(token) {
+        return Ok(());
+    }
+
+    Err(AppError::Forbidden(format!(
+        "provided token does not grant access to document `{doc_id}`"
+    )))
 }
 
 #[cfg(test)]

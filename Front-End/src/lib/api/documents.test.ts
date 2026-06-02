@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createBackendDocument,
   getBackendDocument,
+  getStoredDocumentAccessToken,
   listBackendDocuments,
+  updateBackendDocumentTitle,
 } from './documents';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -19,6 +21,7 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 describe('document API client', () => {
   afterEach(() => {
+    window.localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -123,7 +126,10 @@ describe('document API client', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
-      getBackendDocument('33333333-3333-4333-8333-333333333333'),
+      getBackendDocument(
+        '33333333-3333-4333-8333-333333333333',
+        'doc-token',
+      ),
     ).resolves.toEqual({
       id: '33333333-3333-4333-8333-333333333333',
       title: 'Loaded document',
@@ -134,11 +140,15 @@ describe('document API client', () => {
       expect.stringContaining(
         '/api/documents/33333333-3333-4333-8333-333333333333',
       ),
-      expect.any(Object),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer doc-token',
+        }),
+      }),
     );
   });
 
-  it('creates backend documents without requiring a frontend token', async () => {
+  it('creates backend documents and stores the returned document credential', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         document: {
@@ -146,6 +156,9 @@ describe('document API client', () => {
           title: 'Realtime draft',
           created_at: '2026-04-04T10:00:00.000Z',
           updated_at: '2026-04-04T10:00:00.000Z',
+        },
+        credentials: {
+          access_token: 'created-doc-token',
         },
       }),
     );
@@ -158,7 +171,13 @@ describe('document API client', () => {
         createdAt: '2026-04-04T10:00:00.000Z',
         updatedAt: '2026-04-04T10:00:00.000Z',
       },
+      credentials: {
+        accessToken: 'created-doc-token',
+      },
     });
+    expect(
+      getStoredDocumentAccessToken('44444444-4444-4444-8444-444444444444'),
+    ).toBe('created-doc-token');
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/documents'),
       expect.objectContaining({
@@ -166,5 +185,58 @@ describe('document API client', () => {
         body: JSON.stringify({ title: 'Realtime draft' }),
       }),
     );
+  });
+
+  it('renames backend documents with the stored document credential', async () => {
+    window.localStorage.setItem(
+      'realtime-docs.document-credentials.v1',
+      JSON.stringify({
+        '55555555-5555-4555-8555-555555555555': 'stored-doc-token',
+      }),
+    );
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        document: {
+          id: '55555555-5555-4555-8555-555555555555',
+          title: 'Renamed draft',
+          created_at: '2026-04-04T10:00:00.000Z',
+          updated_at: '2026-04-04T10:05:00.000Z',
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      updateBackendDocumentTitle(
+        '55555555-5555-4555-8555-555555555555',
+        'Renamed draft',
+      ),
+    ).resolves.toEqual({
+      id: '55555555-5555-4555-8555-555555555555',
+      title: 'Renamed draft',
+      createdAt: '2026-04-04T10:00:00.000Z',
+      updatedAt: '2026-04-04T10:05:00.000Z',
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '/api/documents/55555555-5555-4555-8555-555555555555',
+      ),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Renamed draft' }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer stored-doc-token',
+        }),
+      }),
+    );
+  });
+
+  it('rejects document detail requests when no document credential is stored', async () => {
+    await expect(
+      getBackendDocument('66666666-6666-4666-8666-666666666666'),
+    ).rejects.toMatchObject({
+      name: 'MissingDocumentCredentialError',
+      documentId: '66666666-6666-4666-8666-666666666666',
+    });
   });
 });

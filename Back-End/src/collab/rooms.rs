@@ -109,6 +109,15 @@ impl Room {
             .authorize(token)
     }
 
+    pub fn rename_document(&self, title: String) -> Document {
+        let mut document = self
+            .document
+            .write()
+            .expect("room document lock should not be poisoned");
+        document.rename(title);
+        document.clone()
+    }
+
     pub fn snapshot(&self) -> Result<DocumentSnapshot, StorageError> {
         let mut document = self
             .document
@@ -209,6 +218,23 @@ impl RoomRegistry {
         let document = self.rooms.remove(doc_id).map(|(_, room)| room.document());
         self.snapshot_store.delete_snapshot(doc_id)?;
         Ok(document)
+    }
+
+    pub fn rename_document(
+        &self,
+        doc_id: &Uuid,
+        title: String,
+    ) -> Result<Option<Document>, StorageError> {
+        let Some(room) = self.get_or_restore(doc_id)? else {
+            return Ok(None);
+        };
+
+        room.rename_document(title);
+        let snapshot = room.snapshot()?;
+        let document = snapshot.document.clone();
+        self.snapshot_store.save_snapshot(snapshot)?;
+
+        Ok(Some(document))
     }
 
     pub fn get_or_create(&self, document: Document) -> Arc<Room> {

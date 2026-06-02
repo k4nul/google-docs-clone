@@ -112,6 +112,20 @@ async fn localhost_create_list_get_delete_document() {
     );
     assert!(get_body["document"]["access_token"].is_null());
 
+    let update_resp = client
+        .patch(format!("{base}/api/documents/{doc_id}"))
+        .header("Authorization", doc_auth(&access_token))
+        .json(&serde_json::json!({ "title": "Localhost renamed test" }))
+        .send()
+        .await
+        .expect("update request should succeed");
+    assert_eq!(update_resp.status().as_u16(), 200);
+    let update_body: Value = update_resp.json().await.unwrap();
+    assert_eq!(
+        update_body["document"]["title"].as_str(),
+        Some("Localhost renamed test")
+    );
+
     let delete_resp = client
         .delete(format!("{base}/api/documents/{doc_id}"))
         .header("Authorization", doc_auth(&access_token))

@@ -1,9 +1,12 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const editorShellMock = vi.hoisted(() => vi.fn());
 const fileManagerMock = vi.hoisted(() => vi.fn());
+const getStoredDocumentAccessTokenMock = vi.hoisted(() => vi.fn());
+const storeDocumentAccessTokenMock = vi.hoisted(() => vi.fn());
+const updateBackendDocumentTitleMock = vi.hoisted(() => vi.fn());
 
 type MockCollaborationSnapshot = {
   activeCollaborators: Array<{
@@ -24,12 +27,16 @@ type MockCollaborationSnapshot = {
 };
 
 type MockEditorShellProps = {
+  documentAccessToken?: string | null;
   docId: string;
   documentTitle?: string;
   lastEditedAt?: string | null;
   onCollaborationChange?: (snapshot: MockCollaborationSnapshot) => void;
   onEditorReady?: (editor: null) => void;
+  onTitleSubmit?: (title: string) => Promise<void> | void;
   realtimeServerUrl?: string | null;
+  titleError?: string | null;
+  titleStatus?: 'idle' | 'saving';
 };
 
 type MockFileManagerProps = {
@@ -56,15 +63,24 @@ vi.mock('@/features/util/FileManager', () => ({
 
 vi.mock('@/lib/api/documents', () => ({
   getBackendDocument: vi.fn(),
+  getStoredDocumentAccessToken: getStoredDocumentAccessTokenMock,
+  storeDocumentAccessToken: storeDocumentAccessTokenMock,
+  updateBackendDocumentTitle: updateBackendDocumentTitleMock,
 }));
 
-import { getBackendDocument } from '@/lib/api/documents';
+import {
+  getBackendDocument,
+  updateBackendDocumentTitle as updateBackendDocumentTitleApi,
+} from '@/lib/api/documents';
 import { ApiRequestError } from '@/lib/api/httpClient';
 import type { BackendDocument } from '@/shared/types/document';
 
 import { EditorPage } from './EditorPage';
 
 const getBackendDocumentMock = vi.mocked(getBackendDocument);
+const updateBackendDocumentTitleMocked = vi.mocked(
+  updateBackendDocumentTitleApi,
+);
 
 function createBackendDocument(
   overrides: Partial<BackendDocument> = {},
@@ -110,6 +126,10 @@ function latestEditorShellProps() {
 }
 
 describe('EditorPage', () => {
+  beforeEach(() => {
+    getStoredDocumentAccessTokenMock.mockReturnValue('stored-doc-token');
+  });
+
   afterEach(() => {
     cleanup();
     vi.resetAllMocks();
@@ -138,7 +158,25 @@ describe('EditorPage', () => {
     expect(
       screen.queryByRole('region', { name: /mock editor shell/i }),
     ).not.toBeInTheDocument();
-    expect(getBackendDocumentMock).toHaveBeenCalledWith('doc-1');
+    expect(getBackendDocumentMock).toHaveBeenCalledWith(
+      'doc-1',
+      'stored-doc-token',
+    );
+  });
+
+  it('prompts for a document credential before loading metadata', async () => {
+    getStoredDocumentAccessTokenMock.mockReturnValue(null);
+
+    renderEditorPage('/docs/protected-doc');
+
+    expect(
+      await screen.findByRole('heading', { name: /credential required/i }),
+    ).toBeInTheDocument();
+    expectTextContent('Document details: credential required');
+    expect(getBackendDocumentMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('region', { name: /mock editor shell/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('loads metadata and starts the editor with realtime document settings', async () => {
@@ -154,7 +192,10 @@ describe('EditorPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Team draft' }),
     ).toBeInTheDocument();
-    expect(getBackendDocumentMock).toHaveBeenCalledWith('team draft');
+    expect(getBackendDocumentMock).toHaveBeenCalledWith(
+      'team draft',
+      'stored-doc-token',
+    );
     expectTextContent('Document details: ready');
     expectTextContent('Created: created-on');
     expectTextContent('Updated: updated-on');
@@ -162,6 +203,7 @@ describe('EditorPage', () => {
 
     await waitFor(() => expect(editorShellMock).toHaveBeenCalled());
     expect(latestEditorShellProps()).toMatchObject({
+      documentAccessToken: 'stored-doc-token',
       docId: 'team draft',
       documentTitle: 'Team draft',
       lastEditedAt: 'updated-on',
@@ -173,7 +215,7 @@ describe('EditorPage', () => {
     );
   });
 
-  it('falls back to a local-only editor when metadata loading fails', async () => {
+  it('blocks the editor when metadata loading fails', async () => {
     getBackendDocumentMock.mockRejectedValue(new Error('offline'));
 
     renderEditorPage('/docs/missing-doc');
@@ -186,7 +228,7 @@ describe('EditorPage', () => {
     expect(screen.getByText('offline')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /protected local mode while document metadata is unavailable\./,
+        /Document metadata could not be loaded with the current credential\./,
       ),
     ).toBeInTheDocument();
     expectTextContent('Document details: unavailable');
@@ -194,12 +236,7 @@ describe('EditorPage', () => {
       'Collaboration: available after document details load',
     );
 
-    await waitFor(() => expect(editorShellMock).toHaveBeenCalled());
-    expect(latestEditorShellProps()).toMatchObject({
-      docId: 'missing-doc',
-      documentTitle: 'Untitled document',
-      realtimeServerUrl: null,
-    });
+    expect(editorShellMock).not.toHaveBeenCalled();
   });
 
   it('surfaces owner handoff details from metadata API errors', async () => {
@@ -221,6 +258,7 @@ describe('EditorPage', () => {
       ),
     ).toBeInTheDocument();
     expectTextContent('Document details: unavailable');
+    expect(editorShellMock).not.toHaveBeenCalled();
   });
 
   it('reflects collaboration snapshots from the editor shell side panel', async () => {
@@ -264,5 +302,36 @@ describe('EditorPage', () => {
     expectTextContent('Active users: 2');
     expectTextContent('Ada Lovelace (me) - typing');
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
+  });
+
+  it('renames the loaded document through the protected document API', async () => {
+    getBackendDocumentMock.mockResolvedValue(
+      createBackendDocument({ title: 'Live plan' }),
+    );
+    updateBackendDocumentTitleMocked.mockResolvedValue(
+      createBackendDocument({
+        title: 'Renamed plan',
+        updatedAt: 'updated-after-rename',
+      }),
+    );
+
+    renderEditorPage('/docs/live-plan');
+
+    expect(
+      await screen.findByRole('region', { name: /mock editor shell/i }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await latestEditorShellProps().onTitleSubmit?.('Renamed plan');
+    });
+
+    expect(updateBackendDocumentTitleMocked).toHaveBeenCalledWith(
+      'live-plan',
+      'Renamed plan',
+      'stored-doc-token',
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Renamed plan' }),
+    ).toBeInTheDocument();
   });
 });

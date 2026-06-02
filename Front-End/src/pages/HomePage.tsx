@@ -78,7 +78,7 @@ export function HomePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const canCreateBackendDocument = useMemo(
-    () => Boolean(appEnv.apiBaseUrl && appEnv.wsUrl),
+    () => Boolean(appEnv.apiBaseUrl && appEnv.apiToken && appEnv.wsUrl),
     [],
   );
   const filteredDocuments = useMemo(() => {

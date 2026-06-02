@@ -17,12 +17,20 @@ export type ProviderConnectionStatus =
   | 'reconnecting'
   | 'disconnected';
 
-function buildWsEndpoint(serverUrl: string, roomId: string) {
+function buildWsEndpoint(
+  serverUrl: string,
+  roomId: string,
+  accessToken?: string | null,
+) {
   const normalizedBaseUrl = serverUrl.replace(/\/+$/, '');
   const endpoint = new URL(
     `/ws/${encodeURIComponent(roomId)}`,
     `${normalizedBaseUrl}/`,
   );
+
+  if (accessToken) {
+    endpoint.searchParams.set('access_token', accessToken);
+  }
 
   return endpoint.toString();
 }
@@ -37,6 +45,20 @@ function logConnectionEvent(
   }
 
   console.info(`[collab] ${message}`);
+}
+
+export function redactAccessToken(value: string) {
+  try {
+    const url = new URL(value);
+
+    if (url.searchParams.has('access_token')) {
+      url.searchParams.set('access_token', '[redacted]');
+    }
+
+    return url.toString();
+  } catch {
+    return value.replace(/([?&]access_token=)[^&]+/i, '$1[redacted]');
+  }
 }
 
 function sendAwarenessUpdate(
@@ -89,11 +111,16 @@ export class BinaryWebsocketProvider {
   shouldConnect = false;
   synced = false;
 
-  constructor(serverUrl: string, roomId: string, doc: Y.Doc) {
+  constructor(
+    serverUrl: string,
+    roomId: string,
+    doc: Y.Doc,
+    accessToken?: string | null,
+  ) {
     this.serverUrl = serverUrl;
     this.roomId = roomId;
     this.doc = doc;
-    this.url = buildWsEndpoint(serverUrl, roomId);
+    this.url = buildWsEndpoint(serverUrl, roomId, accessToken);
     this.awareness = new awarenessProtocol.Awareness(doc);
 
     this.docUpdateHandler = (update, origin) => {
@@ -180,7 +207,7 @@ export class BinaryWebsocketProvider {
       this.reconnectTimer === null ? 'connecting' : 'reconnecting',
     );
     logConnectionEvent('websocket connect requested', {
-      endpoint: this.url,
+      endpoint: redactAccessToken(this.url),
       roomId: this.roomId,
       status: this.getStatus(),
     });
@@ -194,7 +221,7 @@ export class BinaryWebsocketProvider {
         logConnectionEvent(
           'websocket opened after cleanup, closing stale socket',
           {
-            endpoint: this.url,
+            endpoint: redactAccessToken(this.url),
             roomId: this.roomId,
           },
         );
@@ -207,7 +234,7 @@ export class BinaryWebsocketProvider {
       this.setConnectionStatus('connected');
       this.startResync();
       logConnectionEvent('websocket connected', {
-        endpoint: this.url,
+        endpoint: redactAccessToken(this.url),
         roomId: this.roomId,
       });
 
@@ -269,7 +296,7 @@ export class BinaryWebsocketProvider {
       }
       logConnectionEvent('websocket closed', {
         code: event.code,
-        endpoint: this.url,
+        endpoint: redactAccessToken(this.url),
         roomId: this.roomId,
         wasClean: event.wasClean,
         willReconnect: this.shouldConnect,
@@ -295,7 +322,7 @@ export class BinaryWebsocketProvider {
 
     ws.onerror = () => {
       logConnectionEvent('websocket error', {
-        endpoint: this.url,
+        endpoint: redactAccessToken(this.url),
         roomId: this.roomId,
         readyState: ws.readyState,
       });
@@ -358,11 +385,13 @@ export interface CollaborationConnection {
 }
 
 interface CreateCollaborationConnectionParams {
+  accessToken?: string | null;
   roomId: string;
   serverUrl: string | null;
 }
 
 export function createCollaborationConnection({
+  accessToken = null,
   roomId,
   serverUrl,
 }: CreateCollaborationConnectionParams): CollaborationConnection {
@@ -383,6 +412,7 @@ export function createCollaborationConnection({
     serverUrl,
     normalizedRoomId,
     doc,
+    accessToken,
   );
 
   return {

@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiRequestError, apiGet, apiPost, buildApiUrl } from './httpClient';
+import {
+  ApiRequestError,
+  apiGet,
+  apiPatch,
+  apiPost,
+  buildApiUrl,
+} from './httpClient';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -76,6 +82,36 @@ describe('HTTP API client', () => {
           Accept: 'application/json',
           'Content-Type': 'application/json',
           Authorization: 'Bearer test-token',
+        },
+      }),
+    );
+  });
+
+  it('PATCHes JSON bodies while preserving caller-provided headers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ updated: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      apiPatch<{ updated: boolean }>(
+        '/documents/doc-1',
+        { title: 'Renamed draft' },
+        {
+          headers: {
+            Authorization: 'Bearer doc-token',
+          },
+        },
+      ),
+    ).resolves.toEqual({ updated: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/documents/doc-1'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Renamed draft' }),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer doc-token',
         },
       }),
     );

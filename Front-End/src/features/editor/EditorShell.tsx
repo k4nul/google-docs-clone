@@ -1,10 +1,11 @@
 import type { Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import {
   connectCollaborationConnection,
   createCollaborationConnection,
+  redactAccessToken,
   scheduleCollaborationConnectionDestroy,
   type CollaborationConnection,
   type ProviderConnectionStatus,
@@ -33,12 +34,16 @@ export interface CollaborationSnapshot {
 }
 
 interface EditorShellProps {
+  documentAccessToken?: string | null;
   docId: string;
   documentTitle?: string;
   lastEditedAt?: string | null;
   onEditorReady?: (editor: Editor | null) => void;
   onCollaborationChange?: (snapshot: CollaborationSnapshot) => void;
+  onTitleSubmit?: (title: string) => Promise<void> | void;
   realtimeServerUrl?: string | null;
+  titleError?: string | null;
+  titleStatus?: 'idle' | 'saving';
 }
 
 type WebsocketTransportStatus =
@@ -93,17 +98,21 @@ function getRealtimeDebugState(
       : provider.wsconnecting
         ? 'connecting'
         : 'disconnected',
-    url: provider.url,
+    url: redactAccessToken(provider.url),
   };
 }
 
 export function EditorShell({
+  documentAccessToken = null,
   docId,
   documentTitle = 'Untitled document',
   lastEditedAt = null,
   onEditorReady,
   onCollaborationChange,
+  onTitleSubmit,
   realtimeServerUrl = appEnv.wsUrl,
+  titleError = null,
+  titleStatus = 'idle',
 }: EditorShellProps) {
   const [user] = useState(() => createPlaceholderCollaborationUser());
   const [activeCollaborators, setActiveCollaborators] = useState<
@@ -111,14 +120,23 @@ export function EditorShell({
   >([]);
   const [isCurrentUserTyping, setIsCurrentUserTyping] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [draftTitleState, setDraftTitleState] = useState({
+    sourceTitle: documentTitle,
+    value: documentTitle,
+  });
+  const draftTitle =
+    draftTitleState.sourceTitle === documentTitle
+      ? draftTitleState.value
+      : documentTitle;
   const typingTimeoutRef = useRef<number | null>(null);
   const connection = useMemo(
     () =>
       createCollaborationConnection({
+        accessToken: documentAccessToken,
         roomId: docId,
         serverUrl: realtimeServerUrl,
       }),
-    [docId, realtimeServerUrl],
+    [docId, documentAccessToken, realtimeServerUrl],
   );
   const [connectionStatus, setConnectionStatus] =
     useState<ProviderConnectionStatus>(
@@ -140,6 +158,16 @@ export function EditorShell({
     },
     [connection.roomId, connection.provider, user.id],
   );
+
+  async function handleTitleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!onTitleSubmit || titleStatus === 'saving') {
+      return;
+    }
+
+    await onTitleSubmit(draftTitle);
+  }
 
   useEffect(() => {
     const { provider } = connection;
@@ -276,12 +304,42 @@ export function EditorShell({
       <header className="editor-topbar">
         <div className="editor-title-group">
           <p className="section-kicker">Document editor</p>
-          <h2>{documentTitle}</h2>
+          {onTitleSubmit ? (
+            <form className="editor-title-form" onSubmit={handleTitleSubmit}>
+              <label className="sr-only" htmlFor="document-title-input">
+                Document title
+              </label>
+              <input
+                id="document-title-input"
+                value={draftTitle}
+                onChange={(event) =>
+                  setDraftTitleState({
+                    sourceTitle: documentTitle,
+                    value: event.target.value,
+                  })
+                }
+              />
+              <button
+                className="ui-button ui-button--secondary ui-button--sm"
+                disabled={
+                  titleStatus === 'saving' ||
+                  draftTitle.trim() === '' ||
+                  draftTitle.trim() === documentTitle
+                }
+                type="submit"
+              >
+                {titleStatus === 'saving' ? 'Saving...' : 'Save title'}
+              </button>
+            </form>
+          ) : (
+            <h2>{documentTitle}</h2>
+          )}
           <p>
             {lastEditedAt
               ? `Last edited ${lastEditedAt}`
               : 'Local editing surface is ready for collaboration.'}
           </p>
+          {titleError ? <p className="form-error">{titleError}</p> : null}
         </div>
         <div className="editor-status-group">
           <StatusPill

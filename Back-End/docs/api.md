@@ -32,6 +32,14 @@ room ownership conflict처럼 non-local owner 힌트를 함께 주는 경우에�
 
 ## HTTP Endpoints
 
+### Authorization
+
+- Admin document catalog operations use `Authorization: Bearer <API_TOKEN>`.
+- Document-specific operations use the `credentials.access_token` returned by `POST /api/documents` as `Authorization: Bearer <document-access-token>`.
+- Browser WebSocket clients cannot send arbitrary headers, so `/ws/:doc_id?access_token=<document-access-token>` is the supported browser contract. Non-browser clients may use the same `Authorization` header as REST.
+- Document access tokens are persisted in snapshots and are not serialized in `document` response bodies or list metadata.
+- HTTP tracing records request method and path only, not raw query strings, so WebSocket query tokens are not emitted by the default request span.
+
 ### `GET /api/health`
 
 Response:
@@ -46,7 +54,7 @@ Response:
 
 ### `GET /api/documents`
 
-- 인증 헤더 없이 호출한다.
+- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
 
 Response:
 
@@ -91,7 +99,7 @@ active room과 snapshot store에 남아 있는 persisted document catalog를 합
 
 ### `POST /api/documents`
 
-- 인증 헤더 없이 호출한다.
+- `Authorization: Bearer <API_TOKEN>` 헤더가 필요하다.
 
 Request body:
 
@@ -104,7 +112,7 @@ Request body:
 - `title`은 선택값이다.
 - `title`이 비어 있거나 누락되면 기본 제목 `Document {uuid}`를 사용한다.
 - 서버가 새 UUID를 생성하고 해당 문서 room을 메모리 및 snapshot store에 등록한다.
-- 응답의 `credentials.access_token`은 저장소 호환을 위해 계속 반환하지만, 현재 로컬 개발 계약에서는 이후 문서 상세 조회, 삭제, WebSocket 연결에 사용하지 않는다.
+- 응답의 `credentials.access_token`은 이후 문서 상세 조회, 제목 변경, 삭제, WebSocket 연결에 필요한 문서 전용 credential이다.
 
 Response: `201 Created`
 
@@ -124,7 +132,7 @@ Response: `201 Created`
 
 ### `GET /api/documents/:id`
 
-- 인증 헤더 없이 호출한다.
+- `Authorization: Bearer <document-access-token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 현재 노드 ownership을 `RoomLocator` 경계로 먼저 확인하고, active room이 없으면 snapshot store에서 문서를 on-demand로 복구한다.
 - snapshot restore source는 현재 `SNAPSHOT_STORE=file|apex_store|armdb|flash_kv|blockbucket|grebedb|grumpydb|graus_db|highlandcows_isam|simple_db|docdb|emdb|osmiumdb|eight|epoch_db|etchdb|fastkv|ferrumdb|rumdb|shorterdb|sqlite|heed|hightower_kv|hmdb|hurrahdb|fs_db|icefalldb|bitask|bitkv_rs|bitcask_engine|blazeup|candystore|celerix_store|citadeldb|cuendillar|data_pile|jammdb|mace|fjall|persy|persistent_kv|native_db|nebari|nikidb|nodb|okofdb|parity_db|pickledb|rcask|microkv|redb|rskey|readb|rustlite|rustcask|rusty_leveldb|canopydb|caves|ckydb|crepedb|scdb|skv|surrealkv|sled|rustbreak|yedb|btree_store|cacache|siamesedb|structsy|abyssiniandb|aeternusdb|thunderdb|thetadb|tinybase|tinydb|dblite|dbless|db_rs|dharmadb|sanakirja|snaildb|tinykv|yakv|yakvdb|saberdb|smolldb|kstone|jsondb|joydb|png_db|kopperdb|kv|koit|lite_db|lmdb_rs_core|log_kv|append_log|mhdb|marble|loro_kv|luckdb|ipjdb|kagi|deeb|rubin|lsm_engine|lsm_storage_engine|lsmdb|lsm_tree|mindb|mmdb|nanodb|jfs|json_store|cdb64|json_mutex_db|toiletdb|feoxdb|s3|managed` 중 하나다.
@@ -154,9 +162,37 @@ Response:
 }
 ```
 
+### `PATCH /api/documents/:id`
+
+- `Authorization: Bearer <document-access-token>` 헤더가 필요하다.
+- Path parameter `id`는 UUID 형식이어야 한다.
+- `title`은 trim 뒤 비어 있으면 `400` JSON 에러를 반환한다.
+- 제목 변경은 snapshot store에 즉시 저장되며, 이후 상세 조회와 문서 목록에 같은 제목이 반환된다.
+
+Request body:
+
+```json
+{
+  "title": "Renamed design notes"
+}
+```
+
+Response:
+
+```json
+{
+  "document": {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "title": "Renamed design notes",
+    "created_at": "2026-04-17T14:00:00Z",
+    "updated_at": "2026-04-17T14:10:00Z"
+  }
+}
+```
+
 ### `DELETE /api/documents/:id`
 
-- 인증 헤더 없이 호출한다.
+- `Authorization: Bearer <document-access-token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
 - 문서가 존재하면 room과 문서 메타데이터를 함께 제거한다.
 - 문서가 없으면 `404` JSON 에러 응답을 반환한다.
@@ -169,7 +205,8 @@ Response: `204 No Content`
 
 ### `GET /ws/:doc_id`
 
-- 인증 헤더 없이 연결한다.
+- 브라우저 클라이언트는 `/ws/:doc_id?access_token=<document-access-token>`로 연결한다.
+- non-browser 클라이언트는 `Authorization: Bearer <document-access-token>` 헤더도 사용할 수 있다.
 - `doc_id`는 UUID 형식이어야 한다.
 - 문서는 먼저 `POST /api/documents`로 생성되어 있어야 한다.
 - WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN` 정책과 일치해야 한다. `FRONTEND_ORIGIN=*`이면 모든 Origin을 허용하고, `FRONTEND_ORIGIN=https://a.example.com,https://b.example.com`처럼 comma-separated 목록도 지원한다.
@@ -557,9 +594,9 @@ Response: `204 No Content`
 
 - incoming awareness JSON is validated against `AwarenessState`; malformed JSON, blank required identifiers, or invalid `user.color` values are rejected before room awareness state is updated.
 
-- 프런트엔드는 문서 API와 WebSocket 연결에 `Authorization` 헤더를 넣지 않아도 된다.
-- 문서 생성 응답의 `credentials.access_token`은 현재 클라이언트 플로우에서 재사용하지 않는다.
-- WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저 origin은 `FRONTEND_ORIGIN` 정책과 일치해야 한다. 기본 `*`는 모든 Origin을 허용한다.
+- 프런트엔드는 문서 목록/생성에 `Authorization: Bearer <API_TOKEN>`을 넣는다.
+- 문서 생성 응답의 `credentials.access_token`은 상세 조회, 제목 변경, 삭제, WebSocket 연결에 재사용한다.
+- WebSocket 연결 경로는 문서 ID 단위로 고정하고, 브라우저는 `/ws/:doc_id?access_token=<document-token>`을 사용한다. 브라우저 origin은 `FRONTEND_ORIGIN` 정책과 일치해야 한다. 기본 `*`는 모든 Origin을 허용한다.
 - 연결 후 게시하는 Yrs awareness state는 아래 구조를 표준으로 사용한다.
 
 ```json

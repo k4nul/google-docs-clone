@@ -98,3 +98,28 @@ export async function apiPost<T>(
 
   return readJsonResponse<T>(response);
 }
+
+export async function apiPatch<T>(
+  path: `/${string}`,
+  body?: unknown,
+  init?: RequestInit,
+): Promise<T> {
+  const requestInit: RequestInit = {
+    method: 'PATCH',
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {}),
+    },
+    ...(body === undefined
+      ? init?.body !== undefined
+        ? { body: init.body }
+        : {}
+      : { body: JSON.stringify(body) }),
+  };
+
+  const response = await fetch(buildApiUrl(path), requestInit);
+
+  return readJsonResponse<T>(response);
+}

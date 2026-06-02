@@ -1,15 +1,21 @@
 import { Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import { EditorShell } from '@/features/editor/EditorShell';
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
 import { FileManager } from '@/features/util/FileManager';
-import { getBackendDocument } from '@/lib/api/documents';
+import {
+  getBackendDocument,
+  getStoredDocumentAccessToken,
+  storeDocumentAccessToken,
+  updateBackendDocumentTitle,
+} from '@/lib/api/documents';
 import { ApiRequestError } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument } from '@/shared/types/document';
 import {
+  Button,
   ErrorState,
   LinkButton,
   LoadingState,
@@ -30,6 +36,10 @@ function formatMetadataError(error: unknown) {
   return error instanceof Error
     ? error.message
     : 'Unable to load document metadata.';
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function formatDateTime(value: string) {
@@ -67,6 +77,35 @@ export function EditorPage() {
   const decodedDocId = docId ? decodeURIComponent(docId) : '';
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [documentCredential, setDocumentCredential] = useState<{
+    docId: string;
+    accessToken: string | null;
+  }>(() => ({
+    accessToken: decodedDocId
+      ? getStoredDocumentAccessToken(decodedDocId)
+      : null,
+    docId: decodedDocId,
+  }));
+  const [credentialInputState, setCredentialInputState] = useState({
+    docId: decodedDocId,
+    value: '',
+  });
+  const [credentialErrorState, setCredentialErrorState] = useState<{
+    docId: string;
+    error: string | null;
+  }>({
+    docId: decodedDocId,
+    error: null,
+  });
+  const [titleMutationState, setTitleMutationState] = useState<{
+    docId: string;
+    error: string | null;
+    status: 'idle' | 'saving';
+  }>({
+    docId: decodedDocId,
+    error: null,
+    status: 'idle',
+  });
   const [metadataState, setMetadataState] = useState<DocumentMetadataState>({
     docId: null,
     status: 'loading',
@@ -79,17 +118,45 @@ export function EditorPage() {
     isCurrentUserTyping: false,
     lastSyncedAt: null,
   });
+  const documentAccessToken =
+    documentCredential.docId === decodedDocId
+      ? documentCredential.accessToken
+      : decodedDocId
+        ? getStoredDocumentAccessToken(decodedDocId)
+        : null;
+  const credentialInput =
+    credentialInputState.docId === decodedDocId
+      ? credentialInputState.value
+      : '';
+  const credentialError =
+    credentialErrorState.docId === decodedDocId
+      ? credentialErrorState.error
+      : null;
+  const titleMutation =
+    titleMutationState.docId === decodedDocId
+      ? titleMutationState
+      : { error: null, status: 'idle' as const };
 
   useEffect(() => {
-    if (!decodedDocId) {
+    if (!decodedDocId || !documentAccessToken) {
       return undefined;
     }
 
     let isCurrent = true;
 
     async function loadDocument() {
+      setMetadataState({
+        docId: decodedDocId,
+        status: 'loading',
+        document: null,
+        error: null,
+      });
+
       try {
-        const backendDocument = await getBackendDocument(decodedDocId);
+        const backendDocument = await getBackendDocument(
+          decodedDocId,
+          documentAccessToken,
+        );
 
         if (!isCurrent) {
           return;
@@ -120,7 +187,7 @@ export function EditorPage() {
     return () => {
       isCurrent = false;
     };
-  }, [decodedDocId]);
+  }, [decodedDocId, documentAccessToken]);
 
   const isMetadataCurrent = metadataState.docId === decodedDocId;
   const document =
@@ -131,20 +198,82 @@ export function EditorPage() {
     isMetadataCurrent && metadataState.status === 'error'
       ? metadataState.error
       : null;
+  const isCredentialRequired = Boolean(decodedDocId && !documentAccessToken);
   const isDocumentLoading =
-    !isMetadataCurrent || metadataState.status === 'loading';
+    Boolean(documentAccessToken) &&
+    (!isMetadataCurrent || metadataState.status === 'loading');
 
   if (!docId) {
     return <Navigate replace to="/" />;
   }
 
-  const realtimeServerUrl = document && !documentError ? appEnv.wsUrl : null;
+  const realtimeServerUrl =
+    document && documentAccessToken && !documentError ? appEnv.wsUrl : null;
   const pageTitle = document?.title ?? 'Untitled document';
   const pageDescription = document
     ? 'Continue editing this document with realtime presence.'
+    : isCredentialRequired
+      ? 'Enter the document credential to open this workspace.'
     : documentError
-      ? 'The editor is available in a protected local mode while document metadata is unavailable.'
+      ? 'Document metadata could not be loaded with the current credential.'
       : 'Document metadata is loading before the editor joins the realtime workspace.';
+
+  function handleCredentialSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = credentialInput.trim();
+
+    if (!token) {
+      setCredentialErrorState({
+        docId: decodedDocId,
+        error: 'Enter the document access token to continue.',
+      });
+      return;
+    }
+
+    storeDocumentAccessToken(decodedDocId, token);
+    setCredentialErrorState({ docId: decodedDocId, error: null });
+    setDocumentCredential({
+      accessToken: token,
+      docId: decodedDocId,
+    });
+  }
+
+  async function handleTitleSubmit(title: string) {
+    if (!document || !documentAccessToken) {
+      return;
+    }
+
+    setTitleMutationState({
+      docId: decodedDocId,
+      error: null,
+      status: 'saving',
+    });
+
+    try {
+      const updatedDocument = await updateBackendDocumentTitle(
+        decodedDocId,
+        title,
+        documentAccessToken,
+      );
+      setMetadataState({
+        docId: decodedDocId,
+        status: 'loaded',
+        document: updatedDocument,
+        error: null,
+      });
+      setTitleMutationState({
+        docId: decodedDocId,
+        error: null,
+        status: 'idle',
+      });
+    } catch (error) {
+      setTitleMutationState({
+        docId: decodedDocId,
+        error: getErrorMessage(error, 'Unable to rename this document.'),
+        status: 'idle',
+      });
+    }
+  }
 
   return (
     <PageLayout
@@ -171,16 +300,90 @@ export function EditorPage() {
               <LoadingState rows={2} title="Loading document metadata" />
             </Panel>
           ) : (
-            <EditorShell
-              docId={decodedDocId}
-              documentTitle={pageTitle}
-              lastEditedAt={
-                document?.updatedAt ? formatDateTime(document.updatedAt) : null
-              }
-              realtimeServerUrl={realtimeServerUrl}
-              onCollaborationChange={setCollaboration}
-              onEditorReady={setEditor}
-            />
+            <>
+              {isCredentialRequired ? (
+                <Panel>
+                  <form
+                    className="credential-form"
+                    onSubmit={handleCredentialSubmit}
+                  >
+                    <div>
+                      <p className="section-kicker">Document access</p>
+                      <h2>Credential required</h2>
+                      <p className="muted">
+                        Paste the access token created with this document to
+                        reopen it.
+                      </p>
+                    </div>
+                    <label className="credential-form__field">
+                      <span>Access token</span>
+                      <input
+                        autoComplete="off"
+                        value={credentialInput}
+                        onChange={(event) =>
+                          setCredentialInputState({
+                            docId: decodedDocId,
+                            value: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    {credentialError ? (
+                      <p className="form-error">{credentialError}</p>
+                    ) : null}
+                    <Button type="submit">Unlock document</Button>
+                  </form>
+                </Panel>
+              ) : document ? (
+                <EditorShell
+                  docId={decodedDocId}
+                  documentAccessToken={documentAccessToken}
+                  documentTitle={pageTitle}
+                  lastEditedAt={
+                    document.updatedAt
+                      ? formatDateTime(document.updatedAt)
+                      : null
+                  }
+                  realtimeServerUrl={realtimeServerUrl}
+                  titleError={titleMutation.error}
+                  titleStatus={titleMutation.status}
+                  onCollaborationChange={setCollaboration}
+                  onEditorReady={setEditor}
+                  onTitleSubmit={handleTitleSubmit}
+                />
+              ) : (
+                <Panel>
+                  <ErrorState
+                    description={
+                      documentError ?? 'Document metadata is unavailable.'
+                    }
+                    title="Document metadata unavailable"
+                  />
+                  <form
+                    className="credential-form credential-form--retry"
+                    onSubmit={handleCredentialSubmit}
+                  >
+                    <label className="credential-form__field">
+                      <span>Access token</span>
+                      <input
+                        autoComplete="off"
+                        value={credentialInput}
+                        onChange={(event) =>
+                          setCredentialInputState({
+                            docId: decodedDocId,
+                            value: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    {credentialError ? (
+                      <p className="form-error">{credentialError}</p>
+                    ) : null}
+                    <Button type="submit">Try credential</Button>
+                  </form>
+                </Panel>
+              )}
+            </>
           )}
           {notice ? (
             <Panel>
@@ -204,6 +407,8 @@ export function EditorPage() {
                     ? 'loading'
                     : document
                       ? 'ready'
+                      : isCredentialRequired
+                        ? 'credential required'
                       : 'unavailable'}
                 </code>
               </span>
@@ -227,13 +432,6 @@ export function EditorPage() {
               </span>
             </div>
           </section>
-
-          {documentError ? (
-            <ErrorState
-              description={documentError}
-              title="Document metadata unavailable"
-            />
-          ) : null}
 
           <section className="editor-side-card">
             <div>

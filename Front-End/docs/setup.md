@@ -71,17 +71,18 @@ npm run typecheck
 `.env.example`를 기준으로 `.env.local`을 구성한다.
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용한다.
+- `VITE_API_TOKEN`: local backend의 `API_TOKEN`과 같은 값. 문서 목록과 문서 생성을 호출할 때 `Authorization: Bearer <token>`으로 사용한다.
 - `VITE_WS_URL`: Yjs websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용한다. provider는 이 값에서 `/ws/:docId` endpoint를 구성한다.
-- `VITE_API_TOKEN`: optional legacy token. 현재 local backend contract에서는 문서 생성, 조회, WebSocket 연결에 필요하지 않다.
+
+문서 생성 응답의 `credentials.access_token`은 브라우저 `localStorage`에 문서별로 저장된다. 편집기 상세 조회와 제목 변경은 이 문서 credential을 `Authorization` 헤더로 보내고, 브라우저 WebSocket은 `/ws/:docId?access_token=<document-token>` query parameter를 사용한다.
 
 예시:
 
 ```bash
 # optional, only needed when the backend is not served through the same origin
 VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000
-# optional legacy compatibility only
-# VITE_API_TOKEN=dev-admin-token
 ```
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 된다.

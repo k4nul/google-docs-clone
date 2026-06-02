@@ -14,7 +14,7 @@
 - 프론트엔드는 문서 목록, `/docs/:docId` 편집기, DOCX import/export, Yjs binary WebSocket provider를 담당한다.
 - 백엔드는 `/api/documents` REST API, `/ws/:doc_id` WebSocket, Yrs room registry, snapshot persistence를 담당한다.
 - 백엔드 기본 snapshot store는 `file`이며 `Back-End/data/snapshots` 아래에 문서를 복구 가능한 snapshot으로 저장한다.
-- 로컬 개발 계약에서는 문서 API와 WebSocket 연결에 `Authorization` 헤더가 필요하지 않다.
+- 로컬 개발 계약에서는 문서 목록/생성에 backend `API_TOKEN`이 필요하고, 문서 상세/제목 변경/삭제/WebSocket 연결에 문서 생성 응답의 `credentials.access_token`이 필요하다.
 
 ## Requirements
 
@@ -47,10 +47,11 @@ npm run dev
 
 ```bash
 VITE_API_BASE_URL=http://localhost:4000/api
+VITE_API_TOKEN=dev-admin-token
 VITE_WS_URL=ws://localhost:4000
 ```
 
-`VITE_WS_URL`은 WebSocket origin/base host다. 실제 room endpoint는 provider가 `/ws/:docId`로 구성하므로 로컬 UUID 문서는 `ws://localhost:4000/ws/<uuid>`에 연결된다.
+`VITE_API_TOKEN`은 `Back-End/.env`의 `API_TOKEN`과 같아야 한다. `VITE_WS_URL`은 WebSocket origin/base host다. 실제 room endpoint는 provider가 `/ws/:docId?access_token=<document-token>`으로 구성하므로 로컬 UUID 문서는 저장된 문서 credential이 있을 때만 연결된다.
 
 ## Local Editing Flow
 
@@ -58,8 +59,9 @@ VITE_WS_URL=ws://localhost:4000
 2. 홈 화면은 `GET /api/documents`로 백엔드 문서 목록을 불러온다.
 3. 백엔드 목록을 불러올 수 없으면 사용자용 unavailable 상태와 `Retry` 버튼이 표시되고, 개발용 fallback 문서 카드가 source/debug label 없이 렌더링될 수 있다.
 4. `New document`를 클릭하면 프론트엔드가 `POST /api/documents`를 호출한다.
-5. 백엔드가 UUID 문서를 만들고 프론트엔드는 `/docs/<uuid>`로 이동한다.
-6. 편집기 화면은 `GET /api/documents/:id`가 성공한 뒤 `ws://localhost:4000/ws/<uuid>`로 실시간 협업 연결을 연다.
+5. 백엔드가 UUID 문서와 `credentials.access_token`을 반환하고, 프론트엔드는 credential을 `localStorage`에 저장한 뒤 `/docs/<uuid>`로 이동한다.
+6. 편집기 화면은 저장된 문서 credential로 `GET /api/documents/:id`가 성공한 뒤 `ws://localhost:4000/ws/<uuid>?access_token=<token>`으로 실시간 협업 연결을 연다.
+7. 저장된 credential이 없는 문서 URL을 직접 열면 편집기 페이지는 내용을 열지 않고 access token 입력을 요구한다.
 
 Fallback 문서 카드는 백엔드 persisted document라고 보장하지 않는다. 실제 realtime room을 확인하려면 백엔드가 실행 중인 상태에서 `New document`로 생성된 문서를 사용한다.
 

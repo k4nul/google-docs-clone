@@ -1,11 +1,14 @@
-use std::{sync::Arc, time::Duration};
+use std::{borrow::Cow, sync::Arc, time::Duration};
 
 use axum::{
     extract::{
         OriginalUri, Path, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
-    http::{HeaderMap, Uri, header::ORIGIN},
+    http::{
+        HeaderMap, Uri,
+        header::{AUTHORIZATION, ORIGIN},
+    },
     response::IntoResponse,
 };
 use futures_util::{SinkExt, Stream, StreamExt, stream::SplitStream};
@@ -23,6 +26,7 @@ use yrs::{
 use yrs_axum::ws::AxumSink;
 
 use crate::{
+    auth::{authorize_document_token, require_bearer_token},
     collab::coordinator::RoomCoordinator,
     collab::protocol::ValidatingProtocol,
     collab::rooms::{Room, RoomRegistry},
@@ -207,8 +211,34 @@ fn resolve_websocket_room(
         .map_err(anyhow::Error::from)
         .map_err(AppError::from)?
         .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))?;
+    let token = require_websocket_access_token(headers, request_uri)?;
+    authorize_document_token(token.as_ref(), &room, doc_id)?;
 
     Ok((doc_id, room))
+}
+
+fn require_websocket_access_token<'a>(
+    headers: &'a HeaderMap,
+    request_uri: &Uri,
+) -> AppResult<Cow<'a, str>> {
+    if headers.contains_key(AUTHORIZATION) {
+        return require_bearer_token(headers).map(Cow::Borrowed);
+    }
+
+    request_uri
+        .query()
+        .and_then(|query| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .find(|(name, _)| name == "access_token")
+                .map(|(_, value)| value.trim().to_owned())
+        })
+        .filter(|token| !token.is_empty())
+        .map(Cow::Owned)
+        .ok_or_else(|| {
+            AppError::Unauthorized(
+                "Authorization header or access_token query parameter is required".to_owned(),
+            )
+        })
 }
 
 fn validate_origin(state: &AppState, headers: &HeaderMap, doc_id: Uuid) -> AppResult<()> {
@@ -303,6 +333,11 @@ mod tests {
             ORIGIN,
             HeaderValue::from_static("http://new-domain.test:5173"),
         );
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
+                .expect("document authorization header should be valid"),
+        );
         let request_uri: Uri = format!("/ws/{}", document.id)
             .parse()
             .expect("websocket request URI should parse");
@@ -327,6 +362,11 @@ mod tests {
 
         let mut allowed_headers = HeaderMap::new();
         allowed_headers.insert(ORIGIN, HeaderValue::from_static("http://two.test:5173"));
+        allowed_headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
+                .expect("document authorization header should be valid"),
+        );
         resolve_websocket_room(
             &state,
             &allowed_headers,
@@ -337,6 +377,11 @@ mod tests {
 
         let mut rejected_headers = HeaderMap::new();
         rejected_headers.insert(ORIGIN, HeaderValue::from_static("http://three.test:5173"));
+        rejected_headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
+                .expect("document authorization header should be valid"),
+        );
         let error = match resolve_websocket_room(
             &state,
             &rejected_headers,
@@ -348,6 +393,31 @@ mod tests {
         };
 
         assert!(matches!(error, AppError::Forbidden(_)));
+    }
+
+    #[test]
+    fn websocket_room_resolution_accepts_document_token_query_parameter() {
+        let state = AppState::new(
+            crate::config::FRONTEND_ORIGIN_WILDCARD,
+            crate::config::DEFAULT_API_TOKEN,
+        );
+        let document = state
+            .rooms()
+            .create_document(Some("Query token websocket".to_owned()))
+            .expect("document should be created");
+
+        let mut headers = HeaderMap::new();
+        headers.insert(ORIGIN, HeaderValue::from_static("http://docs.test:5173"));
+        let request_uri: Uri = format!(
+            "/ws/{}?access_token={}",
+            document.id,
+            document.access_token()
+        )
+        .parse()
+        .expect("websocket request URI should parse");
+
+        resolve_websocket_room(&state, &headers, &request_uri, &document.id.to_string())
+            .expect("query access token should authorize websocket access");
     }
 
     #[derive(Debug, Default)]

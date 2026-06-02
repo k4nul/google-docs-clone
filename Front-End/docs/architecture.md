@@ -44,7 +44,7 @@
 
 ## API Boundary
 
-- `src/lib/api/httpClient.ts`는 `buildApiUrl()`, `apiGet()`, `apiPost()`, JSON error payload parsing을 담당한다.
-- `src/lib/api/documents.ts`는 backend `GET /documents`, `GET /documents/:id`, `POST /documents` 응답을 frontend camelCase document shape로 변환한다.
+- `src/lib/api/httpClient.ts`는 `buildApiUrl()`, `apiGet()`, `apiPost()`, `apiPatch()`, JSON error payload parsing을 담당한다.
+- `src/lib/api/documents.ts`는 backend `GET /documents`, `GET /documents/:id`, `POST /documents`, `PATCH /documents/:id` 응답을 frontend camelCase document shape로 변환한다.
 - document list summary는 backend가 제공하는 preview/summary를 우선 사용하고, preview가 없거나 hidden이면 사용자용 placeholder를 표시한다.
-- `POST /documents`는 현재 backend local-development contract에 맞춰 토큰 없이 동작한다. `VITE_API_TOKEN`이 있으면 legacy compatibility header만 추가한다.
+- `GET /documents`와 `POST /documents`는 `VITE_API_TOKEN`을 admin bearer token으로 사용한다. `POST /documents` 응답의 `credentials.access_token`은 문서별로 `localStorage`에 저장되고, detail/rename REST 요청과 WebSocket `access_token` query parameter에 재사용된다.

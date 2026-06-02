@@ -33,6 +33,11 @@ impl Document {
         self.updated_at = Utc::now();
     }
 
+    pub fn rename(&mut self, title: String) {
+        self.title = title;
+        self.touch();
+    }
+
     pub fn access_token(&self) -> &str {
         &self.access_token
     }

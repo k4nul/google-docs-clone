@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   connectCollaborationConnection,
   createCollaborationConnection,
+  redactAccessToken,
   scheduleCollaborationConnectionDestroy,
 } from './connection';
 
@@ -44,5 +45,20 @@ describe('collaboration connection lifecycle', () => {
 
     expect(connection.destroyed).toBe(true);
     expect(destroyHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the document access token to websocket provider URLs', () => {
+    const connection = createCollaborationConnection({
+      accessToken: 'doc-token',
+      roomId: 'credentialed-room',
+      serverUrl: 'ws://localhost:4000',
+    });
+
+    expect(connection.provider?.url).toBe(
+      'ws://localhost:4000/ws/credentialed-room?access_token=doc-token',
+    );
+    expect(redactAccessToken(connection.provider?.url ?? '')).toBe(
+      'ws://localhost:4000/ws/credentialed-room?access_token=%5Bredacted%5D',
+    );
   });
 });

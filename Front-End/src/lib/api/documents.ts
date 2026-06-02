@@ -1,6 +1,8 @@
-import { apiGet, apiPost } from '@/lib/api/httpClient';
+import { apiGet, apiPatch, apiPost } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument, DocumentSummary } from '@/shared/types/document';
+
+const DOCUMENT_CREDENTIALS_STORAGE_KEY = 'realtime-docs.document-credentials.v1';
 
 interface BackendDocumentResponse {
   id: string;
@@ -25,6 +27,28 @@ interface DocumentResponse {
 
 interface CreateDocumentResponse {
   document: BackendDocumentResponse;
+  credentials: DocumentCredentialsResponse;
+}
+
+interface DocumentCredentialsResponse {
+  access_token: string;
+}
+
+interface CreateDocumentResult {
+  document: BackendDocument;
+  credentials: {
+    accessToken: string;
+  };
+}
+
+export class MissingDocumentCredentialError extends Error {
+  readonly documentId: string;
+
+  constructor(documentId: string) {
+    super('Document access token is required.');
+    this.name = 'MissingDocumentCredentialError';
+    this.documentId = documentId;
+  }
 }
 
 function mapBackendDocument(
@@ -38,7 +62,7 @@ function mapBackendDocument(
   };
 }
 
-function getCreateDocumentInit() {
+function getAdminRequestInit(): RequestInit | undefined {
   if (!appEnv.apiToken) {
     return undefined;
   }
@@ -48,6 +72,99 @@ function getCreateDocumentInit() {
       Authorization: `Bearer ${appEnv.apiToken}`,
     },
   };
+}
+
+function getDocumentRequestInit(accessToken: string): RequestInit {
+  return {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+}
+
+function getBrowserStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage;
+}
+
+function readCredentialMap(): Record<string, string> {
+  const storage = getBrowserStorage();
+
+  if (!storage) {
+    return {};
+  }
+
+  const rawCredentials = storage.getItem(DOCUMENT_CREDENTIALS_STORAGE_KEY);
+
+  if (!rawCredentials) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(rawCredentials) as unknown;
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[0] === 'string' && typeof entry[1] === 'string',
+      ),
+    ) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function writeCredentialMap(credentials: Record<string, string>) {
+  const storage = getBrowserStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(
+    DOCUMENT_CREDENTIALS_STORAGE_KEY,
+    JSON.stringify(credentials),
+  );
+}
+
+export function getStoredDocumentAccessToken(documentId: string): string | null {
+  return readCredentialMap()[documentId] ?? null;
+}
+
+export function storeDocumentAccessToken(
+  documentId: string,
+  accessToken: string,
+) {
+  const token = accessToken.trim();
+
+  if (!token) {
+    return;
+  }
+
+  writeCredentialMap({
+    ...readCredentialMap(),
+    [documentId]: token,
+  });
+}
+
+function requireDocumentAccessToken(
+  documentId: string,
+  accessToken?: string | null,
+) {
+  const token = accessToken?.trim() || getStoredDocumentAccessToken(documentId);
+
+  if (!token) {
+    throw new MissingDocumentCredentialError(documentId);
+  }
+
+  return token;
 }
 
 function getTimestamp(value: string) {
@@ -97,7 +214,10 @@ export function documentSummaryFromBackend(
 }
 
 export async function listBackendDocuments() {
-  const response = await apiGet<DocumentsResponse>('/documents');
+  const response = await apiGet<DocumentsResponse>(
+    '/documents',
+    getAdminRequestInit(),
+  );
 
   return response.documents
     .map((document) =>
@@ -109,22 +229,50 @@ export async function listBackendDocuments() {
     );
 }
 
-export async function getBackendDocument(documentId: string) {
+export async function getBackendDocument(
+  documentId: string,
+  accessToken?: string | null,
+) {
+  const token = requireDocumentAccessToken(documentId, accessToken);
   const response = await apiGet<DocumentResponse>(
     `/documents/${encodeURIComponent(documentId)}` as `/${string}`,
+    getDocumentRequestInit(token),
   );
 
   return mapBackendDocument(response.document);
 }
 
-export async function createBackendDocument(title?: string) {
+export async function createBackendDocument(
+  title?: string,
+): Promise<CreateDocumentResult> {
   const response = await apiPost<CreateDocumentResponse>(
     '/documents',
     { title },
-    getCreateDocumentInit(),
+    getAdminRequestInit(),
   );
+  const document = mapBackendDocument(response.document);
+  const accessToken = response.credentials.access_token;
+  storeDocumentAccessToken(document.id, accessToken);
 
   return {
-    document: mapBackendDocument(response.document),
+    document,
+    credentials: {
+      accessToken,
+    },
   };
+}
+
+export async function updateBackendDocumentTitle(
+  documentId: string,
+  title: string,
+  accessToken?: string | null,
+) {
+  const token = requireDocumentAccessToken(documentId, accessToken);
+  const response = await apiPatch<DocumentResponse>(
+    `/documents/${encodeURIComponent(documentId)}` as `/${string}`,
+    { title },
+    getDocumentRequestInit(token),
+  );
+
+  return mapBackendDocument(response.document);
 }
