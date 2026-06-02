@@ -135,7 +135,7 @@ Top-level message type:
 
 기본 흐름:
 
-1. 클라이언트가 `/ws/:doc_id`에 WebSocket으로 연결한다.
+1. 클라이언트가 `/ws/:doc_id?access_token=<document-access-token>`에 WebSocket으로 연결한다. non-browser 클라이언트는 같은 토큰을 `Authorization: Bearer <document-access-token>` 헤더로 보낼 수 있다.
 2. 클라이언트가 binary `Sync(SyncStep1(stateVector))`를 보낸다.
 3. 서버가 binary `Sync(SyncStep2(update))`를 반환한다.
 4. 클라이언트가 받은 update를 로컬 `Y.Doc`에 적용한다.
@@ -154,9 +154,13 @@ import * as awarenessProtocol from "y-protocols/awareness";
 const MSG_SYNC = 0;
 const MSG_AWARENESS = 1;
 
+const docId = "00000000-0000-0000-0000-000000000000";
+const accessToken = "<document-access-token>";
 const doc = new Y.Doc();
 const awareness = new awarenessProtocol.Awareness(doc);
-const ws = new WebSocket(`ws://localhost:4000/ws/${docId}`);
+const ws = new WebSocket(
+  `ws://localhost:4000/ws/${docId}?access_token=${encodeURIComponent(accessToken)}`,
+);
 ws.binaryType = "arraybuffer";
 
 ws.onopen = () => {

@@ -21,6 +21,7 @@ npm run typecheck
 | `npm run lint` | `Front-End/package.json` | ESLint, `--max-warnings 0` |
 | `npm run test` | `Front-End/package.json`, `Front-End/vite.config.ts` | Vitest with jsdom and `src/test/setup.ts` |
 | `npm run typecheck` | `Front-End/package.json` | `tsc -b --pretty false` |
+| `npm run preview` | `Front-End/package.json` | Optional post-build manual smoke server, not part of CI |
 
 Frontend unit and component tests use Vitest/jsdom and mocked `fetch` boundaries, so they do not require a live backend. Run the local backend and Vite dev server only for manual cross-stack create/open/edit checks.
 
@@ -54,9 +55,22 @@ cd Back-End
 cargo test --features full-snapshot-stores
 ```
 
+For live API validation against a running local backend, start the server in one terminal and run the ignored API tests in another:
+
+```bash
+cd Back-End
+cargo run
+```
+
+```bash
+cd Back-End
+TEST_BASE_URL=http://localhost:4000 TEST_API_TOKEN=dev-admin-token cargo test --test api -- --ignored
+```
+
 ## When To Run More
 
 - API, WebSocket, room ownership, or snapshot persistence changes: run backend `core`, `websocket`, and the relevant `full-snapshot-stores` check or test.
 - Frontend route, editor, provider, import/export, or env handling changes: run all frontend gates.
 - Cross-stack contract changes: run frontend gates, backend `core`, backend `websocket`, and manually exercise create/open/edit with the backend and Vite dev servers running.
+- Auth or REST API behavior changes: add the ignored live API test lane when a running local backend is available.
 - Docs-only changes: run `git diff --check`; run full gates only when the documentation change reveals a command or contract that needs live verification.

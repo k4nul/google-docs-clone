@@ -19,9 +19,11 @@ Then open `http://127.0.0.1:4000/api/health`. The expected response has `"status
 
 If the frontend is served from Vite, `Front-End/vite.config.ts` proxies `/api` to `http://127.0.0.1:4000`. If `VITE_API_BASE_URL` is set, verify it points to `http://localhost:4000/api` or another reachable backend API base.
 
+If the health endpoint works but the document list still fails, verify `Front-End/.env.local` has `VITE_API_TOKEN` set to the same value as `API_TOKEN` in `Back-End/.env`. The list and create endpoints return authorization errors when this admin token is missing or mismatched.
+
 ## WebSocket Stays Disconnected
 
-The frontend should connect only after `GET /api/documents/:id` succeeds. A fallback document card is not guaranteed to exist in the backend snapshot catalog, so it may open the editor in protected local mode instead of joining a realtime room.
+The frontend should connect only after `GET /api/documents/:id` succeeds with a stored or entered document access token. A fallback document card is not guaranteed to exist in the backend snapshot catalog, so it may open the protected credential flow instead of joining a realtime room.
 
 Use this flow:
 
@@ -29,9 +31,15 @@ Use this flow:
 2. Start the frontend dev server.
 3. Click `New document` from the home page.
 4. Confirm the editor route uses a UUID.
-5. Confirm the provider endpoint is `ws://localhost:4000/ws/<uuid>` or the equivalent proxied `/ws/<uuid>` URL.
+5. Confirm the provider endpoint is `ws://localhost:4000/ws/<uuid>?access_token=<document-token>` or the equivalent proxied `/ws/<uuid>?access_token=<document-token>` URL.
 
-If the backend rejects the WebSocket handshake, check `FRONTEND_ORIGIN`. The default `*` allows local development origins. A restricted value must match the browser origin exactly, or be part of the comma-separated allowlist.
+If the backend rejects the WebSocket handshake, check the document token and `FRONTEND_ORIGIN`. The default `*` allows local development origins. A restricted value must match the browser origin exactly, or be part of the comma-separated allowlist.
+
+## Editor Asks For An Access Token
+
+The browser stores document credentials in `localStorage` under `realtime-docs.document-credentials.v1` after `POST /api/documents` succeeds. Opening `/docs/<uuid>` in a different browser profile, after clearing storage, or after manually sharing only the URL will show the credential form.
+
+Use the original `credentials.access_token` returned when the document was created. If that token is unavailable, create a new document from the home page. Document list and detail responses intentionally do not serialize access tokens.
 
 ## Delete Returns Conflict
 
@@ -55,6 +63,7 @@ Use the scripted lanes to distinguish environment blockers from test failures.
 ```bash
 cd Back-End
 ./scripts/verify.sh core
+./scripts/preflight.sh publish
 ./scripts/preflight.sh websocket
 ./scripts/verify.sh websocket
 ```
@@ -62,6 +71,13 @@ cd Back-End
 - If `preflight.sh websocket` reports that the runner cannot bind socket addresses, the WebSocket lane is blocked by the environment.
 - If `verify.sh core` fails, inspect the preceding `cargo fmt`, `cargo check`, or socket-free test output.
 - If `preflight.sh publish` fails DNS or `.git` write checks, that blocks publish readiness, not necessarily local build correctness.
+
+For live API failures that only reproduce against a running server, keep `cargo run` active in one terminal and run:
+
+```bash
+cd Back-End
+TEST_BASE_URL=http://localhost:4000 TEST_API_TOKEN=dev-admin-token cargo test --test api -- --ignored
+```
 
 ## Frontend Validation Is Blocked
 

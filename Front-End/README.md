@@ -176,7 +176,7 @@ VITE_WS_URL=ws://localhost:4000
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용합니다.
 - `VITE_API_TOKEN`: 문서 목록/생성을 위한 backend admin API token입니다.
-- `VITE_WS_URL`: collaboration websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용합니다. provider는 이 값에서 `/ws/:docId` endpoint를 구성합니다.
+- `VITE_WS_URL`: collaboration websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용합니다. provider는 이 값에서 `/ws/:docId?access_token=<document-token>` endpoint를 구성합니다.
 
 현재 origin 기반 기본값을 쓰면 `localhost`, DDNS, 새 도메인, HTTPS 전환 시 프론트 환경변수를 바꾸지 않아도 됩니다.
 
