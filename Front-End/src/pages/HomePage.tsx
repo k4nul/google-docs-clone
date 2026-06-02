@@ -47,6 +47,28 @@ function formatCollaborators(count: number) {
 
 type DocumentListStatus = 'loading' | 'ready' | 'fallback';
 
+type ResolvedDocumentList = {
+  documents: DocumentSummary[];
+  error: string | null;
+  status: Exclude<DocumentListStatus, 'loading'>;
+};
+
+async function resolveDocumentList(): Promise<ResolvedDocumentList> {
+  try {
+    return {
+      documents: await listBackendDocuments(),
+      error: null,
+      status: 'ready',
+    };
+  } catch (error) {
+    return {
+      documents: mockDocuments,
+      error: getErrorMessage(error, 'Unable to load documents.'),
+      status: 'fallback',
+    };
+  }
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
@@ -78,53 +100,30 @@ export function HomePage() {
       ? 'Loading documents'
       : formatDocumentCount(documents.length);
 
+  const applyDocumentList = useCallback((nextList: ResolvedDocumentList) => {
+    setDocuments(nextList.documents);
+    setListError(nextList.error);
+    setListStatus(nextList.status);
+  }, []);
+
   const loadDocuments = useCallback(async () => {
     setListStatus('loading');
-
-    try {
-      const backendDocuments = await listBackendDocuments();
-
-      setDocuments(backendDocuments);
-      setListError(null);
-      setListStatus('ready');
-    } catch (error) {
-      setDocuments(mockDocuments);
-      setListError(getErrorMessage(error, 'Unable to load documents.'));
-      setListStatus('fallback');
-    }
-  }, []);
+    applyDocumentList(await resolveDocumentList());
+  }, [applyDocumentList]);
 
   useEffect(() => {
     let isCurrent = true;
 
-    async function loadInitialDocuments() {
-      try {
-        const backendDocuments = await listBackendDocuments();
-
-        if (!isCurrent) {
-          return;
-        }
-
-        setDocuments(backendDocuments);
-        setListError(null);
-        setListStatus('ready');
-      } catch (error) {
-        if (!isCurrent) {
-          return;
-        }
-
-        setDocuments(mockDocuments);
-        setListError(getErrorMessage(error, 'Unable to load documents.'));
-        setListStatus('fallback');
+    void resolveDocumentList().then((nextList) => {
+      if (isCurrent) {
+        applyDocumentList(nextList);
       }
-    }
-
-    void loadInitialDocuments();
+    });
 
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [applyDocumentList]);
 
   async function handleCreateBackendDocument() {
     setCreateError(null);
@@ -193,7 +192,7 @@ export function HomePage() {
       {listError ? (
         <ErrorState
           action={
-            <Button variant="secondary" onClick={loadDocuments}>
+            <Button variant="secondary" onClick={() => void loadDocuments()}>
               Retry
             </Button>
           }
