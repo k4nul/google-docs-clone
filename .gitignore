@@ -17,4 +17,9 @@ id_ed25519
 *.log
 logs/
 Back-End/data/
+
+# Dependency installs and build artifacts
+Front-End/node_modules/
 Front-End/dist/
+Front-End/coverage/
+Back-End/target/
