@@ -2,6 +2,11 @@ import { Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
 import { type FormEvent, useEffect, useState } from 'react';
 
+import { EditorAccessForm } from '@/features/editor/EditorAccessForm';
+import {
+  EditorDetailsSidebar,
+  type EditorDocumentDetailStatus,
+} from '@/features/editor/EditorDetailsSidebar';
 import { EditorShell } from '@/features/editor/EditorShell';
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
 import { FileManager } from '@/features/util/FileManager';
@@ -15,12 +20,10 @@ import { ApiRequestError } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument } from '@/shared/types/document';
 import {
-  Button,
   ErrorState,
   LinkButton,
   LoadingState,
   Panel,
-  StatusPill,
 } from '@/shared/ui/DesignSystem';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
@@ -209,6 +212,19 @@ export function EditorPage() {
 
   const realtimeServerUrl =
     document && documentAccessToken && !documentError ? appEnv.wsUrl : null;
+  const documentStatus: EditorDocumentDetailStatus = isDocumentLoading
+    ? 'loading'
+    : document
+      ? 'ready'
+      : isCredentialRequired
+        ? 'credential required'
+        : 'unavailable';
+  const documentTimestamps = document
+    ? {
+        createdAt: formatDateTime(document.createdAt),
+        updatedAt: formatDateTime(document.updatedAt),
+      }
+    : null;
   const pageTitle = document?.title ?? 'Untitled document';
   const pageDescription = document
     ? 'Continue editing this document with realtime presence.'
@@ -235,6 +251,13 @@ export function EditorPage() {
     setDocumentCredential({
       accessToken: token,
       docId: decodedDocId,
+    });
+  }
+
+  function handleCredentialInputChange(value: string) {
+    setCredentialInputState({
+      docId: decodedDocId,
+      value,
     });
   }
 
@@ -303,36 +326,16 @@ export function EditorPage() {
             <>
               {isCredentialRequired ? (
                 <Panel>
-                  <form
-                    className="credential-form"
+                  <EditorAccessForm
+                    description="Paste the access token created with this document to reopen it."
+                    error={credentialError}
+                    heading="Credential required"
+                    kicker="Document access"
+                    submitLabel="Unlock document"
+                    value={credentialInput}
                     onSubmit={handleCredentialSubmit}
-                  >
-                    <div>
-                      <p className="section-kicker">Document access</p>
-                      <h2>Credential required</h2>
-                      <p className="muted">
-                        Paste the access token created with this document to
-                        reopen it.
-                      </p>
-                    </div>
-                    <label className="credential-form__field">
-                      <span>Access token</span>
-                      <input
-                        autoComplete="off"
-                        value={credentialInput}
-                        onChange={(event) =>
-                          setCredentialInputState({
-                            docId: decodedDocId,
-                            value: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    {credentialError ? (
-                      <p className="form-error">{credentialError}</p>
-                    ) : null}
-                    <Button type="submit">Unlock document</Button>
-                  </form>
+                    onValueChange={handleCredentialInputChange}
+                  />
                 </Panel>
               ) : document ? (
                 <EditorShell
@@ -359,28 +362,14 @@ export function EditorPage() {
                     }
                     title="Document metadata unavailable"
                   />
-                  <form
-                    className="credential-form credential-form--retry"
+                  <EditorAccessForm
+                    className="credential-form--retry"
+                    error={credentialError}
+                    submitLabel="Try credential"
+                    value={credentialInput}
                     onSubmit={handleCredentialSubmit}
-                  >
-                    <label className="credential-form__field">
-                      <span>Access token</span>
-                      <input
-                        autoComplete="off"
-                        value={credentialInput}
-                        onChange={(event) =>
-                          setCredentialInputState({
-                            docId: decodedDocId,
-                            value: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                    {credentialError ? (
-                      <p className="form-error">{credentialError}</p>
-                    ) : null}
-                    <Button type="submit">Try credential</Button>
-                  </form>
+                    onValueChange={handleCredentialInputChange}
+                  />
                 </Panel>
               )}
             </>
@@ -393,89 +382,12 @@ export function EditorPage() {
           ) : null}
         </div>
 
-        <aside className="editor-side-stack" aria-label="Document details">
-          <section className="editor-side-card">
-            <div>
-              <p className="section-kicker">Document</p>
-              <h2>Details</h2>
-            </div>
-            <div className="info-list">
-              <span>
-                Document details:{' '}
-                <code>
-                  {isDocumentLoading
-                    ? 'loading'
-                    : document
-                      ? 'ready'
-                      : isCredentialRequired
-                        ? 'credential required'
-                      : 'unavailable'}
-                </code>
-              </span>
-              {document ? (
-                <>
-                  <span>
-                    Created: <code>{formatDateTime(document.createdAt)}</code>
-                  </span>
-                  <span>
-                    Updated: <code>{formatDateTime(document.updatedAt)}</code>
-                  </span>
-                </>
-              ) : null}
-              <span>
-                Collaboration:{' '}
-                <code>
-                  {realtimeServerUrl
-                    ? 'ready'
-                    : 'available after document details load'}
-                </code>
-              </span>
-            </div>
-          </section>
-
-          <section className="editor-side-card">
-            <div>
-              <p className="section-kicker">Collaboration</p>
-              <h2>Realtime presence</h2>
-            </div>
-            <div className="info-list">
-              <span>
-                Connection state: <code>{collaboration.connectionStatus}</code>
-              </span>
-              <span>
-                My activity:{' '}
-                <code>
-                  {collaboration.isCurrentUserTyping ? 'typing' : 'idle'}
-                </code>
-              </span>
-              <span>
-                Last sync event:{' '}
-                <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
-              </span>
-              <span>
-                Active users:{' '}
-                <code>{collaboration.activeCollaborators.length}</code>
-              </span>
-            </div>
-            <div className="presence-list">
-              {collaboration.activeCollaborators.length > 0 ? (
-                collaboration.activeCollaborators.map((collaborator) => (
-                  <StatusPill
-                    key={collaborator.id}
-                    tone={collaborator.isTyping ? 'success' : 'neutral'}
-                    title={collaborator.color}
-                  >
-                    {collaborator.name}
-                    {collaborator.isCurrentUser ? ' (me)' : ''}
-                    {collaborator.isTyping ? ' - typing' : ''}
-                  </StatusPill>
-                ))
-              ) : (
-                <StatusPill>No active collaborators yet</StatusPill>
-              )}
-            </div>
-          </section>
-        </aside>
+        <EditorDetailsSidebar
+          collaboration={collaboration}
+          documentStatus={documentStatus}
+          documentTimestamps={documentTimestamps}
+          isCollaborationReady={Boolean(realtimeServerUrl)}
+        />
       </div>
     </PageLayout>
   );
