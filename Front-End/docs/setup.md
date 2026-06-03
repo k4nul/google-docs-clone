@@ -71,7 +71,7 @@ npm run typecheck
 `.env.example`를 기준으로 `.env.local`을 구성한다.
 
 - `VITE_API_BASE_URL`: REST API base URL. 없으면 `<current-origin>/api`를 사용한다.
-- `VITE_API_TOKEN`: local backend의 `API_TOKEN`과 같은 값. 문서 목록과 문서 생성을 호출할 때 `Authorization: Bearer <token>`으로 사용한다.
+- `VITE_API_TOKEN`: local backend의 `API_TOKEN`과 같은 값. 문서 목록과 문서 생성을 호출할 때 `Authorization: Bearer <token>`으로 사용한다. Vite 환경변수는 브라우저 번들에 포함되므로 `dev-admin-token`은 local loopback 개발 전용으로만 사용한다.
 - `VITE_WS_URL`: Yjs websocket origin/base host. 없으면 `ws(s)://<current-host>/ws`를 사용한다. provider는 이 값에서 `/ws/:docId?access_token=<document-token>` endpoint를 구성한다.
 
 문서 생성 응답의 `credentials.access_token`은 브라우저 `localStorage`에 문서별로 저장된다. 편집기 상세 조회와 제목 변경은 이 문서 credential을 `Authorization` 헤더로 보내고, 브라우저 WebSocket은 `/ws/:docId?access_token=<document-token>` query parameter를 사용한다.

@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, net::IpAddr};
 
 use axum::http::{HeaderValue, Uri};
 
@@ -672,7 +672,7 @@ impl Config {
         let node_base_url = env_optional_origin("NODE_BASE_URL")?;
         let room_owner_hints_path = env_optional_string("ROOM_OWNER_HINTS_PATH")?;
 
-        Ok(Self {
+        let config = Self {
             host,
             port,
             frontend_origin,
@@ -846,7 +846,11 @@ impl Config {
             node_id,
             node_base_url,
             room_owner_hints_path,
-        })
+        };
+
+        config.validate_runtime_security()?;
+
+        Ok(config)
     }
 
     pub fn bind_address(&self) -> String {
@@ -869,6 +873,54 @@ impl Config {
     pub fn frontend_origin_headers(&self) -> AppResult<Vec<HeaderValue>> {
         frontend_origin_headers(&self.frontend_origin)
     }
+
+    fn validate_runtime_security(&self) -> AppResult<()> {
+        if !host_allows_remote_clients(&self.host) {
+            return Ok(());
+        }
+
+        if self.api_token == DEFAULT_API_TOKEN {
+            return Err(AppError::Config(
+                "API_TOKEN must be set to a non-default value when HOST exposes the backend beyond loopback"
+                    .to_owned(),
+            ));
+        }
+
+        if self.allows_any_frontend_origin() {
+            return Err(AppError::Config(
+                "FRONTEND_ORIGIN cannot include `*` when HOST exposes the backend beyond loopback"
+                    .to_owned(),
+            ));
+        }
+
+        if self.snapshot_store.eq_ignore_ascii_case("citadeldb")
+            && self.snapshot_citadeldb_passphrase == DEFAULT_SNAPSHOT_CITADELDB_PASSPHRASE
+        {
+            return Err(AppError::Config(
+                "SNAPSHOT_CITADELDB_PASSPHRASE must be set to a non-default value when HOST exposes the backend beyond loopback"
+                    .to_owned(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+fn host_allows_remote_clients(host: &str) -> bool {
+    let normalized = host
+        .trim()
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .to_ascii_lowercase();
+
+    if normalized == "localhost" {
+        return false;
+    }
+
+    normalized
+        .parse::<IpAddr>()
+        .map(|addr| !addr.is_loopback())
+        .unwrap_or(true)
 }
 
 pub fn frontend_origin_allows_any(value: &str) -> bool {
@@ -1155,6 +1207,83 @@ mod tests {
         let error = config
             .frontend_origin_header()
             .expect_err("origin with newline should be rejected");
+        assert!(matches!(error, AppError::Config(_)));
+    }
+
+    #[test]
+    fn runtime_security_allows_development_defaults_on_loopback_host() {
+        let mut config = test_config();
+        config.host = "127.0.0.1".to_owned();
+        config.frontend_origin = DEFAULT_FRONTEND_ORIGIN.to_owned();
+        config.api_token = DEFAULT_API_TOKEN.to_owned();
+
+        config
+            .validate_runtime_security()
+            .expect("loopback-only development defaults should be allowed");
+    }
+
+    #[test]
+    fn runtime_security_treats_localhost_as_loopback_only() {
+        let mut config = test_config();
+        config.host = "localhost".to_owned();
+        config.frontend_origin = DEFAULT_FRONTEND_ORIGIN.to_owned();
+        config.api_token = DEFAULT_API_TOKEN.to_owned();
+
+        config
+            .validate_runtime_security()
+            .expect("localhost development defaults should be allowed");
+    }
+
+    #[test]
+    fn runtime_security_rejects_default_api_token_on_remote_host() {
+        let mut config = test_config();
+        config.host = "0.0.0.0".to_owned();
+        config.frontend_origin = "http://localhost:5173".to_owned();
+        config.api_token = DEFAULT_API_TOKEN.to_owned();
+
+        let error = config
+            .validate_runtime_security()
+            .expect_err("default admin token should be rejected on an exposed host");
+        assert!(matches!(error, AppError::Config(_)));
+    }
+
+    #[test]
+    fn runtime_security_rejects_wildcard_frontend_origin_on_remote_host() {
+        let mut config = test_config();
+        config.host = "0.0.0.0".to_owned();
+        config.frontend_origin = DEFAULT_FRONTEND_ORIGIN.to_owned();
+        config.api_token = "deployed-admin-token".to_owned();
+
+        let error = config
+            .validate_runtime_security()
+            .expect_err("wildcard frontend origin should be rejected on an exposed host");
+        assert!(matches!(error, AppError::Config(_)));
+    }
+
+    #[test]
+    fn runtime_security_allows_remote_host_with_explicit_security_config() {
+        let mut config = test_config();
+        config.host = "0.0.0.0".to_owned();
+        config.frontend_origin = "https://docs.example.test".to_owned();
+        config.api_token = "deployed-admin-token".to_owned();
+
+        config
+            .validate_runtime_security()
+            .expect("explicit security config should allow exposed host binding");
+    }
+
+    #[test]
+    fn runtime_security_rejects_default_citadeldb_passphrase_on_remote_host() {
+        let mut config = test_config();
+        config.host = "0.0.0.0".to_owned();
+        config.frontend_origin = "https://docs.example.test".to_owned();
+        config.api_token = "deployed-admin-token".to_owned();
+        config.snapshot_store = "citadeldb".to_owned();
+        config.snapshot_citadeldb_passphrase = DEFAULT_SNAPSHOT_CITADELDB_PASSPHRASE.to_owned();
+
+        let error = config
+            .validate_runtime_security()
+            .expect_err("default CitadelDB passphrase should be rejected on an exposed host");
         assert!(matches!(error, AppError::Config(_)));
     }
 }

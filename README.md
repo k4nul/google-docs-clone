@@ -62,6 +62,7 @@ cargo run
 ```
 
 기본 서버 주소는 `http://127.0.0.1:4000`입니다. 기본 `FRONTEND_ORIGIN=*`라 로컬 개발에서는 Vite dev server origin을 별도 등록하지 않아도 됩니다. 기본 `SNAPSHOT_STORE=file`은 `Back-End/data/snapshots` 아래에 문서 snapshot을 저장합니다.
+`HOST=0.0.0.0`처럼 loopback 밖으로 바인드할 때는 백엔드가 시작 시 `dev-admin-token`, `FRONTEND_ORIGIN=*`, `SNAPSHOT_STORE=citadeldb`의 기본 passphrase 조합을 거부합니다. 이 경우 `API_TOKEN`을 새 값으로 바꾸고, `FRONTEND_ORIGIN`을 실제 프런트엔드 origin 목록으로 제한하며, citadeldb를 쓰면 `SNAPSHOT_CITADELDB_PASSPHRASE`도 바꿉니다.
 
 ### 2. 프론트엔드 실행
 
@@ -73,6 +74,7 @@ npm run dev
 ```
 
 `Front-End/.env.example`의 기본값은 로컬 백엔드에 맞춰져 있습니다.
+`VITE_API_TOKEN`은 브라우저 번들에 포함되므로 `dev-admin-token`은 local loopback 개발 전용입니다.
 
 ```bash
 VITE_API_BASE_URL=http://localhost:4000/api
