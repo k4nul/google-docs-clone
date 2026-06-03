@@ -13,6 +13,22 @@
 - `src/models`: 문서 placeholder 모델
 - `src/storage`: snapshot store trait과 `src/storage/mod.rs`의 `SUPPORTED_SNAPSHOT_STORES` canonical 목록에 대응하는 adapter. 기본 빌드는 `memory`/`file`/`sqlite`/`s3`/`managed`만 남기고, 나머지 adapter는 `full-snapshot-stores` feature 뒤에 둔다.
 
+## Runtime Boundary Rules
+
+- `src/main.rs`는 process entry point로서 config 로딩, tracing 초기화, TCP listener, graceful shutdown만 담당한다.
+- `src/app.rs`는 router composition 경계다. HTTP route, WebSocket route, CORS, tracing layer를 조립하지만 room, storage, CRDT 세부 구현을 직접 호출하지 않는다.
+- `src/state.rs`는 dependency injection root다. `RoomRegistry`, `RoomLocator`, `RoomCoordinator`, `SnapshotStore` trait object를 소유하고 route/WS handler가 concrete adapter를 모르도록 한다.
+- `src/routes/*`는 HTTP parsing, auth, ownership 확인, response shaping만 담당한다. 문서 상태 변경은 `RoomRegistry` API를 통해서만 수행한다.
+- `src/collab/ws.rs`는 WebSocket upgrade, origin/access-token 검증, Yrs binary stream bridging, session teardown을 담당한다. REST route는 WebSocket sink/source나 Yrs protocol detail에 의존하지 않는다.
+- `src/collab/rooms.rs`는 document metadata, active session count, Yrs document, snapshot persistence observer를 묶는 runtime room boundary다. storage adapter 호출은 `SnapshotStore` trait을 통해서만 이뤄진다.
+- `src/storage/*_snapshot_store.rs` concrete adapter는 storage layer 밖으로 노출하지 않는다. 새 adapter를 추가할 때는 `SnapshotStore` contract, `SUPPORTED_SNAPSHOT_STORES`, config/env docs, adapter-specific tests를 같은 작업 단위에서 갱신한다.
+
+## Adapter Inventory Boundary
+
+기본 runtime compile path는 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend에 집중한다. 그 외 embedded/local adapter inventory는 `full-snapshot-stores` feature 뒤에 있어 adapter compatibility regression과 운영 후보 비교를 위한 확장면으로 취급한다.
+
+따라서 정상 요청 흐름은 `routes`/`ws` -> `AppState` -> `RoomRegistry` -> `SnapshotStore` trait 방향을 유지해야 하며, route handler나 WebSocket handler가 adapter 이름, adapter path, env var default를 직접 분기하지 않는다. adapter 선택은 `Config.snapshot_store`와 `snapshot_store_from_config`에만 둔다.
+
 ## Request Flow
 
 1. `main.rs`가 환경변수를 읽고 tracing을 초기화한다.

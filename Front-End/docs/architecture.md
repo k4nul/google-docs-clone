@@ -14,6 +14,17 @@
 - `src/shared/types`: 공용 타입
 - `src/shared/ui`: 공용 레이아웃
 
+## Boundary Rules
+
+- `src/main.tsx`와 `src/app/*`는 React root, router provider, route table만 담당한다.
+- `src/pages/*`는 URL param, route-level loading/error state, backend metadata orchestration, feature composition을 담당한다. Tiptap extension, Yjs binary protocol, low-level fetch request construction은 page에서 직접 다루지 않는다.
+- `src/features/editor/*`는 editor shell, toolbar, Tiptap extension composition, realtime connection lifecycle UI를 담당한다. backend REST 호출과 document credential persistence는 `src/lib/api` 경계를 통해서만 사용한다.
+- `src/features/documents/*`는 document list presentation과 user action surface를 담당한다. document transport shape 변환은 `src/lib/api/documents.ts`에 둔다.
+- `src/lib/api/*`는 fetch, URL construction, backend response mapping, document credential storage를 담당한다. `pages`나 `features`를 import하지 않는다.
+- `src/lib/collab/*`는 Y.Doc, WebSocket endpoint construction, Yjs/Yrs binary sync protocol, provider cleanup을 담당한다. React component state와 DOM rendering을 import하지 않는다.
+- `src/lib/import`와 `src/lib/export`는 file conversion boundary다. editor feature는 import/export result만 받아 editor content에 적용한다.
+- `src/shared/*`는 cross-feature config, type, UI primitive만 제공한다. shared module이 route-specific orchestration을 소유하지 않는다.
+
 ## Route Structure
 
 - `/`: backend document list page with user-facing unavailable state
