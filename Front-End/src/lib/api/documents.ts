@@ -27,11 +27,11 @@ interface DocumentResponse {
 
 interface CreateDocumentResponse {
   document: BackendDocumentResponse;
-  credentials: DocumentCredentialsResponse;
+  credentials?: DocumentCredentialsResponse | null;
 }
 
 interface DocumentCredentialsResponse {
-  access_token: string;
+  access_token?: unknown;
 }
 
 interface CreateDocumentResult {
@@ -87,7 +87,11 @@ function getBrowserStorage() {
     return null;
   }
 
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function readCredentialMap(): Record<string, string> {
@@ -97,7 +101,13 @@ function readCredentialMap(): Record<string, string> {
     return {};
   }
 
-  const rawCredentials = storage.getItem(DOCUMENT_CREDENTIALS_STORAGE_KEY);
+  let rawCredentials: string | null;
+
+  try {
+    rawCredentials = storage.getItem(DOCUMENT_CREDENTIALS_STORAGE_KEY);
+  } catch {
+    return {};
+  }
 
   if (!rawCredentials) {
     return {};
@@ -128,10 +138,14 @@ function writeCredentialMap(credentials: Record<string, string>) {
     return;
   }
 
-  storage.setItem(
-    DOCUMENT_CREDENTIALS_STORAGE_KEY,
-    JSON.stringify(credentials),
-  );
+  try {
+    storage.setItem(
+      DOCUMENT_CREDENTIALS_STORAGE_KEY,
+      JSON.stringify(credentials),
+    );
+  } catch {
+    return;
+  }
 }
 
 export function getStoredDocumentAccessToken(documentId: string): string | null {
@@ -162,6 +176,19 @@ function requireDocumentAccessToken(
 
   if (!token) {
     throw new MissingDocumentCredentialError(documentId);
+  }
+
+  return token;
+}
+
+function requireCreatedDocumentAccessToken(response: CreateDocumentResponse) {
+  const token =
+    typeof response.credentials?.access_token === 'string'
+      ? response.credentials.access_token.trim()
+      : '';
+
+  if (!token) {
+    throw new Error('Document creation response did not include an access token.');
   }
 
   return token;
@@ -251,7 +278,7 @@ export async function createBackendDocument(
     getAdminRequestInit(),
   );
   const document = mapBackendDocument(response.document);
-  const accessToken = response.credentials.access_token;
+  const accessToken = requireCreatedDocumentAccessToken(response);
   storeDocumentAccessToken(document.id, accessToken);
 
   return {

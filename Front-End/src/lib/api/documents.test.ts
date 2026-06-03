@@ -5,8 +5,14 @@ import {
   getBackendDocument,
   getStoredDocumentAccessToken,
   listBackendDocuments,
+  storeDocumentAccessToken,
   updateBackendDocumentTitle,
 } from './documents';
+
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(
+  window,
+  'localStorage',
+);
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -19,8 +25,15 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   });
 }
 
+function restoreLocalStorage() {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(window, 'localStorage', originalLocalStorageDescriptor);
+  }
+}
+
 describe('document API client', () => {
   afterEach(() => {
+    restoreLocalStorage();
     window.localStorage.clear();
     vi.unstubAllGlobals();
   });
@@ -185,6 +198,49 @@ describe('document API client', () => {
         body: JSON.stringify({ title: 'Realtime draft' }),
       }),
     );
+  });
+
+  it('rejects create responses without a usable document credential', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        document: {
+          id: '77777777-7777-4777-8777-777777777777',
+          title: 'Missing credential draft',
+          created_at: '2026-04-04T10:00:00.000Z',
+          updated_at: '2026-04-04T10:00:00.000Z',
+        },
+        credentials: {
+          access_token: '   ',
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createBackendDocument('Missing credential draft')).rejects.toThrow(
+      'Document creation response did not include an access token.',
+    );
+    expect(
+      getStoredDocumentAccessToken('77777777-7777-4777-8777-777777777777'),
+    ).toBeNull();
+  });
+
+  it('fails closed when browser credential storage is unavailable', () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('Storage is blocked.', 'SecurityError');
+      },
+    });
+
+    expect(() =>
+      storeDocumentAccessToken(
+        '88888888-8888-4888-8888-888888888888',
+        'doc-token',
+      ),
+    ).not.toThrow();
+    expect(
+      getStoredDocumentAccessToken('88888888-8888-4888-8888-888888888888'),
+    ).toBeNull();
   });
 
   it('renames backend documents with the stored document credential', async () => {
