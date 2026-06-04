@@ -647,6 +647,29 @@ impl From<PersistedSnapshot> for DocumentSnapshot {
     }
 }
 
+pub(crate) fn serialize_persisted_snapshot(
+    snapshot: DocumentSnapshot,
+    context: impl AsRef<str>,
+) -> Result<Vec<u8>, StorageError> {
+    serde_json::to_vec(&PersistedSnapshot::from(snapshot))
+        .map_err(|error| StorageError::Io(format!("{}: {error}", context.as_ref())))
+}
+
+pub(crate) fn deserialize_persisted_snapshot(
+    expected_doc_id: Uuid,
+    bytes: &[u8],
+) -> Result<DocumentSnapshot, StorageError> {
+    let snapshot = serde_json::from_slice::<PersistedSnapshot>(bytes)
+        .map_err(|_| StorageError::CorruptSnapshot(expected_doc_id))?;
+    let snapshot: DocumentSnapshot = snapshot.into();
+
+    if snapshot.document.id != expected_doc_id {
+        return Err(StorageError::CorruptSnapshot(expected_doc_id));
+    }
+
+    Ok(snapshot)
+}
+
 #[derive(Debug, Error)]
 pub enum StorageError {
     #[error("snapshot `{0}` is temporarily busy")]

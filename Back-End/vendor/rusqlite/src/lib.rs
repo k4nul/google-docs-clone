@@ -456,6 +456,8 @@ struct PersistedSnapshotRow {
     created_at: String,
     updated_at: String,
     access_token: String,
+    #[serde(default)]
+    hide_preview: bool,
     update_bytes: String,
 }
 
@@ -542,6 +544,28 @@ fn sync_parent_directory(_path: &Path) -> Result<()> {
 fn query_rows(db: &PersistedDb, sql: &str, params: Vec<Value>) -> Result<Vec<Vec<Value>>> {
     let normalized = normalize_sql(sql);
 
+    if normalized == "PRAGMA table_info(snapshots)" {
+        return Ok(vec![
+            pragma_column(0, "doc_id"),
+            pragma_column(1, "title"),
+            pragma_column(2, "created_at"),
+            pragma_column(3, "updated_at"),
+            pragma_column(4, "access_token"),
+            pragma_column(5, "hide_preview"),
+            pragma_column(6, "update_bytes"),
+        ]);
+    }
+
+    if normalized.starts_with(
+        "SELECT doc_id, title, created_at, updated_at, access_token, hide_preview, update_bytes FROM snapshots WHERE doc_id = ?1",
+    ) {
+        let doc_id = expect_text_param(&params, 0, "?1")?;
+        let Some(row) = db.snapshots.get(&doc_id) else {
+            return Ok(Vec::new());
+        };
+        return Ok(vec![snapshot_values(row)?]);
+    }
+
     if normalized.starts_with(
         "SELECT doc_id, title, created_at, updated_at, access_token, update_bytes FROM snapshots WHERE doc_id = ?1",
     ) {
@@ -549,7 +573,22 @@ fn query_rows(db: &PersistedDb, sql: &str, params: Vec<Value>) -> Result<Vec<Vec
         let Some(row) = db.snapshots.get(&doc_id) else {
             return Ok(Vec::new());
         };
-        return Ok(vec![snapshot_values(row)?]);
+        return Ok(vec![legacy_snapshot_values(row)?]);
+    }
+
+    if normalized.starts_with(
+        "SELECT doc_id, title, created_at, updated_at, access_token, hide_preview, update_bytes FROM snapshots ORDER BY created_at ASC, doc_id ASC",
+    ) {
+        let mut rows = db.snapshots.values().cloned().collect::<Vec<_>>();
+        rows.sort_by(|left, right| {
+            left.created_at
+                .cmp(&right.created_at)
+                .then_with(|| left.doc_id.cmp(&right.doc_id))
+        });
+        return rows
+            .into_iter()
+            .map(|row| snapshot_values(&row))
+            .collect::<Result<Vec<_>>>();
     }
 
     if normalized.starts_with(
@@ -563,7 +602,7 @@ fn query_rows(db: &PersistedDb, sql: &str, params: Vec<Value>) -> Result<Vec<Vec
         });
         return rows
             .into_iter()
-            .map(|row| snapshot_values(&row))
+            .map(|row| legacy_snapshot_values(&row))
             .collect::<Result<Vec<_>>>();
     }
 
@@ -593,14 +632,31 @@ fn query_rows(db: &PersistedDb, sql: &str, params: Vec<Value>) -> Result<Vec<Vec
 fn execute_mutation(db: &mut PersistedDb, sql: &str, params: Vec<Value>) -> Result<usize> {
     let normalized = normalize_sql(sql);
 
+    if normalized.starts_with("ALTER TABLE snapshots ADD COLUMN hide_preview") {
+        return Ok(0);
+    }
+
     if normalized.starts_with("INSERT INTO snapshots (") {
+        let includes_hide_preview = normalized.contains("hide_preview");
         let row = PersistedSnapshotRow {
             doc_id: expect_text_param(&params, 0, "?1")?,
             title: expect_text_param(&params, 1, "?2")?,
             created_at: expect_text_param(&params, 2, "?3")?,
             updated_at: expect_text_param(&params, 3, "?4")?,
             access_token: expect_text_param(&params, 4, "?5")?,
-            update_bytes: encode_bytes(expect_blob_param(&params, 5, "?6")?.as_slice()),
+            hide_preview: if includes_hide_preview {
+                expect_i64_param(&params, 5, "?6")? != 0
+            } else {
+                false
+            },
+            update_bytes: encode_bytes(
+                expect_blob_param(
+                    &params,
+                    if includes_hide_preview { 6 } else { 5 },
+                    if includes_hide_preview { "?7" } else { "?6" },
+                )?
+                .as_slice(),
+            ),
         };
         db.snapshots.insert(row.doc_id.clone(), row);
         return Ok(1);
@@ -696,8 +752,31 @@ fn snapshot_values(row: &PersistedSnapshotRow) -> Result<Vec<Value>> {
         Value::Text(row.created_at.clone()),
         Value::Text(row.updated_at.clone()),
         Value::Text(row.access_token.clone()),
+        Value::Integer(if row.hide_preview { 1 } else { 0 }),
         Value::Blob(decode_bytes(&row.update_bytes)?),
     ])
+}
+
+fn legacy_snapshot_values(row: &PersistedSnapshotRow) -> Result<Vec<Value>> {
+    Ok(vec![
+        Value::Text(row.doc_id.clone()),
+        Value::Text(row.title.clone()),
+        Value::Text(row.created_at.clone()),
+        Value::Text(row.updated_at.clone()),
+        Value::Text(row.access_token.clone()),
+        Value::Blob(decode_bytes(&row.update_bytes)?),
+    ])
+}
+
+fn pragma_column(index: i64, name: &str) -> Vec<Value> {
+    vec![
+        Value::Integer(index),
+        Value::Text(name.to_owned()),
+        Value::Text(String::new()),
+        Value::Integer(0),
+        Value::Null,
+        Value::Integer(0),
+    ]
 }
 
 fn room_lease_values(row: &PersistedRoomLeaseRow) -> Vec<Value> {

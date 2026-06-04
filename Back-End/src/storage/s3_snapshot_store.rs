@@ -11,7 +11,10 @@ use crate::{
     config::normalize_http_base_url,
     http_client::{BlockingHttpClient, RequestError, Response},
     models::document::Document,
-    storage::{DocumentSnapshot, PersistedSnapshot, SnapshotStore, StorageError},
+    storage::{
+        DocumentSnapshot, SnapshotStore, StorageError, deserialize_persisted_snapshot,
+        serialize_persisted_snapshot,
+    },
 };
 
 type HmacSha256 = Hmac<Sha256>;
@@ -98,15 +101,7 @@ impl S3SnapshotStore {
         expected_doc_id: Uuid,
         bytes: &[u8],
     ) -> Result<DocumentSnapshot, StorageError> {
-        let snapshot = serde_json::from_slice::<PersistedSnapshot>(bytes)
-            .map_err(|_| StorageError::CorruptSnapshot(expected_doc_id))?;
-        let snapshot: DocumentSnapshot = snapshot.into();
-
-        if snapshot.document.id != expected_doc_id {
-            return Err(StorageError::CorruptSnapshot(expected_doc_id));
-        }
-
-        Ok(snapshot)
+        deserialize_persisted_snapshot(expected_doc_id, bytes)
     }
 
     fn object_target(&self, key: &str) -> Result<RequestTarget, StorageError> {
@@ -329,11 +324,10 @@ impl SnapshotStore for S3SnapshotStore {
         let doc_id = snapshot.document.id;
         let key = self.object_key(&doc_id);
         let target = self.object_target(&key)?;
-        let bytes = serde_json::to_vec(&PersistedSnapshot::from(snapshot)).map_err(|error| {
-            StorageError::Io(format!(
-                "failed to serialize s3 snapshot `{doc_id}`: {error}"
-            ))
-        })?;
+        let bytes = serialize_persisted_snapshot(
+            snapshot,
+            format!("failed to serialize s3 snapshot `{doc_id}`"),
+        )?;
 
         self.send("PUT", &target, &bytes, Some("application/json"))
             .map(|_| ())

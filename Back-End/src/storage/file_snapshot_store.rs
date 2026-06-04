@@ -9,7 +9,8 @@ use uuid::Uuid;
 use crate::{
     models::document::Document,
     storage::{
-        DocumentSnapshot, PersistedSnapshot, SnapshotStore, StorageError, ensure_snapshot_dir,
+        DocumentSnapshot, SnapshotStore, StorageError, deserialize_persisted_snapshot,
+        ensure_snapshot_dir, serialize_persisted_snapshot,
     },
 };
 
@@ -55,10 +56,8 @@ impl FileSnapshotStore {
     fn read_snapshot(&self, path: &Path, doc_id: &Uuid) -> Result<DocumentSnapshot, StorageError> {
         let bytes = fs::read(path)
             .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))?;
-        let snapshot = serde_json::from_slice::<PersistedSnapshot>(&bytes)
-            .map_err(|_| StorageError::CorruptSnapshot(*doc_id))?;
 
-        Ok(snapshot.into())
+        deserialize_persisted_snapshot(*doc_id, &bytes)
     }
 
     fn remove_file_if_exists(&self, path: &Path) -> Result<(), StorageError> {
@@ -162,8 +161,7 @@ impl SnapshotStore for FileSnapshotStore {
     fn save_snapshot(&self, snapshot: DocumentSnapshot) -> Result<(), StorageError> {
         let doc_id = snapshot.document.id;
         let path = self.snapshot_path(&doc_id);
-        let bytes = serde_json::to_vec(&PersistedSnapshot::from(snapshot))
-            .map_err(|error| StorageError::Io(format!("{}: {error}", path.display())))?;
+        let bytes = serialize_persisted_snapshot(snapshot, path.display().to_string())?;
 
         self.write_snapshot_atomically(&doc_id, &path, &bytes)?;
         Ok(())

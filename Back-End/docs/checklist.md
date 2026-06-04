@@ -20,6 +20,17 @@
 - [x] 인증과 문서 접근 제어 추가
 - [x] frontend editor provider와 end-to-end 상호운용 테스트 추가
 
+## Refactor Maintenance
+
+- [x] persisted snapshot JSON serialization/deserialization helper centralized for always-on file/S3 stores
+- [x] persisted snapshot document-id validation moved behind the shared helper boundary
+- [x] file snapshot load path delegates persisted JSON decode to the shared helper
+- [x] file snapshot save path delegates persisted JSON encode error handling to the shared helper
+- [x] S3 snapshot load path delegates persisted JSON decode to the shared helper
+- [x] S3 snapshot save path delegates persisted JSON encode error handling to the shared helper
+- [x] file-backed snapshot round-trip and delete/reopen lifecycle tests rerun after refactor
+- [x] backend compile validation rerun after refactor with explicit local OpenSSL env workaround
+
 ## Platform Compatibility Plan
 
 ### WINDOWS_SQLITE_SHIM_COMPATIBILITY_PLAN
