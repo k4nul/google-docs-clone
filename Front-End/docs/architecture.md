@@ -32,11 +32,12 @@
 
 ## Realtime Flow
 
-`EditorPage` -> `GET /api/documents/:id` -> `EditorShell` -> `createCollaborationConnection()` -> `Y.Doc` 생성 -> `WebsocketProvider` 연결 시도 -> Tiptap `Collaboration` extension 연결 -> `CollaborationCaret`는 provider가 있을 때만 활성화
+`EditorPage` -> `GET /api/documents/:id` -> `EditorShell` -> `createCollaborationConnection()` -> `Y.Doc` 생성 -> `BinaryWebsocketProvider` 연결 시도 -> Tiptap `Collaboration` extension 연결 -> `CollaborationCaret`는 provider가 있을 때만 활성화
 
 핵심 포인트:
 
 - provider base는 `VITE_WS_URL`이 있으면 그 값을 쓰고, 없으면 현재 브라우저 origin에서 `ws(s)://<current-host>/ws`로 자동 계산한다. 실제 room endpoint는 `/ws/:docId?access_token=<document-token>`으로 구성한다.
+- `BinaryWebsocketProvider`는 `y-websocket` provider가 아니라 repository-local custom provider다. Yjs/Yrs v1 binary sync message, awareness message, reconnect, periodic resync, token-redacted logging을 `src/lib/collab/connection.ts`에서 직접 처리한다.
 - API base URL도 `VITE_API_BASE_URL`이 없으면 `<current-origin>/api`로 자동 계산한다.
 - browser WebSocket은 임의의 `Authorization` 헤더를 붙일 수 없으므로 프론트엔드는 backend UUID 문서, 저장된 document credential, origin 정책에 맞춰 연결한다.
 - 문서 credential이 없으면 editor는 내용을 열지 않고 access token 입력을 요구한다. 저장된 credential로 문서 detail 조회가 실패하면 metadata unavailable 상태와 token 재입력 폼을 표시하고 realtime provider를 열지 않는다.

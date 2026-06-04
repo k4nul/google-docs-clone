@@ -1,13 +1,13 @@
 {
   "repo": "frontend",
-  "goal": "bootstrap-collaborative-editor-ui",
+  "goal": "credentialed-collaborative-document-workspace",
   "stack": {
     "framework": "react",
     "bundler": "vite",
     "language": "typescript",
     "editor": "tiptap",
     "sync": "yjs",
-    "provider": "y-websocket"
+    "provider": "custom-binary-yjs-websocket"
   },
   "docs": {
     "root": "docs",
@@ -31,6 +31,7 @@
   },
   "env": {
     "api_base": "VITE_API_BASE_URL",
+    "api_token": "VITE_API_TOKEN",
     "ws_base": "VITE_WS_URL"
   },
   "commands": {
@@ -114,7 +115,16 @@
     "scaffolded": true,
     "deps_installed": true,
     "docs_written": true,
+    "backend_documents_integrated": true,
+    "document_credentials_integrated": true,
+    "custom_binary_provider_integrated": true,
+    "docx_import_export_integrated": true,
     "build_ready": true,
     "test_ready": true
+  },
+  "remaining": {
+    "persisted_draft_save_mutation": true,
+    "dedicated_codeowners_handles": true,
+    "shadcn_ui_migration": true
   }
 }

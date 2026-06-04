@@ -54,27 +54,26 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - API, route, provider 계약이 바뀌면 코드와 함께 `docs/`도 갱신한다.
 - backend/QA 협업이 확대되면 세부 역할 구분은 `docs/roles.md` 기준을 따른다.
 
-## 개발 계획
+## 현재 구현 상태
 
-목표일: `2026-05-07`
+이 섹션은 2026-06-04 기준 현재 소스와 `docs/checklist.md`에 맞춘 프론트엔드 상태를 정리한다. 과거 bootstrap 일정 대신 실제 구현된 흐름과 남은 작업을 기준으로 본다.
 
-### 1주차
+### 완료된 흐름
 
-- bootstrap 상태를 안정화하고 `build`, `lint`, `test`, `typecheck`가 항상 통과되는 기준선을 유지한다.
-- 문서 목록과 editor 진입 흐름을 점검하고 `src/lib/api` 경유 구조를 기준으로 화면 연동 준비를 마친다.
-- 협업 에디터의 기본 UX와 라우트 진입 구조를 정리한다.
+- Vite React TypeScript 앱, strict mode, `@/*` alias, GitHub Actions 품질 게이트가 구성되어 있다.
+- 홈 화면은 `GET /api/documents`로 최근 문서를 불러오고, 실패하면 사용자용 unavailable 상태와 retry 흐름을 보여준다.
+- `New document`는 `POST /api/documents`로 UUID 문서를 만들고, 응답의 `credentials.access_token`을 문서별 `localStorage` credential map에 저장한 뒤 `/docs/:docId`로 이동한다.
+- 편집기 화면은 저장된 문서 credential로 `GET /api/documents/:id` metadata를 확인한 뒤에만 editor와 협업 provider를 연다.
+- `src/lib/collab/connection.ts`의 `BinaryWebsocketProvider`가 Yjs/Yrs v1 binary sync, awareness, reconnect, periodic resync, token-redacted connection logging을 담당한다.
+- browser WebSocket 제약에 맞춰 문서 credential은 `/ws/:docId?access_token=<document-token>` query parameter로 전달한다.
+- DOCX import는 sanitize 경계를 거쳐 editor content에 반영되고, DOCX export는 editor HTML을 `docx` package model로 변환한다.
+- presence participant list, connection status, typing state, last sync time이 editor details surface에 표시된다.
 
-### 2주차
+### 남은 작업
 
-- documents list/detail API 연동으로 데이터 흐름을 실제 화면에 연결했다.
-- browser WebSocket 제약에 맞춰 문서 credential을 `access_token` query parameter로 전달하고 reconnect/status 기준을 정리했다.
-- presence UI와 collaboration 상태 표시 등 실시간 협업 경험을 보강했다.
-
-### 3주차
-
-- `.docx` 업로드 이후 sanitize 결과를 editor ingest 흐름에 연결한다.
-- draft 저장, 오류 처리, 예외 상태 메시지 등 마감 전 안정화 작업을 수행한다.
-- README, `docs/`, CI 검증 기준을 최종 점검하고 배포 전 문서 상태를 정리한다.
+- 현재 editor content 변경은 realtime snapshot persistence에 의존한다. 명시적인 persisted draft/save mutation과 그에 맞는 save/error UI는 아직 별도 작업으로 남아 있다.
+- dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결해야 한다.
+- 현재 UI는 `src/shared/ui/DesignSystem.tsx`와 `src/index.css` 기반 custom design system이다. shadcn/ui 전환은 `docs/product-direction.md`의 다음 제품 방향 작업으로 남아 있다.
 
 ## 커밋 규칙
 
@@ -228,13 +227,13 @@ npm run preview
 
 문서 목록을 불러올 수 없으면 홈 화면은 사용자용 unavailable 상태와 재시도 버튼을 표시합니다. 실제 협업 WebSocket은 백엔드가 생성한 UUID 문서에서만 정상 연결됩니다.
 
-## 이번 문제와 해결
+## 로컬 협업 연결 체크포인트
 
-이번 로컬 연동에서 연결이 실패한 이유는 한 가지가 아니라 여러 단계가 겹쳐 있었습니다.
+로컬에서 협업 연결이 끊기거나 `disconnected` 상태가 계속되면 아래 경계를 순서대로 확인합니다. 각 항목은 현재 구현이 의존하는 연결 조건입니다.
 
 ### 1. 잘못된 WebSocket 주소 사용
 
-초기 설정은 `ws://localhost:1234`를 가리켰지만, 실제 백엔드는 `127.0.0.1:4000`에서 실행 중이었습니다. 그래서 프런트가 잘못된 포트로 연결을 시도해 `disconnected`가 발생했습니다.
+프런트의 `VITE_WS_URL`은 백엔드의 WebSocket host를 가리켜야 합니다. 기본 로컬 백엔드는 `127.0.0.1:4000`에서 실행되므로 direct backend URL을 쓸 때는 `ws://localhost:4000`을 사용합니다.
 
 해결:
 
@@ -252,7 +251,7 @@ npm run preview
 
 ### 3. 문서 경로 전달 정리
 
-문서 생성 후 협업 페이지로 이동할 때 불필요한 query parameter를 붙이지 않고, 문서 ID만으로 이동하도록 단순화했습니다.
+문서 생성 후 협업 페이지로 이동할 때 browser route에는 문서 ID만 넣고, credential은 WebSocket endpoint에만 붙입니다.
 
 해결:
 
@@ -262,7 +261,7 @@ npm run preview
 
 ### 4. awareness payload shape 불일치
 
-서버는 awareness payload를 검증합니다. 초기에 프런트는 서버 계약에 없는 shape를 보내고 있어 collaborator 정보가 반영되지 않을 수 있었습니다.
+서버는 awareness payload를 검증합니다. collaborator 정보가 반영되지 않으면 프런트 awareness local state가 서버 계약의 `user`, `client`, 선택적 `selection` 구조를 유지하는지 확인합니다.
 
 해결:
 
@@ -271,7 +270,7 @@ npm run preview
 
 ### 5. React StrictMode로 인한 개발 모드 이중 연결/해제
 
-개발 모드에서는 `StrictMode` 때문에 `useEffect`가 mount-cleanup-mount 순서로 한 번 더 실행됩니다. 협업 소켓처럼 연결 부작용이 있는 코드에서는 연결 직후 cleanup이 먼저 실행되어, 서버에는 불완전한 바이너리 메시지가 들어가고 브라우저에는 `WebSocket is closed before the connection is established`가 보일 수 있었습니다.
+개발 모드에서 연결 직후 cleanup이 먼저 실행되면 서버에 불완전한 binary message가 들어가고 브라우저에는 `WebSocket is closed before the connection is established`가 보일 수 있습니다. 현재 구현은 `src/main.tsx`에서 React `StrictMode`를 사용하지 않고, provider cleanup을 지연/취소할 수 있게 정리했습니다.
 
 해결:
 
