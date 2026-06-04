@@ -12,6 +12,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - DOCX import/export와 HTML sanitize 유틸리티 제공
 - `src/lib/api` 경계에서 documents list/detail/create/security 응답 변환
 - 문서 생성 응답의 credential을 저장하고 상세 조회, 제목 변경, WebSocket 연결에 재사용
+- 편집 중 realtime snapshot persistence 상태를 autosave UI로 표시
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
 
 ## 모듈 의존성
@@ -66,12 +67,12 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - 편집기 화면은 저장된 문서 credential로 `GET /api/documents/:id` metadata를 확인한 뒤에만 editor와 협업 provider를 연다.
 - `src/lib/collab/connection.ts`의 `BinaryWebsocketProvider`가 Yjs/Yrs v1 binary sync, awareness, reconnect, periodic resync, token-redacted connection logging을 담당한다.
 - browser WebSocket 제약에 맞춰 문서 credential은 `/ws/:docId?access_token=<document-token>` query parameter로 전달한다.
+- editor content 변경은 Yjs update를 통해 백엔드 snapshot persistence로 전송되며, 편집기 헤더는 연결/저장/일시 중단 상태를 autosave UI로 표시한다.
 - DOCX import는 sanitize 경계를 거쳐 editor content에 반영되고, DOCX export는 editor HTML을 `docx` package model로 변환한다.
 - presence participant list, connection status, typing state, last sync time이 editor details surface에 표시된다.
 
 ### 남은 작업
 
-- 현재 editor content 변경은 realtime snapshot persistence에 의존한다. 명시적인 persisted draft/save mutation과 그에 맞는 save/error UI는 아직 별도 작업으로 남아 있다.
 - dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결해야 한다.
 - 현재 UI는 `src/shared/ui/DesignSystem.tsx`와 `src/index.css` 기반 custom design system이다. shadcn/ui 전환은 `docs/product-direction.md`의 다음 제품 방향 작업으로 남아 있다.
 

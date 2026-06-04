@@ -1,6 +1,13 @@
 import type { Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 
 import {
   connectCollaborationConnection,
@@ -19,6 +26,8 @@ import {
   INITIAL_EDITOR_CONTENT,
 } from './editorExtensions';
 import { EditorToolbar } from './EditorToolbar';
+
+const AUTOSAVE_SETTLED_DELAY_MS = 500;
 
 export interface CollaborationSnapshot {
   activeCollaborators: Array<{
@@ -52,6 +61,14 @@ type WebsocketTransportStatus =
   | 'disconnected'
   | 'disabled';
 
+type AutosaveStatus =
+  | 'connecting'
+  | 'local-only'
+  | 'paused'
+  | 'ready'
+  | 'saved'
+  | 'saving';
+
 interface RealtimeDebugState {
   synced: boolean;
   transport: WebsocketTransportStatus;
@@ -76,6 +93,61 @@ function getConnectionMode(status: ProviderConnectionStatus) {
   }
 
   return 'Realtime server disconnected';
+}
+
+function getAutosaveStatus(
+  status: ProviderConnectionStatus,
+  hasProvider: boolean,
+): AutosaveStatus {
+  if (!hasProvider) {
+    return 'local-only';
+  }
+
+  if (status === 'connected') {
+    return 'ready';
+  }
+
+  if (status === 'connecting') {
+    return 'connecting';
+  }
+
+  return 'paused';
+}
+
+function getAutosaveLabel(status: AutosaveStatus) {
+  if (status === 'saving') {
+    return 'Saving changes';
+  }
+
+  if (status === 'saved') {
+    return 'Changes saved';
+  }
+
+  if (status === 'paused') {
+    return 'Autosave paused';
+  }
+
+  if (status === 'connecting') {
+    return 'Connecting autosave';
+  }
+
+  if (status === 'local-only') {
+    return 'Local draft only';
+  }
+
+  return 'Autosave ready';
+}
+
+function getAutosaveTone(status: AutosaveStatus) {
+  if (status === 'saved' || status === 'ready') {
+    return 'success';
+  }
+
+  if (status === 'paused' || status === 'saving' || status === 'connecting') {
+    return 'warning';
+  }
+
+  return 'neutral';
 }
 
 function getRealtimeDebugState(
@@ -138,13 +210,36 @@ export function EditorShell({
       }),
     [docId, documentAccessToken, realtimeServerUrl],
   );
+  const initialConnectionStatus: ProviderConnectionStatus = connection.provider
+    ? 'connecting'
+    : 'local-only';
+  const connectionStatusRef = useRef<ProviderConnectionStatus>(
+    initialConnectionStatus,
+  );
   const [connectionStatus, setConnectionStatus] =
-    useState<ProviderConnectionStatus>(
+    useState<ProviderConnectionStatus>(initialConnectionStatus);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>(() =>
+    getAutosaveStatus(
       connection.provider ? 'connecting' : 'local-only',
-    );
+      Boolean(connection.provider),
+    ),
+  );
   const [realtimeDebug, setRealtimeDebug] = useState(() =>
     getRealtimeDebugState(connection),
   );
+  const visibleConnectionStatus = connection.provider
+    ? connectionStatus
+    : 'local-only';
+  const visibleAutosaveStatus = connection.provider
+    ? autosaveStatus
+    : 'local-only';
+  const autosaveTimeoutRef = useRef<number | null>(null);
+  const clearAutosaveTimeout = useCallback(() => {
+    if (autosaveTimeoutRef.current !== null) {
+      window.clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+  }, []);
 
   const editor = useEditor(
     {
@@ -173,6 +268,7 @@ export function EditorShell({
     const { provider } = connection;
 
     if (!provider) {
+      connectionStatusRef.current = 'local-only';
       return undefined;
     }
 
@@ -181,7 +277,21 @@ export function EditorShell({
     };
 
     const unsubscribeStatus = provider.onStatusChange((status) => {
+      connectionStatusRef.current = status;
       setConnectionStatus(status);
+      if (status !== 'connected') {
+        clearAutosaveTimeout();
+      }
+      setAutosaveStatus((currentStatus) => {
+        if (
+          status === 'connected' &&
+          (currentStatus === 'saving' || currentStatus === 'saved')
+        ) {
+          return currentStatus;
+        }
+
+        return getAutosaveStatus(status, true);
+      });
       refreshRealtimeDebug();
     });
 
@@ -219,7 +329,7 @@ export function EditorShell({
       unsubscribeStatus();
       provider.awareness.off('change', updateCollaborators);
     };
-  }, [connection, user]);
+  }, [clearAutosaveTimeout, connection, user]);
 
   useEffect(() => {
     connectCollaborationConnection(connection);
@@ -243,8 +353,21 @@ export function EditorShell({
     };
 
     const handleUpdate = () => {
+      const currentConnectionStatus = connectionStatusRef.current;
+
       setLastSyncedAt(new Date().toLocaleTimeString());
       setIsCurrentUserTyping(true);
+      clearAutosaveTimeout();
+
+      if (currentConnectionStatus === 'connected') {
+        setAutosaveStatus('saving');
+        autosaveTimeoutRef.current = window.setTimeout(() => {
+          autosaveTimeoutRef.current = null;
+          setAutosaveStatus('saved');
+        }, AUTOSAVE_SETTLED_DELAY_MS);
+      } else {
+        setAutosaveStatus(getAutosaveStatus(currentConnectionStatus, true));
+      }
 
       if (typingTimeoutRef.current !== null) {
         window.clearTimeout(typingTimeoutRef.current);
@@ -261,12 +384,13 @@ export function EditorShell({
     return () => {
       editor.off('update', handleUpdate);
       markTypingStopped();
+      clearAutosaveTimeout();
       if (typingTimeoutRef.current !== null) {
         window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
     };
-  }, [connection.provider, editor]);
+  }, [clearAutosaveTimeout, connection.provider, editor]);
 
   useEffect(() => {
     if (!onEditorReady) {
@@ -287,16 +411,16 @@ export function EditorShell({
 
     onCollaborationChange({
       activeCollaborators,
-      connectionStatus,
+      connectionStatus: visibleConnectionStatus,
       isCurrentUserTyping,
       lastSyncedAt,
     });
   }, [
     activeCollaborators,
-    connectionStatus,
     isCurrentUserTyping,
     lastSyncedAt,
     onCollaborationChange,
+    visibleConnectionStatus,
   ]);
 
   return (
@@ -342,10 +466,15 @@ export function EditorShell({
           {titleError ? <p className="form-error">{titleError}</p> : null}
         </div>
         <div className="editor-status-group">
+          <StatusPill tone={getAutosaveTone(visibleAutosaveStatus)}>
+            {getAutosaveLabel(visibleAutosaveStatus)}
+          </StatusPill>
           <StatusPill
-            tone={connectionStatus === 'connected' ? 'success' : 'warning'}
+            tone={
+              visibleConnectionStatus === 'connected' ? 'success' : 'warning'
+            }
           >
-            {getConnectionMode(connectionStatus)}
+            {getConnectionMode(visibleConnectionStatus)}
           </StatusPill>
           <StatusPill>{isCurrentUserTyping ? 'Typing' : 'Idle'}</StatusPill>
         </div>

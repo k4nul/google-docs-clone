@@ -316,6 +316,7 @@ describe('EditorShell', () => {
     expect(screen.getByText('team-room')).toBeInTheDocument();
     expect(screen.getByText('Atlas')).toBeInTheDocument();
     expect(screen.getByText('connecting')).toBeInTheDocument();
+    expect(screen.getByText('Connecting autosave')).toBeInTheDocument();
 
     await waitFor(() =>
       expect(onCollaborationChange).toHaveBeenLastCalledWith({
@@ -366,6 +367,7 @@ describe('EditorShell', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Realtime sync active')).not.toHaveLength(0),
     );
+    expect(screen.getByText('Autosave ready')).toBeInTheDocument();
     expect(screen.getByText('connected')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     await waitFor(() =>
@@ -421,6 +423,7 @@ describe('EditorShell', () => {
       connection,
     );
     expect(screen.getAllByText('Local-only mode')).not.toHaveLength(0);
+    expect(screen.getByText('Local draft only')).toBeInTheDocument();
     expect(screen.getByText('disabled')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
 
@@ -438,14 +441,21 @@ describe('EditorShell', () => {
     vi.useFakeTimers();
     const onCollaborationChange = vi.fn();
     const { editor } = renderEditorShell({ onCollaborationChange });
+    const provider = latestConnection().provider;
+
+    act(() => {
+      provider?.emitStatus('connected');
+    });
 
     expect(editor.on).toHaveBeenCalledWith('update', expect.any(Function));
+    expect(screen.getByText('Autosave ready')).toBeInTheDocument();
 
     act(() => {
       editor.emitUpdate();
     });
 
     expect(screen.getByText('Typing')).toBeInTheDocument();
+    expect(screen.getByText('Saving changes')).toBeInTheDocument();
     expect(onCollaborationChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         isCurrentUserTyping: true,
@@ -454,7 +464,13 @@ describe('EditorShell', () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(1_200);
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(screen.getByText('Changes saved')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(700);
     });
 
     expect(screen.getByText('Idle')).toBeInTheDocument();
@@ -463,6 +479,17 @@ describe('EditorShell', () => {
         isCurrentUserTyping: false,
       }),
     );
+  });
+
+  it('surfaces autosave pause when realtime disconnects', () => {
+    renderEditorShell();
+    const provider = latestConnection().provider;
+
+    act(() => {
+      provider?.emitStatus('reconnecting');
+    });
+
+    expect(screen.getByText('Autosave paused')).toBeInTheDocument();
   });
 
   it('unsubscribes collaboration and editor listeners on unmount', async () => {

@@ -119,11 +119,11 @@
     "document_credentials_integrated": true,
     "custom_binary_provider_integrated": true,
     "docx_import_export_integrated": true,
+    "persisted_draft_save_mutation": true,
     "build_ready": true,
     "test_ready": true
   },
   "remaining": {
-    "persisted_draft_save_mutation": true,
     "dedicated_codeowners_handles": true,
     "shadcn_ui_migration": true
   }

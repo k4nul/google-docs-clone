@@ -41,6 +41,7 @@
 - API base URL도 `VITE_API_BASE_URL`이 없으면 `<current-origin>/api`로 자동 계산한다.
 - browser WebSocket은 임의의 `Authorization` 헤더를 붙일 수 없으므로 프론트엔드는 backend UUID 문서, 저장된 document credential, origin 정책에 맞춰 연결한다.
 - 문서 credential이 없으면 editor는 내용을 열지 않고 access token 입력을 요구한다. 저장된 credential로 문서 detail 조회가 실패하면 metadata unavailable 상태와 token 재입력 폼을 표시하고 realtime provider를 열지 않는다.
+- editor content update는 Yjs document update로 전송되고 백엔드 room snapshot observer가 persistence를 처리한다. `EditorShell`은 provider connection state와 local editor update를 조합해 autosave ready/saving/saved/paused 상태를 표시한다.
 - connection state, sync 여부, participant count, awareness participant list는 editor 화면에서 확인한다.
 - collaboration 사용 시 `StarterKit.history`는 비활성화한다.
 
