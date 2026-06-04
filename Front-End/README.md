@@ -4,13 +4,13 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 
 ## 핵심 기능
 
-- 백엔드 `GET /api/documents` 기반 최근 문서 목록과 사용자용 unavailable 상태 제공
+- 백엔드 `GET /api/documents` 기반 최근 문서 목록, body preview, redacted preview 상태, 사용자용 unavailable 상태 제공
 - `/docs/:docId` 경로에서 collaborative editor 셸 제공
 - Tiptap 기반 rich text editor 구성
 - Yjs binary sync protocol 기반 실시간 협업 연결 구조 분리
 - `VITE_WS_URL`이 없으면 현재 브라우저 origin에서 WebSocket URL 자동 계산
 - DOCX import/export와 HTML sanitize 유틸리티 제공
-- `src/lib/api` 경계에서 documents list/detail/create 응답 변환
+- `src/lib/api` 경계에서 documents list/detail/create/security 응답 변환
 - 문서 생성 응답의 credential을 저장하고 상세 조회, 제목 변경, WebSocket 연결에 재사용
 - `build`, `lint`, `test`, `typecheck` 품질 게이트 유지
 
@@ -217,7 +217,7 @@ npm run preview
 
 ## 백엔드 연동 흐름
 
-현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다. `POST /api/documents` 응답 credential을 저장한 뒤 `GET /api/documents/:id`, `PATCH /api/documents/:id`, `/ws/:docId?access_token=<token>`에 재사용합니다. 저장된 credential이 없으면 편집기 페이지는 문서 내용을 열지 않고 access token 입력을 요구합니다.
+현재 프런트는 백엔드 README의 문서 생성/협업 연결 계약에 맞춰 동작합니다. `POST /api/documents` 응답 credential을 저장한 뒤 `GET /api/documents/:id`, `PATCH /api/documents/:id`, `/ws/:docId?access_token=<token>`에 재사용합니다. `GET /api/documents`의 `preview`는 최근 문서 카드에 표시하고, `preview_hidden=true` 또는 `hide_preview=true`이면 body preview 대신 redacted 상태를 표시합니다. 저장된 credential이 없으면 편집기 페이지는 문서 내용을 열지 않고 access token 입력을 요구합니다.
 
 1. 홈 화면에서 `New document`를 클릭합니다.
 2. 프런트가 `VITE_API_TOKEN`을 bearer token으로 사용해 `POST /api/documents`를 호출합니다.

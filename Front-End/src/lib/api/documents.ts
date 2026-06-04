@@ -59,6 +59,7 @@ function mapBackendDocument(
     title: document.title,
     createdAt: document.created_at,
     updatedAt: document.updated_at,
+    hidePreview: Boolean(document.hide_preview ?? document.preview_hidden),
   };
 }
 
@@ -298,6 +299,21 @@ export async function updateBackendDocumentTitle(
   const response = await apiPatch<DocumentResponse>(
     `/documents/${encodeURIComponent(documentId)}` as `/${string}`,
     { title },
+    getDocumentRequestInit(token),
+  );
+
+  return mapBackendDocument(response.document);
+}
+
+export async function updateBackendDocumentSecurity(
+  documentId: string,
+  settings: { hidePreview: boolean },
+  accessToken?: string | null,
+) {
+  const token = requireDocumentAccessToken(documentId, accessToken);
+  const response = await apiPatch<DocumentResponse>(
+    `/documents/${encodeURIComponent(documentId)}` as `/${string}`,
+    { hide_preview: settings.hidePreview },
     getDocumentRequestInit(token),
   );
 

@@ -8,6 +8,8 @@ pub struct Document {
     pub title: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    pub hide_preview: bool,
     #[serde(skip_serializing, skip_deserializing)]
     access_token: String,
 }
@@ -25,6 +27,7 @@ impl Document {
             title,
             created_at: now,
             updated_at: now,
+            hide_preview: false,
             access_token: Uuid::new_v4().to_string(),
         }
     }
@@ -36,6 +39,13 @@ impl Document {
     pub fn rename(&mut self, title: String) {
         self.title = title;
         self.touch();
+    }
+
+    pub fn set_hide_preview(&mut self, hide_preview: bool) {
+        if self.hide_preview != hide_preview {
+            self.hide_preview = hide_preview;
+            self.touch();
+        }
     }
 
     pub fn access_token(&self) -> &str {
@@ -52,12 +62,14 @@ impl Document {
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
         access_token: String,
+        hide_preview: bool,
     ) -> Self {
         Self {
             id,
             title,
             created_at,
             updated_at,
+            hide_preview,
             access_token,
         }
     }
@@ -140,6 +152,19 @@ mod tests {
         let doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
         let value = serde_json::to_value(&doc).expect("document should serialize");
         assert!(value.get("access_token").is_none());
+    }
+
+    #[test]
+    fn document_serializes_preview_visibility_setting() {
+        let mut doc = Document::new(Uuid::new_v4(), Some("Test".to_owned()));
+        doc.set_hide_preview(true);
+
+        let value = serde_json::to_value(&doc).expect("document should serialize");
+
+        assert_eq!(
+            value.get("hide_preview").and_then(|value| value.as_bool()),
+            Some(true)
+        );
     }
 
     #[test]

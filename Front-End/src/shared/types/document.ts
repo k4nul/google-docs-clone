@@ -3,6 +3,7 @@ export interface BackendDocument {
   title: string;
   createdAt: string;
   updatedAt: string;
+  hidePreview: boolean;
 }
 
 export interface DocumentSummary {

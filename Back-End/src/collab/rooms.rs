@@ -110,21 +110,40 @@ impl Room {
     }
 
     pub fn rename_document(&self, title: String) -> Document {
+        self.update_document(Some(title), None)
+    }
+
+    pub fn update_document(&self, title: Option<String>, hide_preview: Option<bool>) -> Document {
         let mut document = self
             .document
             .write()
             .expect("room document lock should not be poisoned");
-        document.rename(title);
+        if let Some(title) = title {
+            document.rename(title);
+        }
+        if let Some(hide_preview) = hide_preview {
+            document.set_hide_preview(hide_preview);
+        }
         document.clone()
     }
 
     pub fn snapshot(&self) -> Result<DocumentSnapshot, StorageError> {
+        self.snapshot_with_touch(true)
+    }
+
+    pub fn catalog_snapshot(&self) -> Result<DocumentSnapshot, StorageError> {
+        self.snapshot_with_touch(false)
+    }
+
+    fn snapshot_with_touch(&self, touch_document: bool) -> Result<DocumentSnapshot, StorageError> {
         let mut document = self
             .document
             .read()
             .expect("room document lock should not be poisoned")
             .clone();
-        document.touch();
+        if touch_document {
+            document.touch();
+        }
 
         let awareness = self
             .awareness
@@ -135,10 +154,12 @@ impl Room {
             .transact()
             .encode_state_as_update_v1(&StateVector::default());
 
-        *self
-            .document
-            .write()
-            .expect("room document lock should not be poisoned") = document.clone();
+        if touch_document {
+            *self
+                .document
+                .write()
+                .expect("room document lock should not be poisoned") = document.clone();
+        }
 
         Ok(DocumentSnapshot::new(document, update))
     }
@@ -225,11 +246,20 @@ impl RoomRegistry {
         doc_id: &Uuid,
         title: String,
     ) -> Result<Option<Document>, StorageError> {
+        self.update_document(doc_id, Some(title), None)
+    }
+
+    pub fn update_document(
+        &self,
+        doc_id: &Uuid,
+        title: Option<String>,
+        hide_preview: Option<bool>,
+    ) -> Result<Option<Document>, StorageError> {
         let Some(room) = self.get_or_restore(doc_id)? else {
             return Ok(None);
         };
 
-        room.rename_document(title);
+        room.update_document(title, hide_preview);
         let snapshot = room.snapshot()?;
         let document = snapshot.document.clone();
         self.snapshot_store.save_snapshot(snapshot)?;
@@ -309,26 +339,37 @@ impl RoomRegistry {
         }
     }
 
-    pub fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
-        let mut documents = self
+    pub fn list_document_snapshots(&self) -> Result<Vec<DocumentSnapshot>, StorageError> {
+        let mut snapshots = self
             .snapshot_store
-            .list_documents()?
+            .list_snapshots()?
             .into_iter()
-            .map(|document| (document.id, document))
+            .map(|snapshot| (snapshot.document.id, snapshot))
             .collect::<BTreeMap<_, _>>();
 
         for entry in self.rooms.iter() {
-            let document = entry.value().document();
-            documents.insert(document.id, document);
+            let snapshot = entry.value().catalog_snapshot()?;
+            snapshots.insert(snapshot.document.id, snapshot);
         }
 
-        let mut documents = documents.into_values().collect::<Vec<_>>();
+        let mut snapshots = snapshots.into_values().collect::<Vec<_>>();
 
-        documents.sort_by(|left, right| {
-            left.created_at
-                .cmp(&right.created_at)
-                .then_with(|| left.id.cmp(&right.id))
+        snapshots.sort_by(|left, right| {
+            left.document
+                .created_at
+                .cmp(&right.document.created_at)
+                .then_with(|| left.document.id.cmp(&right.document.id))
         });
+
+        Ok(snapshots)
+    }
+
+    pub fn list_documents(&self) -> Result<Vec<Document>, StorageError> {
+        let documents = self
+            .list_document_snapshots()?
+            .into_iter()
+            .map(|snapshot| snapshot.document)
+            .collect();
 
         Ok(documents)
     }

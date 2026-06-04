@@ -6,6 +6,7 @@ import {
   getStoredDocumentAccessToken,
   listBackendDocuments,
   storeDocumentAccessToken,
+  updateBackendDocumentSecurity,
   updateBackendDocumentTitle,
 } from './documents';
 
@@ -133,6 +134,7 @@ describe('document API client', () => {
           title: 'Loaded document',
           created_at: '2026-04-03T10:00:00.000Z',
           updated_at: '2026-04-03T10:05:00.000Z',
+          hide_preview: true,
         },
       }),
     );
@@ -148,6 +150,7 @@ describe('document API client', () => {
       title: 'Loaded document',
       createdAt: '2026-04-03T10:00:00.000Z',
       updatedAt: '2026-04-03T10:05:00.000Z',
+      hidePreview: true,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -183,6 +186,7 @@ describe('document API client', () => {
         title: 'Realtime draft',
         createdAt: '2026-04-04T10:00:00.000Z',
         updatedAt: '2026-04-04T10:00:00.000Z',
+        hidePreview: false,
       },
       credentials: {
         accessToken: 'created-doc-token',
@@ -272,6 +276,7 @@ describe('document API client', () => {
       title: 'Renamed draft',
       createdAt: '2026-04-04T10:00:00.000Z',
       updatedAt: '2026-04-04T10:05:00.000Z',
+      hidePreview: false,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -280,6 +285,52 @@ describe('document API client', () => {
       expect.objectContaining({
         method: 'PATCH',
         body: JSON.stringify({ title: 'Renamed draft' }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer stored-doc-token',
+        }),
+      }),
+    );
+  });
+
+  it('updates backend document security settings with the stored credential', async () => {
+    window.localStorage.setItem(
+      'realtime-docs.document-credentials.v1',
+      JSON.stringify({
+        '55555555-5555-4555-8555-555555555555': 'stored-doc-token',
+      }),
+    );
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        document: {
+          id: '55555555-5555-4555-8555-555555555555',
+          title: 'Secured draft',
+          created_at: '2026-04-04T10:00:00.000Z',
+          updated_at: '2026-04-04T10:05:00.000Z',
+          hide_preview: true,
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      updateBackendDocumentSecurity(
+        '55555555-5555-4555-8555-555555555555',
+        { hidePreview: true },
+      ),
+    ).resolves.toEqual({
+      id: '55555555-5555-4555-8555-555555555555',
+      title: 'Secured draft',
+      createdAt: '2026-04-04T10:00:00.000Z',
+      updatedAt: '2026-04-04T10:05:00.000Z',
+      hidePreview: true,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '/api/documents/55555555-5555-4555-8555-555555555555',
+      ),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ hide_preview: true }),
         headers: expect.objectContaining({
           Authorization: 'Bearer stored-doc-token',
         }),

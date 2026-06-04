@@ -65,13 +65,18 @@ Response:
       "id": "00000000-0000-0000-0000-000000000000",
       "title": "Document 00000000-0000-0000-0000-000000000000",
       "created_at": "2026-04-17T14:00:00Z",
-      "updated_at": "2026-04-17T14:00:00Z"
+      "updated_at": "2026-04-17T14:00:00Z",
+      "hide_preview": false,
+      "preview_hidden": false,
+      "preview": "First useful text from the document body."
     }
   ]
 }
 ```
 
 active room과 snapshot store에 남아 있는 persisted document catalog를 합쳐 문서 목록을 반환한다.
+- `preview`는 저장된 Yrs `content` document update에서 plain text로 추출한 뒤 whitespace normalize와 180자 truncate를 적용한 값이다.
+- `hide_preview=true`인 문서는 목록 응답에서 body-derived `preview` 값을 직렬화하지 않고 `preview_hidden=true`만 반환한다. 제목, 생성/수정 시각 같은 비본문 메타데이터는 계속 반환한다.
 - snapshot store는 현재 `memory`, `file`, `agdb`, `amandine`, `append_log`, `apex_store`, `armdb`, `assystem`, `colon_db`, `flash_kv`, `ghaladb`, `blockbucket`, `grebedb`, `grumpydb`, `graus_db`, `highlandcows_isam`, `simple_db`, `docdb`, `emdb`, `osmiumdb`, `eight`, `epoch_db`, `etchdb`, `fastkv`, `ferrumdb`, `rumdb`, `rubin`, `shorterdb`, `sqlite`, `heed`, `hightower_kv`, `hmdb`, `hurrahdb`, `fs_db`, `sqjson`, `icefalldb`, `bitask`, `bitkv_rs`, `bitcask_engine`, `blazeup`, `candystore`, `celerix_store`, `citadeldb`, `cuendillar`, `data_pile`, `datastack`, `jammdb`, `mace`, `janql`, `jasondb`, `jasonisnthappy`, `jfs`, `json_store`, `json_db_rs`, `cdb64`, `json_mutex_db`, `toiletdb`, `feoxdb`, `jsondb`, `kopperdb`, `kv`, `koit`, `lite_db`, `lmdb_rs_core`, `log_kv`, `append_kv`, `mhdb`, `marble`, `loro_kv`, `luckdb`, `ipjdb`, `kagi`, `deeb`, `lsm_engine`, `lsm_storage_engine`, `lsmdb`, `lsm_tree`, `mindb`, `mmdb`, `mu_db`, `nanodb`, `fjall`, `persy`, `persistent_kv`, `native_db`, `nebari`, `nikidb`, `nodb`, `okofdb`, `parity_db`, `pickledb`, `rcask`, `microkv`, `redb`, `rskey`, `readb`, `rustlite`, `canopydb`, `caves`, `ckydb`, `crepedb`, `crystal`, `scdb`, `skv`, `surrealkv`, `sled`, `rustbreak`, `rustcask`, `rusty_leveldb`, `yedb`, `btree_store`, `cacache`, `siamesedb`, `structsy`, `abyssiniandb`, `aeternusdb`, `thunderdb`, `thetadb`, `tinybase`, `tinydb`, `dblite`, `dbless`, `db_rs`, `dharmadb`, `dir_cache`, `sanakirja`, `saturn`, `snaildb`, `tinykv`, `vsdb`, `yakv`, `yakvdb`, `saberdb`, `smolldb`, `kstone`, `roughdb`, `raindb`, `infusedb`, `kafi`, `tinkv`, `ledger_kv`, `joydb`, `png_db`, `s3`, `managed` durability backend를 지원한다.
 - `apex_store` 모드에서는 `SNAPSHOT_APEX_STORE_PATH` 디렉터리의 ApexStore WAL/SSTable LSM engine에서 explicit `__catalog__` key를 읽어 catalog를 복구하고, `mace` 모드에서는 `SNAPSHOT_MACE_PATH` 디렉터리의 Mace `snapshots` bucket과 explicit `__catalog__` key에서 catalog를 복구하며, `janql` 모드에서는 `SNAPSHOT_JANQL_PATH` 디렉터리의 janql WAL/SSTable keyspace에서 `doc_id` key와 explicit `__catalog__` key를 읽어 catalog를 복구한다.
 - `emdb` 모드에서는 `SNAPSHOT_EMDB_PATH` 단일 emdb 파일에 `doc_id` key와 explicit `__catalog__` key를 저장하고, adapter가 `EmdbBuilder::prefer_v4(true)`와 transaction + explicit `flush()` 경계로 v0.7 engine replay semantics를 고정한다.
@@ -166,14 +171,16 @@ Response:
 
 - `Authorization: Bearer <document-access-token>` 헤더가 필요하다.
 - Path parameter `id`는 UUID 형식이어야 한다.
+- `title` 또는 `hide_preview` 중 하나 이상을 포함해야 한다.
 - `title`은 trim 뒤 비어 있으면 `400` JSON 에러를 반환한다.
-- 제목 변경은 snapshot store에 즉시 저장되며, 이후 상세 조회와 문서 목록에 같은 제목이 반환된다.
+- 제목과 preview visibility 변경은 snapshot store에 즉시 저장되며, 이후 상세 조회와 문서 목록에 같은 설정이 반환된다.
 
 Request body:
 
 ```json
 {
-  "title": "Renamed design notes"
+  "title": "Renamed design notes",
+  "hide_preview": true
 }
 ```
 
@@ -185,7 +192,8 @@ Response:
     "id": "00000000-0000-0000-0000-000000000000",
     "title": "Renamed design notes",
     "created_at": "2026-04-17T14:00:00Z",
-    "updated_at": "2026-04-17T14:10:00Z"
+    "updated_at": "2026-04-17T14:10:00Z",
+    "hide_preview": true
   }
 }
 ```

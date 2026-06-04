@@ -608,6 +608,8 @@ struct PersistedDocument {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     access_token: String,
+    #[serde(default)]
+    hide_preview: bool,
 }
 
 impl From<DocumentSnapshot> for PersistedSnapshot {
@@ -622,6 +624,7 @@ impl From<DocumentSnapshot> for PersistedSnapshot {
                 created_at: document.created_at,
                 updated_at: document.updated_at,
                 access_token,
+                hide_preview: document.hide_preview,
             },
             update: snapshot.update,
         }
@@ -637,6 +640,7 @@ impl From<PersistedSnapshot> for DocumentSnapshot {
                 snapshot.document.created_at,
                 snapshot.document.updated_at,
                 snapshot.document.access_token,
+                snapshot.document.hide_preview,
             ),
             update: snapshot.update,
         }
@@ -662,6 +666,18 @@ pub trait SnapshotStore: Send + Sync {
     fn save_snapshot(&self, snapshot: DocumentSnapshot) -> Result<(), StorageError>;
     fn delete_snapshot(&self, doc_id: &Uuid) -> Result<(), StorageError>;
     fn list_documents(&self) -> Result<Vec<Document>, StorageError>;
+
+    fn list_snapshots(&self) -> Result<Vec<DocumentSnapshot>, StorageError> {
+        let mut snapshots = Vec::new();
+
+        for document in self.list_documents()? {
+            if let Some(snapshot) = self.load_snapshot(&document.id)? {
+                snapshots.push(snapshot);
+            }
+        }
+
+        Ok(snapshots)
+    }
 }
 
 const SUPPORTED_SNAPSHOT_STORES: &[&str] = &[

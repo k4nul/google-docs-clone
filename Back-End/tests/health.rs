@@ -31,7 +31,7 @@ use std::{
 use tokio::{net::TcpListener, task::JoinHandle};
 use uuid::Uuid;
 use yrs::{
-    Doc, GetString, ReadTxn, StateVector, Text, Transact, Update,
+    Doc, GetString, ReadTxn, StateVector, Text, Transact, Update, XmlFragment, XmlTextPrelim,
     sync::{AwarenessUpdate, Message, SyncMessage, awareness::AwarenessUpdateEntry},
     updates::{decoder::Decode, encoder::Encode},
 };
@@ -2271,6 +2271,99 @@ async fn update_document_endpoint_renames_and_persists_document_title() {
     assert_eq!(
         list_payload["documents"][0]["title"].as_str(),
         Some("Final title")
+    );
+}
+
+#[tokio::test]
+async fn update_document_endpoint_hides_document_list_preview() {
+    let config = test_config();
+    let state = AppState::from_config(&config).expect("state should initialize");
+    let document = state
+        .rooms()
+        .create_document(Some("Private notes".to_owned()))
+        .expect("document should be created");
+    let room = state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have an active room");
+    let preview_text = "Sensitive launch plan for credentialed collaborators only.";
+
+    {
+        let awareness = room.awareness();
+        let awareness = awareness.write().await;
+        let content = awareness.doc().get_or_insert_xml_fragment("content");
+        let mut txn = awareness.doc().transact_mut();
+        content.push_back(&mut txn, XmlTextPrelim::new(preview_text));
+    }
+
+    let access_token = document.access_token().to_owned();
+    let app = build_app(&config, state).expect("app should build");
+    let server = TestServer::new(app);
+
+    let visible_list_response = server
+        .get("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .await;
+    visible_list_response.assert_status_ok();
+    let visible_list_payload = visible_list_response.json::<Value>();
+    assert_eq!(
+        visible_list_payload["documents"][0]["preview"].as_str(),
+        Some(preview_text)
+    );
+    assert_eq!(
+        visible_list_payload["documents"][0]["preview_hidden"].as_bool(),
+        Some(false)
+    );
+
+    let update_response = server
+        .patch(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .json(&serde_json::json!({ "hide_preview": true }))
+        .await;
+    update_response.assert_status_ok();
+    let update_payload = update_response.json::<Value>();
+    assert_eq!(
+        update_payload["document"]["hide_preview"].as_bool(),
+        Some(true)
+    );
+
+    let hidden_list_response = server
+        .get("/api/documents")
+        .add_header("Authorization", admin_auth_header(&config).as_str())
+        .await;
+    hidden_list_response.assert_status_ok();
+    let hidden_list_payload = hidden_list_response.json::<Value>();
+    assert!(hidden_list_payload["documents"][0]["preview"].is_null());
+    assert_eq!(
+        hidden_list_payload["documents"][0]["preview_hidden"].as_bool(),
+        Some(true)
+    );
+    assert_eq!(
+        hidden_list_payload["documents"][0]["hide_preview"].as_bool(),
+        Some(true)
+    );
+    assert!(
+        !serde_json::to_string(&hidden_list_payload)
+            .expect("list response should serialize")
+            .contains(preview_text),
+        "hidden list response should not include redacted preview text"
+    );
+
+    let detail_response = server
+        .get(&format!("/api/documents/{}", document.id))
+        .add_header(
+            "Authorization",
+            document_auth_header(&access_token).as_str(),
+        )
+        .await;
+    detail_response.assert_status_ok();
+    let detail_payload = detail_response.json::<Value>();
+    assert_eq!(
+        detail_payload["document"]["hide_preview"].as_bool(),
+        Some(true)
     );
 }
 

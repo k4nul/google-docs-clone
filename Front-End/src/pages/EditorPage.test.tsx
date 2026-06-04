@@ -90,6 +90,7 @@ function createBackendDocument(
     title: 'Project brief',
     createdAt: 'created-on',
     updatedAt: 'updated-on',
+    hidePreview: false,
     ...overrides,
   };
 }

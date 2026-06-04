@@ -19,6 +19,7 @@ struct StructsySnapshotRecord {
     updated_at_seconds: i64,
     updated_at_subsec_nanos: u32,
     access_token: String,
+    hide_preview: bool,
     update: Vec<u8>,
 }
 
@@ -86,6 +87,7 @@ impl StructsySnapshotStore {
             updated_at_seconds: document.updated_at.timestamp(),
             updated_at_subsec_nanos: document.updated_at.timestamp_subsec_nanos(),
             access_token,
+            hide_preview: document.hide_preview,
             update: snapshot.update,
         }
     }
@@ -117,6 +119,7 @@ impl StructsySnapshotStore {
                 created_at,
                 updated_at,
                 record.access_token,
+                record.hide_preview,
             ),
             record.update,
         ))

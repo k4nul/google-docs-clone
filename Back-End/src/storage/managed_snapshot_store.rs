@@ -31,6 +31,8 @@ struct ManagedSnapshotDocument {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     access_token: String,
+    #[serde(default)]
+    hide_preview: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,6 +117,7 @@ impl ManagedSnapshotPayload {
                 created_at: document.created_at,
                 updated_at: document.updated_at,
                 access_token,
+                hide_preview: document.hide_preview,
             },
             update: snapshot.update,
         }
@@ -144,6 +147,7 @@ impl ManagedSnapshotDocument {
             self.created_at,
             self.updated_at,
             self.access_token,
+            self.hide_preview,
         ))
     }
 }

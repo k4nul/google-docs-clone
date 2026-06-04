@@ -20,6 +20,7 @@ struct SnapshotRow {
     created_at: String,
     updated_at: String,
     access_token: String,
+    hide_preview: bool,
     update: Vec<u8>,
 }
 
@@ -64,11 +65,45 @@ impl SqliteSnapshotStore {
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     access_token TEXT NOT NULL,
+                    hide_preview INTEGER NOT NULL DEFAULT 0,
                     update_bytes BLOB NOT NULL
                 );",
             )
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        if !self.table_has_column(connection, "snapshots", "hide_preview")? {
+            connection
+                .execute(
+                    "ALTER TABLE snapshots
+                     ADD COLUMN hide_preview INTEGER NOT NULL DEFAULT 0",
+                    params![],
+                )
+                .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        }
         Ok(())
+    }
+
+    fn table_has_column(
+        &self,
+        connection: &Connection,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<bool, StorageError> {
+        let mut statement = connection
+            .prepare(&format!("PRAGMA table_info({table_name})"))
+            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+        let columns = statement
+            .query_map(params![], |row| row.get::<_, String>(1))
+            .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+
+        for column in columns {
+            let column = column
+                .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
+            if column == column_name {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     fn snapshot_from_row(&self, row: SnapshotRow) -> Result<DocumentSnapshot, StorageError> {
@@ -98,6 +133,7 @@ impl SqliteSnapshotStore {
                 created_at,
                 updated_at,
                 row.access_token,
+                row.hide_preview,
             ),
             row.update,
         ))
@@ -110,7 +146,7 @@ impl SqliteSnapshotStore {
     ) -> Result<Option<SnapshotRow>, StorageError> {
         connection
             .query_row(
-                "SELECT doc_id, title, created_at, updated_at, access_token, update_bytes
+                "SELECT doc_id, title, created_at, updated_at, access_token, hide_preview, update_bytes
                  FROM snapshots
                  WHERE doc_id = ?1",
                 [doc_id.to_string()],
@@ -121,7 +157,8 @@ impl SqliteSnapshotStore {
                         created_at: row.get(2)?,
                         updated_at: row.get(3)?,
                         access_token: row.get(4)?,
-                        update: row.get(5)?,
+                        hide_preview: row.get::<_, i64>(5)? != 0,
+                        update: row.get(6)?,
                     })
                 },
             )
@@ -154,13 +191,15 @@ impl SnapshotStore for SqliteSnapshotStore {
                     created_at,
                     updated_at,
                     access_token,
+                    hide_preview,
                     update_bytes
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                 ON CONFLICT(doc_id) DO UPDATE SET
                     title = excluded.title,
                     created_at = excluded.created_at,
                     updated_at = excluded.updated_at,
                     access_token = excluded.access_token,
+                    hide_preview = excluded.hide_preview,
                     update_bytes = excluded.update_bytes",
                 params![
                     document.id.to_string(),
@@ -168,6 +207,7 @@ impl SnapshotStore for SqliteSnapshotStore {
                     document.created_at.to_rfc3339(),
                     document.updated_at.to_rfc3339(),
                     access_token,
+                    if document.hide_preview { 1_i64 } else { 0_i64 },
                     snapshot.update,
                 ],
             )
@@ -193,7 +233,7 @@ impl SnapshotStore for SqliteSnapshotStore {
         self.initialize_schema(&connection)?;
         let mut statement = connection
             .prepare(
-                "SELECT doc_id, title, created_at, updated_at, access_token, update_bytes
+                "SELECT doc_id, title, created_at, updated_at, access_token, hide_preview, update_bytes
                  FROM snapshots
                  ORDER BY created_at ASC, doc_id ASC",
             )
@@ -206,7 +246,8 @@ impl SnapshotStore for SqliteSnapshotStore {
                     created_at: row.get(2)?,
                     updated_at: row.get(3)?,
                     access_token: row.get(4)?,
-                    update: row.get(5)?,
+                    hide_preview: row.get::<_, i64>(5)? != 0,
+                    update: row.get(6)?,
                 })
             })
             .map_err(|error| StorageError::Io(format!("{}: {error}", self.path.display())))?;
