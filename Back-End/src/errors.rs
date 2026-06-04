@@ -76,11 +76,7 @@ impl AppError {
 }
 
 fn build_redirect_url(base_url: &str, request_uri: &Uri) -> String {
-    let path_and_query = request_uri
-        .path_and_query()
-        .map(|value| value.as_str())
-        .unwrap_or("/");
-    format!("{base_url}{path_and_query}")
+    format!("{base_url}{}", request_uri.path())
 }
 
 fn header_value_or_log(header_name: &str, value: &str) -> Option<HeaderValue> {
@@ -95,6 +91,83 @@ fn header_value_or_log(header_name: &str, value: &str) -> Option<HeaderValue> {
             );
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn remote_owner_error(base_url: &str) -> AppError {
+        AppError::RemoteOwner {
+            message: "document is owned by another collaboration node".to_owned(),
+            owner_node_id: "node-b".to_owned(),
+            owner_base_url: Some(base_url.to_owned()),
+            redirect_url: None,
+        }
+    }
+
+    fn redirect_url_for_request(request_uri: &str) -> Option<String> {
+        let request_uri = request_uri
+            .parse::<Uri>()
+            .expect("test request URI should parse");
+
+        match remote_owner_error("https://node-b.example.test")
+            .with_redirect_from_request(&request_uri)
+        {
+            AppError::RemoteOwner { redirect_url, .. } => redirect_url,
+            other => panic!("expected remote-owner error, received {other:?}"),
+        }
+    }
+
+    #[test]
+    fn remote_owner_redirect_preserves_path() {
+        assert_eq!(
+            redirect_url_for_request("/api/documents/00000000-0000-4000-8000-000000000000")
+                .as_deref(),
+            Some("https://node-b.example.test/api/documents/00000000-0000-4000-8000-000000000000")
+        );
+    }
+
+    #[test]
+    fn remote_owner_redirect_strips_query_parameters() {
+        assert_eq!(
+            redirect_url_for_request(
+                "/ws/00000000-0000-4000-8000-000000000000?access_token=document-token"
+            )
+            .as_deref(),
+            Some("https://node-b.example.test/ws/00000000-0000-4000-8000-000000000000")
+        );
+    }
+
+    #[test]
+    fn remote_owner_response_headers_do_not_include_request_query_parameters() {
+        let request_uri = "/ws/00000000-0000-4000-8000-000000000000?access_token=document-token"
+            .parse::<Uri>()
+            .expect("test request URI should parse");
+        let response = remote_owner_error("https://node-b.example.test")
+            .with_redirect_from_request(&request_uri)
+            .into_response();
+
+        let location = response
+            .headers()
+            .get(LOCATION)
+            .expect("remote-owner response should include a Location header")
+            .to_str()
+            .expect("Location header should be ASCII");
+        let collab_location = response
+            .headers()
+            .get("x-collab-redirect-location")
+            .expect("remote-owner response should include a collaboration redirect header")
+            .to_str()
+            .expect("collaboration redirect header should be ASCII");
+
+        assert_eq!(
+            location,
+            "https://node-b.example.test/ws/00000000-0000-4000-8000-000000000000"
+        );
+        assert_eq!(collab_location, location);
+        assert!(!location.contains("access_token"));
     }
 }
 

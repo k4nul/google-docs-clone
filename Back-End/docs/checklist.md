@@ -529,6 +529,7 @@ backend 역할 종료는 필요조건일 뿐 충분조건이 아니며, `## Role
 - [x] config-driven `StaticRoomLocator`와 owner hint 응답 계약 추가
 - [x] `RoomCoordinator` session lifecycle hook 경계 추가
 - [x] config-driven `RoomCoordinator` selection과 logging dry-run mode 추가
+- [x] remote-owner redirect headers strip WebSocket query credentials
 
 ## Execution Log
 

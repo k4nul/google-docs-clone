@@ -103,7 +103,7 @@ cargo check --features full-snapshot-stores
 
 문서 목록과 생성은 `Authorization: Bearer <API_TOKEN>` 헤더가 필요합니다. `POST /api/documents` 응답에는 문서 전용 `credentials.access_token`이 포함되고, 상세 조회/제목 변경/preview visibility 변경/삭제는 `Authorization: Bearer <document-access-token>`으로 보호됩니다. `GET /api/documents`는 저장된 Yrs `content` update에서 plain-text `preview`를 추출해 반환하지만, `hide_preview=true` 문서는 목록 응답에서 preview body를 보내지 않고 `preview_hidden=true`만 반환합니다. 브라우저 WebSocket은 임의 헤더를 보낼 수 없으므로 `/ws/:doc_id?access_token=<document-access-token>` 계약을 사용하며, non-browser 클라이언트는 같은 document token을 `Authorization` 헤더로 보낼 수 있습니다. 존재하지 않는 문서 ID로 상세 조회나 WebSocket 연결을 시도하면 `404`를 반환합니다. 활성 협업 WebSocket 세션이 남아 있는 문서를 삭제하려 하면 `409 conflict`를 반환합니다. WebSocket 핸드셰이크의 `Origin` 헤더는 `FRONTEND_ORIGIN` 정책과 일치해야 하며, `*` 또는 comma-separated origin 목록을 지원합니다. active room이 없으면 snapshot store에서 room을 복구하고, Yrs document update가 commit될 때마다 최신 snapshot을 저장합니다. 마지막 WebSocket 세션이 종료되면 한 번 더 snapshot을 저장한 뒤 idle room을 메모리에서 제거합니다.
 
-non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path/query를 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다.
+non-local owner 때문에 `409 conflict`가 반환될 때는 기존 JSON body와 함께 ingress/proxy 레이어가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 추가됩니다. `owner.base_url`이 있으면 canonical owner origin을 담은 `x-collab-owner-base-url`, 현재 요청 path만 owner origin에 붙인 `x-collab-redirect-location`, 그리고 표준 `Location` 헤더도 함께 실립니다. redirect URL은 WebSocket query credential이 헤더로 재노출되지 않도록 query string을 포함하지 않습니다.
 
 ## WebSocket Binary Format
 
@@ -635,7 +635,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 - authoritative coordination store는 최소 `get`, `acquire`, `renew`, `release` 네 동작을 제공해야 한다. 현재 저장소에는 이 계약을 만족하는 SQLite 구현이 포함된다.
 - owner record는 최소 `doc_id`, `node_id`, optional `base_url`, `lease_id`, `acquired_at`, `renewed_at`, `expires_at`, `epoch`를 저장해야 한다.
 - `owner.base_url`을 노출하는 경우 현재 `StaticRoomLocator`와 같은 규칙을 따라 path/query 없는 origin-only absolute `http://` 또는 `https://` URL만 허용하고, 응답에는 canonical origin (`scheme://authority`)으로 실어야 한다.
-- non-local owner conflict 응답은 항상 `x-collab-owner-node-id`를 포함하고, `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함해야 한다. redirect URL은 owner origin 뒤에 현재 요청의 path/query를 그대로 붙인 값이어야 한다.
+- non-local owner conflict 응답은 항상 `x-collab-owner-node-id`를 포함하고, `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 포함해야 한다. redirect URL은 owner origin 뒤에 현재 요청의 path만 붙인 값이어야 하며, WebSocket `access_token` 같은 query credential을 재노출하지 않도록 query string은 포함하지 않는다.
 - `lease_id`는 compare-and-swap 기준값이다. `renew`와 `release`는 현재 holder의 `lease_id`와 `node_id`가 모두 일치할 때만 성공해야 한다.
 - `epoch`는 lease 재획득마다 증가하는 fencing token이다. snapshot write, redirect metadata, future async side effect는 이 값을 함께 기록해 stale owner가 늦게 도착한 작업을 덮어쓰지 못하게 해야 한다.
 - `acquire`는 active lease가 없거나 `expires_at <= now`인 경우에만 새 owner를 기록해야 한다.

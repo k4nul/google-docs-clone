@@ -215,7 +215,7 @@ TEST_BASE_URL=http://localhost:4000 TEST_API_TOKEN=dev-admin-token cargo test --
 - `ROOM_COORDINATION_MANAGED_TIMEOUT_SECS`: managed coordination service HTTP timeout(초)
 - `NODE_ID`: 현재 collaboration node 식별자
 - `NODE_BASE_URL`: 현재 collaboration node를 다른 노드에 안내할 때 사용할 canonical origin-only base URL. `ROOM_COORDINATOR=file|sqlite|managed` lease state와 `ROOM_LOCATOR=file|sqlite|managed` conflict 응답의 `owner.base_url`에 반영된다.
-- non-local owner `409 conflict`가 발생하면 ingress/proxy가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 항상 붙고, `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 붙는다.
+- non-local owner `409 conflict`가 발생하면 ingress/proxy가 바로 사용할 수 있도록 `x-collab-owner-node-id` 헤더가 항상 붙고, `owner.base_url`이 있으면 `x-collab-owner-base-url`, `x-collab-redirect-location`, `Location` 헤더도 함께 붙는다. redirect URL은 현재 요청 path만 유지하고 query string은 포함하지 않아 WebSocket query credential을 헤더로 재노출하지 않는다.
 - `ROOM_OWNER_HINTS_PATH`: `ROOM_LOCATOR=static`일 때 owner hints JSON 파일 경로
 
 ## Snapshot Store Selection Guide
