@@ -12,7 +12,7 @@
 - `src/lib/export`: DOCX export utility
 - `src/shared/config`: 환경변수 파싱
 - `src/shared/types`: 공용 타입
-- `src/shared/ui`: 공용 레이아웃
+- `src/shared/ui`: shadcn-compatible local primitives, feedback states, layout helpers
 
 ## Boundary Rules
 
@@ -24,6 +24,7 @@
 - `src/lib/collab/*`는 Y.Doc, WebSocket endpoint construction, Yjs/Yrs binary sync protocol, provider cleanup을 담당한다. React component state와 DOM rendering을 import하지 않는다.
 - `src/lib/import`와 `src/lib/export`는 file conversion boundary다. editor feature는 import/export result만 받아 editor content에 적용한다.
 - `src/shared/*`는 cross-feature config, type, UI primitive만 제공한다. shared module이 route-specific orchestration을 소유하지 않는다.
+- `src/shared/ui` primitives는 external package dependency 없이 shadcn-style component API와 token names를 제공하며, page/feature code는 old `DesignSystem.tsx` compatibility surface를 import하지 않는다.
 
 ## Route Structure
 

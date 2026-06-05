@@ -1,7 +1,43 @@
 import type { Editor } from '@tiptap/react';
 
+import { Tooltip } from '@/shared/ui';
+
 interface EditorToolbarProps {
   editor: Editor | null;
+}
+
+interface ToolbarButtonProps {
+  children: string;
+  disabled: boolean;
+  label: string;
+  pressed?: boolean;
+  tooltip: string;
+  onClick: () => void;
+}
+
+function ToolbarButton({
+  children,
+  disabled,
+  label,
+  pressed,
+  tooltip,
+  onClick,
+}: ToolbarButtonProps) {
+  return (
+    <Tooltip content={tooltip}>
+      <button
+        aria-label={label}
+        aria-pressed={pressed}
+        className="toolbar-button"
+        disabled={disabled}
+        title={tooltip}
+        onClick={onClick}
+        type="button"
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
 }
 
 function toggleLink(editor: Editor) {
@@ -32,28 +68,24 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   return (
     <div aria-label="Editor toolbar" className="editor-toolbar" role="toolbar">
       <div aria-label="Text formatting" className="toolbar-group" role="group">
-        <button
-          aria-label="Toggle bold"
-          aria-pressed={editor?.isActive('bold') ?? false}
-          className="toolbar-button"
+        <ToolbarButton
           disabled={!editor}
-          title="Bold"
+          label="Toggle bold"
+          pressed={editor?.isActive('bold') ?? false}
+          tooltip="Bold"
           onClick={() => editor?.chain().focus().toggleBold().run()}
-          type="button"
         >
           B
-        </button>
-        <button
-          aria-label="Toggle italic"
-          aria-pressed={editor?.isActive('italic') ?? false}
-          className="toolbar-button"
+        </ToolbarButton>
+        <ToolbarButton
           disabled={!editor}
-          title="Italic"
+          label="Toggle italic"
+          pressed={editor?.isActive('italic') ?? false}
+          tooltip="Italic"
           onClick={() => editor?.chain().focus().toggleItalic().run()}
-          type="button"
         >
           I
-        </button>
+        </ToolbarButton>
       </div>
 
       <div
@@ -61,55 +93,47 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
         className="toolbar-group"
         role="group"
       >
-        <button
-          aria-label="Toggle bullet list"
-          aria-pressed={editor?.isActive('bulletList') ?? false}
-          className="toolbar-button"
+        <ToolbarButton
           disabled={!editor}
-          title="Bullet list"
+          label="Toggle bullet list"
+          pressed={editor?.isActive('bulletList') ?? false}
+          tooltip="Bullet list"
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          type="button"
         >
           List
-        </button>
-        <button
-          aria-label="Edit link"
-          aria-pressed={editor?.isActive('link') ?? false}
-          className="toolbar-button"
+        </ToolbarButton>
+        <ToolbarButton
           disabled={!editor}
-          title="Link"
+          label="Edit link"
+          pressed={editor?.isActive('link') ?? false}
+          tooltip="Link"
           onClick={() => {
             if (editor) {
               toggleLink(editor);
             }
           }}
-          type="button"
         >
           Link
-        </button>
+        </ToolbarButton>
       </div>
 
       <div aria-label="History" className="toolbar-group" role="group">
-        <button
-          aria-label="Undo"
-          className="toolbar-button"
+        <ToolbarButton
           disabled={!editor?.can().undo()}
-          title="Undo"
+          label="Undo"
+          tooltip="Undo"
           onClick={() => editor?.chain().focus().undo().run()}
-          type="button"
         >
           Undo
-        </button>
-        <button
-          aria-label="Redo"
-          className="toolbar-button"
+        </ToolbarButton>
+        <ToolbarButton
           disabled={!editor?.can().redo()}
-          title="Redo"
+          label="Redo"
+          tooltip="Redo"
           onClick={() => editor?.chain().focus().redo().run()}
-          type="button"
         >
           Redo
-        </button>
+        </ToolbarButton>
       </div>
     </div>
   );

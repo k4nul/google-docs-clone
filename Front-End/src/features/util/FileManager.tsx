@@ -4,7 +4,7 @@ import type { Editor } from '@tiptap/core';
 
 import { createDocxExportBlob } from '@/lib/export/documentExport';
 import { readEditorImportFile } from '@/lib/import/documentImport';
-import { Button } from '@/shared/ui/DesignSystem';
+import { Button } from '@/shared/ui';
 
 interface FileManagerProps {
   editor: Editor | null;

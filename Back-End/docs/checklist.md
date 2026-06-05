@@ -54,7 +54,7 @@
 ## Role Completion Gates
 
 - [ ] A: PM / Integration owner complete and cross-role handoff closed.
-- [ ] B: Frontend Editor / UI owner complete and backend contract integration accepted.
+- [x] B: Frontend Editor / UI owner complete and backend contract integration accepted.
 - [x] C: Backend Realtime / API owner complete and `cargo test --test backend_role_completion_gate -- --nocapture` is green.
 - [x] D: QA / Docs / DevOps owner complete and `cargo test --test qa_docs_devops_completion_gate -- --nocapture` is green.
 
@@ -78,7 +78,7 @@ D 역할 작업이 정말 끝났을 때만 그 단일 bullet을 `D 역할 종료
 backend 역할 종료는 필요조건일 뿐 충분조건이 아니며, `## Role Completion Gates`의 A/B/C/D가 모두 `[x]`가 되기 전에는 전체 종료를 선언하지 않는다.
 이전 프로젝트 실행 로그는 모두 아래 `## Project Status History`로 이동한다.
 
-- 2026-06-05: 프로젝트 미완료. backend C 역할과 QA/Docs/DevOps D 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A/B 완료와 전체 통합 종료 확인은 아직 남아 있다.
+- 2026-06-05: 프로젝트 미완료. Frontend B, backend C, QA/Docs/DevOps D 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A PM/Integration 완료와 전체 통합 종료 확인은 아직 남아 있다.
 
 ## Project Status History
 

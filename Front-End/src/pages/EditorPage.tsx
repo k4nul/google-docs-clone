@@ -20,11 +20,11 @@ import { ApiRequestError } from '@/lib/api/httpClient';
 import { appEnv } from '@/shared/config/env';
 import type { BackendDocument } from '@/shared/types/document';
 import {
+  Card,
   ErrorState,
   LinkButton,
   LoadingState,
-  Panel,
-} from '@/shared/ui/DesignSystem';
+} from '@/shared/ui';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
 function formatMetadataError(error: unknown) {
@@ -319,13 +319,13 @@ export function EditorPage() {
       <div className="editor-layout">
         <div className="editor-main-stack">
           {isDocumentLoading ? (
-            <Panel>
+            <Card>
               <LoadingState rows={2} title="Loading document metadata" />
-            </Panel>
+            </Card>
           ) : (
             <>
               {isCredentialRequired ? (
-                <Panel>
+                <Card>
                   <EditorAccessForm
                     description="Paste the access token created with this document to reopen it."
                     error={credentialError}
@@ -336,7 +336,7 @@ export function EditorPage() {
                     onSubmit={handleCredentialSubmit}
                     onValueChange={handleCredentialInputChange}
                   />
-                </Panel>
+                </Card>
               ) : document ? (
                 <EditorShell
                   docId={decodedDocId}
@@ -355,7 +355,7 @@ export function EditorPage() {
                   onTitleSubmit={handleTitleSubmit}
                 />
               ) : (
-                <Panel>
+                <Card>
                   <ErrorState
                     description={
                       documentError ?? 'Document metadata is unavailable.'
@@ -370,15 +370,15 @@ export function EditorPage() {
                     onSubmit={handleCredentialSubmit}
                     onValueChange={handleCredentialInputChange}
                   />
-                </Panel>
+                </Card>
               )}
             </>
           )}
           {notice ? (
-            <Panel>
+            <Card>
               <h2>File status</h2>
               <p className="muted">{notice}</p>
-            </Panel>
+            </Card>
           ) : null}
         </div>
 

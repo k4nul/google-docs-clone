@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { StatusPill } from '@/shared/ui/DesignSystem';
+import { Badge } from '@/shared/ui';
 
 interface PageLayoutProps {
   eyebrow: string;
@@ -29,8 +29,8 @@ export function PageLayout({
           </span>
         </Link>
         <div className="app-header__status">
-          <StatusPill tone="success">Autosave-ready</StatusPill>
-          <StatusPill>Secure workspace</StatusPill>
+          <Badge tone="success">Autosave-ready</Badge>
+          <Badge>Secure workspace</Badge>
         </div>
       </header>
 

@@ -1,6 +1,14 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@/shared/config/env', () => ({
+  appEnv: {
+    apiBaseUrl: 'http://localhost:4000/api',
+    apiToken: 'dev-admin-token',
+    wsUrl: 'ws://localhost:4000',
+  },
+}));
 
 import { HomePage } from './HomePage';
 
@@ -16,6 +24,7 @@ function jsonResponse(body: unknown) {
 describe('HomePage', () => {
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
     vi.unstubAllGlobals();
   });
 
@@ -130,5 +139,48 @@ describe('HomePage', () => {
       }),
     ).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates a backend document, stores its credential, and opens it', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ documents: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          credentials: {
+            access_token: 'created-doc-token',
+          },
+          document: {
+            id: '77777777-7777-4777-8777-777777777777',
+            title: 'Untitled document',
+            created_at: '2026-04-05T10:00:00.000Z',
+            updated_at: '2026-04-05T10:00:00.000Z',
+          },
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route element={<HomePage />} path="/" />
+          <Route element={<div>Opened editor route</div>} path="/docs/:docId" />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /new document/i }));
+
+    expect(await screen.findByText('Opened editor route')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'http://localhost:4000/api/documents',
+      expect.objectContaining({
+        body: JSON.stringify({ title: 'Untitled document' }),
+        method: 'POST',
+      }),
+    );
+    expect(
+      window.localStorage.getItem('realtime-docs.document-credentials.v1'),
+    ).toContain('created-doc-token');
   });
 });

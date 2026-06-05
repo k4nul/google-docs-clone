@@ -9,14 +9,15 @@ import { mockDocuments } from '@/features/documents/mockDocuments';
 import { appEnv } from '@/shared/config/env';
 import type { DocumentSummary } from '@/shared/types/document';
 import {
+  Badge,
   Button,
+  Card,
   EmptyState,
   ErrorState,
   LoadingState,
-  Panel,
   SearchInput,
-  StatusPill,
-} from '@/shared/ui/DesignSystem';
+  ScrollArea,
+} from '@/shared/ui';
 import { PageLayout } from '@/shared/ui/PageLayout';
 
 function formatUpdatedAt(value: string) {
@@ -167,7 +168,7 @@ export function HomePage() {
         />
       ) : null}
 
-      <Panel className="document-toolbar">
+      <Card className="document-toolbar">
         <div>
           <p className="section-kicker">Documents</p>
           <h2>Recent documents</h2>
@@ -183,11 +184,11 @@ export function HomePage() {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
-          <StatusPill tone={listStatus === 'fallback' ? 'warning' : 'neutral'}>
+          <Badge tone={listStatus === 'fallback' ? 'warning' : 'neutral'}>
             {listStatusLabel}
-          </StatusPill>
+          </Badge>
         </div>
-      </Panel>
+      </Card>
 
       {listError ? (
         <ErrorState
@@ -224,7 +225,7 @@ export function HomePage() {
           title={searchQuery ? 'No matching documents' : 'No documents yet'}
         />
       ) : (
-        <div className="document-list-scroll">
+        <ScrollArea className="document-list-scroll">
           <section className="document-grid" aria-label="Document list">
             {filteredDocuments.map((document) => (
               <Link
@@ -233,9 +234,9 @@ export function HomePage() {
                 to={`/docs/${document.id}`}
               >
                 <span className="document-card__topline">
-                  <span className="status-pill">
+                  <Badge>
                     {formatCollaborators(document.collaborators)}
-                  </span>
+                  </Badge>
                 </span>
                 <span className="document-card__body">
                   <h2 className="document-card__title">{document.title}</h2>
@@ -256,7 +257,7 @@ export function HomePage() {
               </Link>
             ))}
           </section>
-        </div>
+        </ScrollArea>
       )}
     </PageLayout>
   );

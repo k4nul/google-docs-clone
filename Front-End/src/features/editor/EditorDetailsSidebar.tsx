@@ -1,5 +1,5 @@
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
-import { StatusPill } from '@/shared/ui/DesignSystem';
+import { Badge } from '@/shared/ui';
 
 export type EditorDocumentDetailStatus =
   | 'loading'
@@ -34,25 +34,21 @@ export function EditorDetailsSidebar({
         </div>
         <div className="info-list">
           <span>
-            Document details: <code>{documentStatus}</code>
+            Open status: <strong>{documentStatus}</strong>
           </span>
           {documentTimestamps ? (
             <>
               <span>
-                Created: <code>{documentTimestamps.createdAt}</code>
+                Created {documentTimestamps.createdAt}
               </span>
               <span>
-                Updated: <code>{documentTimestamps.updatedAt}</code>
+                Updated {documentTimestamps.updatedAt}
               </span>
             </>
           ) : null}
           <span>
-            Collaboration:{' '}
-            <code>
-              {isCollaborationReady
-                ? 'ready'
-                : 'available after document details load'}
-            </code>
+            Collaboration{' '}
+            {isCollaborationReady ? 'is ready' : 'starts after access opens'}
           </span>
         </div>
       </section>
@@ -64,24 +60,22 @@ export function EditorDetailsSidebar({
         </div>
         <div className="info-list">
           <span>
-            Connection state: <code>{collaboration.connectionStatus}</code>
+            Connection {collaboration.connectionStatus}
           </span>
           <span>
-            My activity:{' '}
-            <code>{collaboration.isCurrentUserTyping ? 'typing' : 'idle'}</code>
+            You are {collaboration.isCurrentUserTyping ? 'typing' : 'idle'}
           </span>
           <span>
-            Last sync event:{' '}
-            <code>{collaboration.lastSyncedAt ?? 'not yet synced'}</code>
+            Last saved {collaboration.lastSyncedAt ?? 'not yet synced'}
           </span>
           <span>
-            Active users: <code>{collaboration.activeCollaborators.length}</code>
+            Active users {collaboration.activeCollaborators.length}
           </span>
         </div>
         <div className="presence-list">
           {collaboration.activeCollaborators.length > 0 ? (
             collaboration.activeCollaborators.map((collaborator) => (
-              <StatusPill
+              <Badge
                 key={collaborator.id}
                 tone={collaborator.isTyping ? 'success' : 'neutral'}
                 title={collaborator.color}
@@ -89,10 +83,10 @@ export function EditorDetailsSidebar({
                 {collaborator.name}
                 {collaborator.isCurrentUser ? ' (me)' : ''}
                 {collaborator.isTyping ? ' - typing' : ''}
-              </StatusPill>
+              </Badge>
             ))
           ) : (
-            <StatusPill>No active collaborators yet</StatusPill>
+            <Badge>No active collaborators yet</Badge>
           )}
         </div>
       </section>

@@ -31,7 +31,8 @@
 ## CSS Strategy
 
 - 전역 토큰과 레이아웃은 `src/index.css`에 둔다
-- 불필요한 UI 라이브러리 추가를 피한다
+- shadcn-compatible CSS variable names(`--background`, `--foreground`, `--card`, `--primary`, `--border`, `--ring`, `--radius`)를 유지한다
+- 불필요한 UI 라이브러리 추가를 피하되, 제품 방향에 맞춰 `src/shared/ui` local primitives는 shadcn-style API를 따른다
 - editor-specific styling은 전역 CSS 안에서 명시적으로 네이밍한다
 
 ## Test Rules

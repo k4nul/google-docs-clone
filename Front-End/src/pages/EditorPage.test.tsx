@@ -152,10 +152,8 @@ describe('EditorPage', () => {
         /Document metadata is loading before the editor joins the realtime workspace\./,
       ),
     ).toBeInTheDocument();
-    expectTextContent('Document details: loading');
-    expectTextContent(
-      'Collaboration: available after document details load',
-    );
+    expectTextContent('Open status: loading');
+    expectTextContent('Collaboration starts after access opens');
     expect(
       screen.queryByRole('region', { name: /mock editor shell/i }),
     ).not.toBeInTheDocument();
@@ -173,7 +171,7 @@ describe('EditorPage', () => {
     expect(
       await screen.findByRole('heading', { name: /credential required/i }),
     ).toBeInTheDocument();
-    expectTextContent('Document details: credential required');
+    expectTextContent('Open status: credential required');
     expect(getBackendDocumentMock).not.toHaveBeenCalled();
     expect(
       screen.queryByRole('region', { name: /mock editor shell/i }),
@@ -197,10 +195,10 @@ describe('EditorPage', () => {
       'team draft',
       'stored-doc-token',
     );
-    expectTextContent('Document details: ready');
-    expectTextContent('Created: created-on');
-    expectTextContent('Updated: updated-on');
-    expectTextContent('Collaboration: ready');
+    expectTextContent('Open status: ready');
+    expectTextContent('Created created-on');
+    expectTextContent('Updated updated-on');
+    expectTextContent('Collaboration is ready');
 
     await waitFor(() => expect(editorShellMock).toHaveBeenCalled());
     expect(latestEditorShellProps()).toMatchObject({
@@ -232,10 +230,8 @@ describe('EditorPage', () => {
         /Document metadata could not be loaded with the current credential\./,
       ),
     ).toBeInTheDocument();
-    expectTextContent('Document details: unavailable');
-    expectTextContent(
-      'Collaboration: available after document details load',
-    );
+    expectTextContent('Open status: unavailable');
+    expectTextContent('Collaboration starts after access opens');
 
     expect(editorShellMock).not.toHaveBeenCalled();
   });
@@ -258,7 +254,7 @@ describe('EditorPage', () => {
         'Document owned elsewhere Owner: node-b (http://node-b)',
       ),
     ).toBeInTheDocument();
-    expectTextContent('Document details: unavailable');
+    expectTextContent('Open status: unavailable');
     expect(editorShellMock).not.toHaveBeenCalled();
   });
 
@@ -297,10 +293,10 @@ describe('EditorPage', () => {
       });
     });
 
-    expectTextContent('Connection state: connected');
-    expectTextContent('My activity: typing');
-    expectTextContent('Last sync event: 10:45 AM');
-    expectTextContent('Active users: 2');
+    expectTextContent('Connection connected');
+    expectTextContent('You are typing');
+    expectTextContent('Last saved 10:45 AM');
+    expectTextContent('Active users 2');
     expectTextContent('Ada Lovelace (me) - typing');
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
   });

@@ -313,10 +313,13 @@ describe('EditorShell', () => {
       },
     });
 
-    expect(screen.getByText('team-room')).toBeInTheDocument();
-    expect(screen.getByText('Atlas')).toBeInTheDocument();
-    expect(screen.getByText('connecting')).toBeInTheDocument();
     expect(screen.getByText('Connecting autosave')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Connecting to realtime server'),
+    ).not.toHaveLength(0);
+    expect(screen.queryByLabelText('Realtime status')).not.toBeInTheDocument();
+    expect(screen.queryByText('team-room')).not.toBeInTheDocument();
+    expect(screen.queryByText('Atlas')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(onCollaborationChange).toHaveBeenLastCalledWith({
@@ -368,8 +371,8 @@ describe('EditorShell', () => {
       expect(screen.getAllByText('Realtime sync active')).not.toHaveLength(0),
     );
     expect(screen.getByText('Autosave ready')).toBeInTheDocument();
-    expect(screen.getByText('connected')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText('connected')).not.toBeInTheDocument();
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
     await waitFor(() =>
       expect(onCollaborationChange).toHaveBeenLastCalledWith({
         activeCollaborators: [
@@ -424,8 +427,8 @@ describe('EditorShell', () => {
     );
     expect(screen.getAllByText('Local-only mode')).not.toHaveLength(0);
     expect(screen.getByText('Local draft only')).toBeInTheDocument();
-    expect(screen.getByText('disabled')).toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('disabled')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(onCollaborationChange).toHaveBeenLastCalledWith({

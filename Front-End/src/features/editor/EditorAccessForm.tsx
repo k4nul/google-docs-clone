@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 
-import { Button } from '@/shared/ui/DesignSystem';
+import { Button, Input } from '@/shared/ui';
 
 interface EditorAccessFormProps {
   className?: string;
@@ -54,7 +54,7 @@ export function EditorAccessForm({
       <FormIntro description={description} heading={heading} kicker={kicker} />
       <label className="credential-form__field">
         <span>Access token</span>
-        <input
+        <Input
           autoComplete="off"
           value={value}
           onChange={(event) => onValueChange(event.target.value)}

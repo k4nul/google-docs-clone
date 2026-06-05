@@ -12,14 +12,12 @@ import {
 import {
   connectCollaborationConnection,
   createCollaborationConnection,
-  redactAccessToken,
   scheduleCollaborationConnectionDestroy,
-  type CollaborationConnection,
   type ProviderConnectionStatus,
 } from '@/lib/collab/connection';
 import { createPlaceholderCollaborationUser } from '@/lib/collab/user';
 import { appEnv } from '@/shared/config/env';
-import { StatusPill } from '@/shared/ui/DesignSystem';
+import { Badge, Button } from '@/shared/ui';
 
 import {
   createEditorExtensions,
@@ -55,12 +53,6 @@ interface EditorShellProps {
   titleStatus?: 'idle' | 'saving';
 }
 
-type WebsocketTransportStatus =
-  | 'connected'
-  | 'connecting'
-  | 'disconnected'
-  | 'disabled';
-
 type AutosaveStatus =
   | 'connecting'
   | 'local-only'
@@ -68,12 +60,6 @@ type AutosaveStatus =
   | 'ready'
   | 'saved'
   | 'saving';
-
-interface RealtimeDebugState {
-  synced: boolean;
-  transport: WebsocketTransportStatus;
-  url: string | null;
-}
 
 function getConnectionMode(status: ProviderConnectionStatus) {
   if (status === 'local-only') {
@@ -150,30 +136,6 @@ function getAutosaveTone(status: AutosaveStatus) {
   return 'neutral';
 }
 
-function getRealtimeDebugState(
-  connection: CollaborationConnection,
-): RealtimeDebugState {
-  const { provider } = connection;
-
-  if (!provider) {
-    return {
-      synced: false,
-      transport: 'disabled',
-      url: null,
-    };
-  }
-
-  return {
-    synced: provider.synced,
-    transport: provider.wsconnected
-      ? 'connected'
-      : provider.wsconnecting
-        ? 'connecting'
-        : 'disconnected',
-    url: redactAccessToken(provider.url),
-  };
-}
-
 export function EditorShell({
   documentAccessToken = null,
   docId,
@@ -224,9 +186,6 @@ export function EditorShell({
       Boolean(connection.provider),
     ),
   );
-  const [realtimeDebug, setRealtimeDebug] = useState(() =>
-    getRealtimeDebugState(connection),
-  );
   const visibleConnectionStatus = connection.provider
     ? connectionStatus
     : 'local-only';
@@ -272,10 +231,6 @@ export function EditorShell({
       return undefined;
     }
 
-    const refreshRealtimeDebug = () => {
-      setRealtimeDebug(getRealtimeDebugState(connection));
-    };
-
     const unsubscribeStatus = provider.onStatusChange((status) => {
       connectionStatusRef.current = status;
       setConnectionStatus(status);
@@ -292,7 +247,6 @@ export function EditorShell({
 
         return getAutosaveStatus(status, true);
       });
-      refreshRealtimeDebug();
     });
 
     const updateCollaborators = () => {
@@ -312,7 +266,6 @@ export function EditorShell({
       });
 
       setActiveCollaborators(collaborators);
-      refreshRealtimeDebug();
     };
 
     provider.awareness.setLocalState({
@@ -443,8 +396,9 @@ export function EditorShell({
                   })
                 }
               />
-              <button
-                className="ui-button ui-button--secondary ui-button--sm"
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={
                   titleStatus === 'saving' ||
                   draftTitle.trim() === '' ||
@@ -453,7 +407,7 @@ export function EditorShell({
                 type="submit"
               >
                 {titleStatus === 'saving' ? 'Saving...' : 'Save title'}
-              </button>
+              </Button>
             </form>
           ) : (
             <h2>{documentTitle}</h2>
@@ -466,38 +420,19 @@ export function EditorShell({
           {titleError ? <p className="form-error">{titleError}</p> : null}
         </div>
         <div className="editor-status-group">
-          <StatusPill tone={getAutosaveTone(visibleAutosaveStatus)}>
+          <Badge tone={getAutosaveTone(visibleAutosaveStatus)}>
             {getAutosaveLabel(visibleAutosaveStatus)}
-          </StatusPill>
-          <StatusPill
+          </Badge>
+          <Badge
             tone={
               visibleConnectionStatus === 'connected' ? 'success' : 'warning'
             }
           >
             {getConnectionMode(visibleConnectionStatus)}
-          </StatusPill>
-          <StatusPill>{isCurrentUserTyping ? 'Typing' : 'Idle'}</StatusPill>
+          </Badge>
+          <Badge>{isCurrentUserTyping ? 'Typing' : 'Idle'}</Badge>
         </div>
       </header>
-
-      <div className="editor-status-strip" aria-label="Realtime status">
-        <span className="editor-status-item">
-          Room
-          <strong>{docId}</strong>
-        </span>
-        <span className="editor-status-item">
-          User
-          <strong>{user.name}</strong>
-        </span>
-        <span className="editor-status-item">
-          Transport
-          <strong>{realtimeDebug.transport}</strong>
-        </span>
-        <span className="editor-status-item">
-          Peers
-          <strong>{activeCollaborators.length}</strong>
-        </span>
-      </div>
 
       <div className="sr-only" aria-live="polite">
         <span>{getConnectionMode(connectionStatus)}</span>

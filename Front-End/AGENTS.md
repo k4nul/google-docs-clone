@@ -120,11 +120,11 @@
     "custom_binary_provider_integrated": true,
     "docx_import_export_integrated": true,
     "persisted_draft_save_mutation": true,
+    "shadcn_ui_migration": true,
     "build_ready": true,
     "test_ready": true
   },
   "remaining": {
-    "dedicated_codeowners_handles": true,
-    "shadcn_ui_migration": true
+    "dedicated_codeowners_handles": true
   }
 }

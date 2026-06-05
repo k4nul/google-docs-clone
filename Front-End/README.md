@@ -70,11 +70,12 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - editor content 변경은 Yjs update를 통해 백엔드 snapshot persistence로 전송되며, 편집기 헤더는 연결/저장/일시 중단 상태를 autosave UI로 표시한다.
 - DOCX import는 sanitize 경계를 거쳐 editor content에 반영되고, DOCX export는 editor HTML을 `docx` package model로 변환한다.
 - presence participant list, connection status, typing state, last sync time이 editor details surface에 표시된다.
+- `src/shared/ui`는 shadcn-compatible local primitives(`Button`, `Card`, `Badge`, `Input`, `ScrollArea`, `Tooltip`, feedback states)와 CSS variable tokens를 제공하고, 기존 bespoke `DesignSystem.tsx` surface는 retired 상태다.
+- editor shell과 details sidebar는 room id, raw transport state, generated user id 같은 debug metadata 대신 save status, access status, timestamps, collaborator presence를 사용자용 copy로 표시한다.
 
 ### 남은 작업
 
 - dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결해야 한다.
-- 현재 UI는 `src/shared/ui/DesignSystem.tsx`와 `src/index.css` 기반 custom design system이다. shadcn/ui 전환은 `docs/product-direction.md`의 다음 제품 방향 작업으로 남아 있다.
 
 ## 커밋 규칙
 
