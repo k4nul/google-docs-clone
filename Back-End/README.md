@@ -79,7 +79,7 @@ cargo check --features full-snapshot-stores
 ## 역할 분담
 
 - `A` PM / Integration: 범위 정의, 일정 관리, 프런트-백엔드 계약 조율, 통합 우선순위 결정
-- `B` Frontend Editor / UI Owner: 프런트 전용 레포에서 편집기 UI를 구현하고, 이 백엔드 레포에는 API/WS 계약과 연결 검증 문서만 반영
+- `B` Frontend Editor / UI Owner: 같은 repository의 `Front-End/` workspace에서 편집기 UI, provider 연결, 문서 진입 흐름, 사용자 상호작용을 구현하고 backend API/WS 계약 변경점을 함께 조율
 - `C` Backend Realtime / API Owner: HTTP API, room registry, WebSocket 협업, CRDT 서버 구조 유지
 - `D` QA / Docs / DevOps Owner: 테스트 실행, 문서 최신화, 실행 절차 검증, 릴리스/운영 준비
 
@@ -461,7 +461,7 @@ README에는 위 질문만 남기고, backend별 저장 단위와 손상/복구 
 
 - provider awareness payload 연동
 - 외부 저장소 adapter 추가
-- 별도 frontend 레포와 provider / editor 연동 계약 고도화
+- `Front-End/` workspace와 provider / editor 연동 계약 고도화
 - 추가 vendor-specific database durability backend
 
 ## Snapshot Restore / Eviction Policy

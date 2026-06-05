@@ -21,4 +21,8 @@
 - [x] presence participant list와 connection status indicator 고도화
 - [x] persisted draft/save mutation 및 error handling 추가
 - [x] shadcn-compatible shared UI primitives로 bespoke `DesignSystem.tsx` surface retired
-- [ ] dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결
+- [x] 루트 `.github/CODEOWNERS`의 `@System-Docs-H` baseline으로 문서상 A/B/C/D 역할 구간을 enforcing owner 경계에 연결
+
+## External Owner Provisioning
+
+- dedicated GitHub users/teams가 준비되면 `@System-Docs-H` baseline owner를 실제 팀/사용자 핸들로 교체한다. 이 계정 provisioning은 프론트엔드 구현 완료나 로컬 검증 완료를 막는 구현 gate가 아니다.

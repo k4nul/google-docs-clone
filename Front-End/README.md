@@ -73,9 +73,11 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
 - `src/shared/ui`는 shadcn-compatible local primitives(`Button`, `Card`, `Badge`, `Input`, `ScrollArea`, `Tooltip`, feedback states)와 CSS variable tokens를 제공하고, 기존 bespoke `DesignSystem.tsx` surface는 retired 상태다.
 - editor shell과 details sidebar는 room id, raw transport state, generated user id 같은 debug metadata 대신 save status, access status, timestamps, collaborator presence를 사용자용 copy로 표시한다.
 
-### 남은 작업
+### 운영 후속 작업
 
-- dedicated GitHub users/teams를 준비해 문서상 A/B/C/D 역할 구간을 실제 CODEOWNERS enforcing owner로 연결해야 한다.
+- 프론트엔드 구현과 로컬 검증 gate는 완료 상태다.
+- 루트 `.github/CODEOWNERS`의 `@System-Docs-H` baseline owner가 현재 A/B/C/D 역할 경계를 enforce한다.
+- dedicated GitHub users/teams가 준비되면 baseline owner를 실제 팀/사용자 핸들로 교체한다. 이 계정 provisioning은 구현 완료 조건이 아니라 운영 계정 후속 작업이다.
 
 ## 커밋 규칙
 
@@ -134,7 +136,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
   - `npm run lint`
   - `npm run test`
   - `npm run typecheck`
-- 같은 품질 게이트가 루트 `.github/workflows/ci.yml`의 frontend job에서도 통과되어야 한다. 프론트엔드 전용 package-local workflow mirror는 두지 않고 루트 workflow를 단일 CI entry point로 유지한다.
+- 같은 품질 게이트가 활성 CI entry point인 루트 `.github/workflows/ci.yml`의 frontend job에서도 통과되어야 한다. `Front-End/.github/workflows/ci.yml`은 legacy nested frontend workflow 파일이며, 이 root repository의 활성 GitHub Actions workflow로 사용되지 않는다.
 - UI 변경이 있으면 PR 설명에 변경 화면이나 동작 요약을 함께 남긴다.
 - API, route, provider 계약이 바뀌면 관련 `docs/` 문서도 함께 포함한다.
 - README나 운영 규칙 변경도 PR 설명에 이유를 명확히 적는다.
@@ -248,8 +250,8 @@ npm run preview
 
 해결:
 
-- 홈 화면에 `New document` 버튼 추가
-- `POST /api/documents`로 실제 문서를 생성한 뒤 해당 UUID로 이동
+- 홈 화면의 `New document` 버튼으로 `POST /api/documents`를 호출
+- 생성된 실제 backend 문서 UUID로 이동
 
 ### 3. 문서 경로 전달 정리
 
@@ -299,7 +301,7 @@ VITE_WS_URL=ws://localhost:4000
 
 ```text
 [collab] websocket connect requested {
-  endpoint: "ws://localhost:4000/ws/<uuid>",
+  endpoint: "ws://localhost:4000/ws/<uuid>?access_token=%5Bredacted%5D",
   roomId: "<uuid>",
   status: "connecting"
 }

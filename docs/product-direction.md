@@ -1,9 +1,18 @@
 # Product Direction Change
 
 Date: 2026-05-27
-Last updated: 2026-05-28
+Last updated: 2026-06-05
 
-This document is an implementation directive for the next automation pass. It records the requested product direction change only. Do not treat this document as evidence that the current implementation already behaves this way.
+This document records the May 2026 implementation directive and is retained as historical product direction. Do not treat the original directive text below as the current next-task queue.
+
+## Implementation Status
+
+As of 2026-06-05, local repository evidence shows this direction has been integrated:
+
+- `Front-End/README.md` records the credentialed document workspace, shadcn-compatible local primitives, user-facing recent documents, preview redaction, inline rename, and removal of the old bespoke `DesignSystem.tsx` surface.
+- `Back-End/README.md` and `Back-End/docs/api.md` record document `credentials.access_token`, credential-protected detail/title/security/delete operations, browser-compatible `/ws/:doc_id?access_token=<document-token>`, hidden previews, and snapshot persistence.
+- `docs/onboarding.md`, `docs/testing.md`, and `docs/troubleshooting.md` now describe the implemented cross-stack local flow rather than a demo-only editor flow.
+- `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` mark the local implementation and role handoff gates complete. Dedicated GitHub user/team provisioning remains an external account follow-up, not a product implementation blocker.
 
 ## Scope
 

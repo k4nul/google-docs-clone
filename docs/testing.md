@@ -25,7 +25,7 @@ npm run typecheck
 
 Frontend unit and component tests use Vitest/jsdom and mocked `fetch` boundaries, so they do not require a live backend. Run the local backend and Vite dev server only for manual cross-stack create/open/edit checks.
 
-The root `.github/workflows/ci.yml` workflow runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path. The repository intentionally keeps a single active workflow entry point at the root instead of a frontend-local mirror.
+The root `.github/workflows/ci.yml` workflow is the active CI entry point and runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path. `Front-End/.github/workflows/ci.yml` is a legacy nested frontend workflow file; GitHub does not use it as an active workflow for this root repository.
 
 ## Backend
 

@@ -137,10 +137,11 @@ cargo check --features full-snapshot-stores
 
 | 문서 | 내용 |
 | --- | --- |
-| [Product Direction](docs/product-direction.md) | 다음 자동화 작업에서 반영할 제품 방향성 변경 지시사항 |
+| [Product Direction](docs/product-direction.md) | 2026년 5월 제품 방향성 지시사항과 2026-06-05 구현 완료 상태 |
 | [Onboarding](docs/onboarding.md) | 루트 기준 프론트엔드/백엔드 로컬 실행 흐름 |
 | [Testing](docs/testing.md) | 프론트엔드, 백엔드 검증 명령과 CI 상태 |
 | [Troubleshooting](docs/troubleshooting.md) | 로컬 API/WS 연동과 validation 문제 해결 |
+| [Maintenance](docs/maintenance.md) | 활성 CI/CODEOWNERS 경계, progress gate, 검증 lane |
 | [Front-End README](Front-End/README.md) | 프론트엔드 기능, 실행 방법, 디버깅 체크리스트 |
 | [Front-End Architecture](Front-End/docs/architecture.md) | 프론트엔드 모듈 구조와 realtime flow |
 | [Front-End Setup](Front-End/docs/setup.md) | 프론트엔드 설치, 실행, 환경변수 |
