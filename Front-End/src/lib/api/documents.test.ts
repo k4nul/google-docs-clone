@@ -14,6 +14,8 @@ const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(
   window,
   'localStorage',
 );
+const documentCredentialsStorageKey =
+  'realtime-docs.document-credentials.v1';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -204,6 +206,36 @@ describe('document API client', () => {
     );
   });
 
+  it('trims returned document credentials before exposing and storing them', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          document: {
+            id: '99999999-9999-4999-8999-999999999999',
+            title: 'Whitespace credential draft',
+            created_at: '2026-04-04T10:00:00.000Z',
+            updated_at: '2026-04-04T10:00:00.000Z',
+          },
+          credentials: {
+            access_token: '  created-doc-token  ',
+          },
+        }),
+      ),
+    );
+
+    await expect(
+      createBackendDocument('Whitespace credential draft'),
+    ).resolves.toMatchObject({
+      credentials: {
+        accessToken: 'created-doc-token',
+      },
+    });
+    expect(
+      getStoredDocumentAccessToken('99999999-9999-4999-8999-999999999999'),
+    ).toBe('created-doc-token');
+  });
+
   it('rejects create responses without a usable document credential', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
@@ -247,9 +279,45 @@ describe('document API client', () => {
     ).toBeNull();
   });
 
+  it('stores trimmed credentials without overwriting existing entries with blanks', () => {
+    storeDocumentAccessToken(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      '  first-doc-token  ',
+    );
+    storeDocumentAccessToken(
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      'second-doc-token',
+    );
+    storeDocumentAccessToken('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '   ');
+
+    expect(
+      getStoredDocumentAccessToken('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+    ).toBe('first-doc-token');
+    expect(
+      getStoredDocumentAccessToken('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+    ).toBe('second-doc-token');
+  });
+
+  it('does not call the backend when stored credentials are malformed', async () => {
+    window.localStorage.setItem(documentCredentialsStorageKey, 'not-json');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      updateBackendDocumentTitle(
+        'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        'Renamed draft',
+      ),
+    ).rejects.toMatchObject({
+      name: 'MissingDocumentCredentialError',
+      documentId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('renames backend documents with the stored document credential', async () => {
     window.localStorage.setItem(
-      'realtime-docs.document-credentials.v1',
+      documentCredentialsStorageKey,
       JSON.stringify({
         '55555555-5555-4555-8555-555555555555': 'stored-doc-token',
       }),
@@ -292,9 +360,46 @@ describe('document API client', () => {
     );
   });
 
+  it('prefers an explicit document credential over a stored title credential', async () => {
+    window.localStorage.setItem(
+      documentCredentialsStorageKey,
+      JSON.stringify({
+        '55555555-5555-4555-8555-555555555555': 'stale-doc-token',
+      }),
+    );
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        document: {
+          id: '55555555-5555-4555-8555-555555555555',
+          title: 'Explicit token draft',
+          created_at: '2026-04-04T10:00:00.000Z',
+          updated_at: '2026-04-04T10:05:00.000Z',
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await updateBackendDocumentTitle(
+      '55555555-5555-4555-8555-555555555555',
+      'Explicit token draft',
+      '  fresh-doc-token  ',
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '/api/documents/55555555-5555-4555-8555-555555555555',
+      ),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer fresh-doc-token',
+        }),
+      }),
+    );
+  });
+
   it('updates backend document security settings with the stored credential', async () => {
     window.localStorage.setItem(
-      'realtime-docs.document-credentials.v1',
+      documentCredentialsStorageKey,
       JSON.stringify({
         '55555555-5555-4555-8555-555555555555': 'stored-doc-token',
       }),
@@ -333,6 +438,45 @@ describe('document API client', () => {
         body: JSON.stringify({ hide_preview: true }),
         headers: expect.objectContaining({
           Authorization: 'Bearer stored-doc-token',
+        }),
+      }),
+    );
+  });
+
+  it('encodes document ids before updating backend document security', async () => {
+    const documentId = 'draft folder/one?rev=2';
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        document: {
+          id: documentId,
+          title: 'Encoded id draft',
+          created_at: '2026-04-04T10:00:00.000Z',
+          updated_at: '2026-04-04T10:05:00.000Z',
+          hide_preview: false,
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      updateBackendDocumentSecurity(
+        documentId,
+        { hidePreview: false },
+        'encoded-doc-token',
+      ),
+    ).resolves.toMatchObject({
+      id: documentId,
+      hidePreview: false,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `/api/documents/${encodeURIComponent(documentId)}`,
+      ),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ hide_preview: false }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer encoded-doc-token',
         }),
       }),
     );
