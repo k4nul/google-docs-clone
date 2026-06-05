@@ -1,0 +1,56 @@
+# Active repository-level ownership mapping.
+# Role sections mirror Front-End/docs/roles.md, Back-End/docs/roles.md, and AGENTS.md responsibility lanes.
+# Until dedicated GitHub users or teams are provisioned, @System-Docs-H remains
+# the baseline enforcing owner for every path listed below.
+
+* @System-Docs-H
+
+# Repository / CI
+/.github/ @System-Docs-H
+/README.md @System-Docs-H
+/docs/ @System-Docs-H
+
+# Frontend A: PM / Integration
+/Front-End/AGENTS.md @System-Docs-H
+/Front-End/README.md @System-Docs-H
+
+# Frontend B: Editor / UI
+/Front-End/src/app/ @System-Docs-H
+/Front-End/src/pages/ @System-Docs-H
+/Front-End/src/features/editor/ @System-Docs-H
+/Front-End/src/features/documents/ @System-Docs-H
+/Front-End/src/shared/ui/ @System-Docs-H
+/Front-End/src/index.css @System-Docs-H
+
+# Frontend C: API / realtime contract
+/Front-End/src/lib/api/ @System-Docs-H
+/Front-End/src/lib/collab/ @System-Docs-H
+/Front-End/src/shared/config/ @System-Docs-H
+/Front-End/src/shared/types/ @System-Docs-H
+
+# Frontend D: QA / Docs / DevOps
+/Front-End/.env.example @System-Docs-H
+/Front-End/docs/ @System-Docs-H
+/Front-End/eslint.config.js @System-Docs-H
+/Front-End/index.html @System-Docs-H
+/Front-End/package-lock.json @System-Docs-H
+/Front-End/package.json @System-Docs-H
+/Front-End/src/lib/import/ @System-Docs-H
+/Front-End/src/test/ @System-Docs-H
+/Front-End/tsconfig.app.json @System-Docs-H
+/Front-End/tsconfig.json @System-Docs-H
+/Front-End/tsconfig.node.json @System-Docs-H
+/Front-End/vite.config.ts @System-Docs-H
+
+# Backend
+/Back-End/AGENTS.md @System-Docs-H
+/Back-End/README.md @System-Docs-H
+/Back-End/.env.example @System-Docs-H
+/Back-End/.gitattributes @System-Docs-H
+/Back-End/Cargo.lock @System-Docs-H
+/Back-End/Cargo.toml @System-Docs-H
+/Back-End/docs/ @System-Docs-H
+/Back-End/scripts/ @System-Docs-H
+/Back-End/src/ @System-Docs-H
+/Back-End/tests/ @System-Docs-H
+/Back-End/vendor/ @System-Docs-H

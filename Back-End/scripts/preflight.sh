@@ -24,7 +24,14 @@ fail() {
 check_git_write() {
     local probe_path
 
-    probe_path="$ROOT_DIR/.git/codex-preflight-$$.lock"
+    if ! probe_path="$(git -C "$ROOT_DIR" rev-parse --git-path "codex-preflight-$$.lock" 2>/dev/null)"; then
+        fail "cannot resolve git metadata path; staging and commit would be blocked"
+        return 1
+    fi
+    if [[ "$probe_path" != /* ]]; then
+        probe_path="$ROOT_DIR/$probe_path"
+    fi
+
     if : >"$probe_path" 2>/dev/null && rm -f "$probe_path"; then
         pass "git metadata directory is writable"
         return 0

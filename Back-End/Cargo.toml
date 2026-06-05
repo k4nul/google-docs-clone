@@ -321,4 +321,4 @@ png-db = { version = "0.1.2", default-features = false, optional = true }
 
 [dev-dependencies]
 axum-test = { version = "20.0.0", features = ["ws"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }

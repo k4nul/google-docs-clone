@@ -56,7 +56,7 @@
 - [ ] A: PM / Integration owner complete and cross-role handoff closed.
 - [ ] B: Frontend Editor / UI owner complete and backend contract integration accepted.
 - [x] C: Backend Realtime / API owner complete and `cargo test --test backend_role_completion_gate -- --nocapture` is green.
-- [ ] D: QA / Docs / DevOps owner complete and `cargo test --test qa_docs_devops_completion_gate -- --nocapture` is green.
+- [x] D: QA / Docs / DevOps owner complete and `cargo test --test qa_docs_devops_completion_gate -- --nocapture` is green.
 
 ## QA / Docs / DevOps Current Status
 
@@ -64,11 +64,12 @@
 D 역할 작업이 정말 끝났을 때만 그 단일 bullet을 `D 역할 종료 확인. completion gate 통과. 남은 역할 작업 없음.` 형식의 terminal entry로 갱신한다.
 이전 D 역할 실행 로그는 모두 아래 `## QA / Docs / DevOps Status History`로 이동한다.
 
-- 2026-04-26: D 역할 미완료. qa/docs/devops completion gate는 도입됐지만 최종 terminal entry, publish readiness 판정, 역할 완료 체크는 아직 닫히지 않았다.
+- 2026-06-05: D 역할 종료 확인. completion gate 통과. 남은 D 역할 작업 없음. 이번 dependency-plan run에서 repository-level CI/CODEOWNERS 경계를 정리하고 `Back-End/scripts/preflight.sh commit`이 루트 Git metadata path를 찾도록 고쳤으며, generated worktree의 read-only `.gitstore` 차단은 환경 blocker로 분리한 뒤 `cargo test --test qa_docs_devops_completion_gate -- --nocapture`로 QA/docs/devops gate를 고정했다.
 
 ## QA / Docs / DevOps Status History
 
 - 2026-04-26: D 역할 자동 gate를 도입해 `./scripts/verify.sh core`, 문서 정합성 테스트, `.env.example` 정합성 테스트, `./scripts/preflight.sh commit|publish` readiness를 역할 종료 조건으로 묶는다.
+- 2026-04-26: D 역할 미완료. qa/docs/devops completion gate는 도입됐지만 최종 terminal entry, publish readiness 판정, 역할 완료 체크는 아직 닫히지 않았다.
 
 ## Project Current Status
 
@@ -77,11 +78,12 @@ D 역할 작업이 정말 끝났을 때만 그 단일 bullet을 `D 역할 종료
 backend 역할 종료는 필요조건일 뿐 충분조건이 아니며, `## Role Completion Gates`의 A/B/C/D가 모두 `[x]`가 되기 전에는 전체 종료를 선언하지 않는다.
 이전 프로젝트 실행 로그는 모두 아래 `## Project Status History`로 이동한다.
 
-- 2026-04-26: 프로젝트 미완료. backend 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A/B/D 완료와 전체 통합 종료 확인은 아직 남아 있다.
+- 2026-06-05: 프로젝트 미완료. backend C 역할과 QA/Docs/DevOps D 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A/B 완료와 전체 통합 종료 확인은 아직 남아 있다.
 
 ## Project Status History
 
 - 2026-04-26: 전체 프로젝트 종료와 backend 역할 종료가 혼동되지 않도록 별도 `project_completion_gate`를 도입한다. 이 gate는 역할별 완료 체크와 프로젝트 단일 terminal entry를 함께 요구하고, backend 역할은 nested `cargo test --test backend_role_completion_gate -- --nocapture` green을 필요조건으로 삼는다.
+- 2026-04-26: 프로젝트 미완료. backend 역할 종료 gate는 통과했지만 `## Role Completion Gates`의 A/B/D 완료와 전체 통합 종료 확인은 아직 남아 있다.
 
 ## Status History
 

@@ -51,8 +51,8 @@
 - 작은 단위 PR을 선호한다
 - PR 생성 전 최신 `main` 기준으로 충돌을 정리한다
 - PR 전 `build`, `lint`, `test`, `typecheck`를 모두 통과시킨다
-- 동일한 검증은 루트 `.github/workflows/ci.yml`의 frontend job과 `Front-End/.github/workflows/ci.yml` package-local mirror에 함께 유지한다
-- baseline code owner 설정은 `Front-End/.github/CODEOWNERS`에서 관리한다
+- 동일한 검증은 루트 `.github/workflows/ci.yml`의 frontend job에 유지한다
+- baseline code owner 설정은 루트 `.github/CODEOWNERS`에서 `Front-End/` 경로 기준으로 관리한다
 - 계약 변경이 있으면 코드보다 먼저 또는 동시에 `docs/`를 갱신한다
 
 ## Commit Conventions

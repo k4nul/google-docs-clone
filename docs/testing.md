@@ -25,7 +25,7 @@ npm run typecheck
 
 Frontend unit and component tests use Vitest/jsdom and mocked `fetch` boundaries, so they do not require a live backend. Run the local backend and Vite dev server only for manual cross-stack create/open/edit checks.
 
-The root `.github/workflows/ci.yml` workflow runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path. `Front-End/.github/workflows/ci.yml` remains a package-local mirror, but the root workflow is the repository-level CI entry point.
+The root `.github/workflows/ci.yml` workflow runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path. The repository intentionally keeps a single active workflow entry point at the root instead of a frontend-local mirror.
 
 ## Backend
 
@@ -46,7 +46,7 @@ cargo check --features full-snapshot-stores
 | `./scripts/verify.sh websocket` | Probes socket binding, then runs WebSocket/delete/managed/S3 lanes |
 | `cargo check --features full-snapshot-stores` | Compile-checks the full snapshot adapter inventory |
 
-The root `.github/workflows/ci.yml` workflow installs `pkg-config` and `libssl-dev`, then runs `./scripts/verify.sh core` for the backend. WebSocket and full snapshot-store checks remain explicit follow-up lanes because they need socket binding or compile the large optional adapter inventory.
+The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` for the backend. WebSocket and full snapshot-store checks remain explicit follow-up lanes because they need socket binding or compile the large optional adapter inventory.
 
 For full adapter regression instead of compile-only inventory, run:
 

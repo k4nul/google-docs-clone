@@ -59,7 +59,7 @@ npm run typecheck
 
 ## CI Quality Gates
 
-같은 검증은 루트 `.github/workflows/ci.yml`에서 `Front-End/` 기준으로 실행된다. `Front-End/.github/workflows/ci.yml`은 package-local mirror로 남아 있다.
+같은 검증은 루트 `.github/workflows/ci.yml`에서 `Front-End/` 기준으로 실행된다. 프론트엔드 전용 package-local workflow mirror는 두지 않고 루트 workflow를 단일 CI entry point로 유지한다.
 
 - `build`
 - `lint`
