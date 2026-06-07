@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0.0",
+  "project": "google-docs-clone",
+  "current_phase": "collaborative-editor-local-validation",
+  "next_phase": "external-account-provisioning-review",
+  "transition": {
+    "intent": "Advance only after local frontend/backend validation is complete and any external account or publish needs are explicitly reviewed.",
+    "mode": "machine-gated-local-validation-with-manual-external-review",
+    "validation_command": "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
+    "transition_validation_command": "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
+    "decision_rule": "Do not move to external provisioning while local checks, checklist evidence, or external-risk review are pending."
+  },
+  "phase_model": [
+    {
+      "id": "collaborative-editor-local-validation",
+      "purpose": "Validate the local collaborative editor, REST API, WebSocket sync, document credentials, and snapshot store boundaries.",
+      "allowed_work": [
+        "frontend React and TypeScript fixes",
+        "backend Rust verification",
+        "WebSocket sync tests",
+        "snapshot store validation",
+        "docs alignment"
+      ],
+      "blocked_work": [
+        "production deployment",
+        "external account provisioning",
+        "public data hosting",
+        "unreviewed credential changes"
+      ],
+      "exit_criteria": [
+        "frontend build, lint, test, and typecheck pass",
+        "backend core and websocket verification pass",
+        "docs checklists are current",
+        "external provisioning needs are listed"
+      ]
+    },
+    {
+      "id": "external-account-provisioning-review",
+      "purpose": "Manually review any external storage, hosting, account, or publish requirements.",
+      "allowed_work": [
+        "provisioning checklist",
+        "risk review",
+        "deployment plan documentation",
+        "environment variable documentation"
+      ],
+      "blocked_work": [
+        "automatic account creation",
+        "production deployment",
+        "secret creation or insertion",
+        "public release without approval"
+      ],
+      "exit_criteria": [
+        "owner approves external provisioning plan"
+      ]
+    },
+    {
+      "id": "maintenance-only",
+      "purpose": "Keep the editor buildable and documented when no development scope is selected.",
+      "allowed_work": [
+        "maintenance-audit",
+        "docs-update",
+        "security-review",
+        "test repair for existing behavior"
+      ],
+      "blocked_work": [
+        "new external integrations without explicit request"
+      ],
+      "exit_criteria": [
+        "a new collaborative-editor feature scope is selected"
+      ]
+    }
+  ],
+  "required_gates": [
+    {
+      "id": "frontend-validation-passes",
+      "status": "machine-check",
+      "required_for_transition": true,
+      "description": "Frontend build, lint, tests, and typecheck pass.",
+      "evidence": [
+        "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck"
+      ]
+    },
+    {
+      "id": "backend-validation-passes",
+      "status": "machine-check",
+      "required_for_transition": true,
+      "description": "Backend core and WebSocket verification pass.",
+      "evidence": [
+        "cd Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket"
+      ]
+    },
+    {
+      "id": "checklists-current",
+      "status": "manual-check",
+      "required_for_transition": true,
+      "description": "Frontend and backend checklist evidence must be current.",
+      "evidence": [
+        "Front-End/docs/checklist.md",
+        "Back-End/docs/checklist.md"
+      ],
+      "on_failure": "Stay in local validation and update checklist evidence."
+    },
+    {
+      "id": "external-provisioning-reviewed",
+      "status": "pending",
+      "required_for_transition": true,
+      "description": "External account, storage, hosting, or publish needs require manual review.",
+      "evidence": [
+        "README.md",
+        "docs/maintenance.md"
+      ],
+      "on_failure": "Do not provision accounts or deploy automatically."
+    },
+    {
+      "id": "secret-boundary-retained",
+      "status": "passed",
+      "required_for_transition": true,
+      "description": "Real credentials and secrets must not be committed.",
+      "evidence": [
+        "README.md",
+        "Back-End/.env.example",
+        "Front-End/.env.example"
+      ]
+    }
+  ]
+}
