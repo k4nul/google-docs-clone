@@ -1137,6 +1137,8 @@ pub fn normalize_http_base_url(value: &str, field_name: &str) -> Result<String, 
     let invalid_message = || {
         format!("{field_name} must be an absolute http/https URL without query, received `{value}`")
     };
+    let insecure_remote_message =
+        || format!("{field_name} must use https when the host is not loopback, received `{value}`");
 
     let uri: Uri = value.parse().map_err(|_| invalid_message())?;
     let Some(scheme) = uri.scheme_str() else {
@@ -1148,6 +1150,10 @@ pub fn normalize_http_base_url(value: &str, field_name: &str) -> Result<String, 
 
     if !matches!(scheme, "http" | "https") || uri.query().is_some() {
         return Err(invalid_message());
+    }
+
+    if scheme == "http" && host_allows_remote_clients(authority.host()) {
+        return Err(insecure_remote_message());
     }
 
     let normalized_path = match uri.path() {
@@ -1285,5 +1291,39 @@ mod tests {
             .validate_runtime_security()
             .expect_err("default CitadelDB passphrase should be rejected on an exposed host");
         assert!(matches!(error, AppError::Config(_)));
+    }
+
+    #[test]
+    fn normalize_http_base_url_allows_loopback_http_for_local_services() {
+        assert_eq!(
+            normalize_http_base_url("http://127.0.0.1:9000/snapshots/", "TEST_URL")
+                .expect("loopback http should be allowed for local services"),
+            "http://127.0.0.1:9000/snapshots"
+        );
+        assert_eq!(
+            normalize_http_base_url("http://localhost:9100", "TEST_URL")
+                .expect("localhost http should be allowed for local services"),
+            "http://localhost:9100"
+        );
+    }
+
+    #[test]
+    fn normalize_http_base_url_allows_https_for_remote_services() {
+        assert_eq!(
+            normalize_http_base_url("https://snapshots.example.test/api/", "TEST_URL")
+                .expect("https should be allowed for remote services"),
+            "https://snapshots.example.test/api"
+        );
+    }
+
+    #[test]
+    fn normalize_http_base_url_rejects_remote_plaintext_http() {
+        let error = normalize_http_base_url("http://snapshots.example.test/api", "TEST_URL")
+            .expect_err("remote plaintext http should be rejected");
+
+        assert_eq!(
+            error,
+            "TEST_URL must use https when the host is not loopback, received `http://snapshots.example.test/api`"
+        );
     }
 }
