@@ -1,4 +1,11 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -438,6 +445,111 @@ describe('EditorShell', () => {
         lastSyncedAt: null,
       }),
     );
+  });
+
+  it('submits edited document titles and disables unchanged submissions', () => {
+    const onTitleSubmit = vi.fn();
+
+    renderEditorShell({
+      documentTitle: 'Project brief',
+      onTitleSubmit,
+    });
+
+    const titleInput = screen.getByLabelText('Document title');
+    const saveButton = screen.getByRole('button', { name: 'Save title' });
+
+    expect(titleInput).toHaveValue('Project brief');
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(titleInput, {
+      target: {
+        value: 'Project plan',
+      },
+    });
+
+    expect(saveButton).not.toBeDisabled();
+
+    fireEvent.click(saveButton);
+
+    expect(onTitleSubmit).toHaveBeenCalledWith('Project plan');
+  });
+
+  it('keeps blank and saving title states from submitting through the disabled action', () => {
+    const onTitleSubmit = vi.fn();
+    const { rerender } = renderEditorShell({
+      documentTitle: 'Project brief',
+      onTitleSubmit,
+    });
+
+    const titleInput = screen.getByLabelText('Document title');
+    const saveButton = screen.getByRole('button', { name: 'Save title' });
+
+    fireEvent.change(titleInput, {
+      target: {
+        value: '   ',
+      },
+    });
+    fireEvent.click(saveButton);
+
+    expect(saveButton).toBeDisabled();
+    expect(onTitleSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(titleInput, {
+      target: {
+        value: 'Project plan',
+      },
+    });
+    rerender(
+      <EditorShell
+        documentAccessToken="doc-token"
+        docId="team-room"
+        documentTitle="Project brief"
+        onTitleSubmit={onTitleSubmit}
+        realtimeServerUrl="ws://localhost:4000"
+        titleStatus="saving"
+      />,
+    );
+
+    const savingButton = screen.getByRole('button', { name: 'Saving...' });
+
+    fireEvent.click(savingButton);
+
+    expect(savingButton).toBeDisabled();
+    expect(onTitleSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows the upstream title when document metadata changes during a local edit', () => {
+    const onTitleSubmit = vi.fn();
+    const { rerender } = renderEditorShell({
+      documentTitle: 'Project brief',
+      onTitleSubmit,
+    });
+
+    const titleInput = screen.getByLabelText('Document title');
+
+    fireEvent.change(titleInput, {
+      target: {
+        value: 'Unsaved local title',
+      },
+    });
+
+    expect(titleInput).toHaveValue('Unsaved local title');
+
+    rerender(
+      <EditorShell
+        documentAccessToken="doc-token"
+        docId="team-room"
+        documentTitle="Published title"
+        onTitleSubmit={onTitleSubmit}
+        realtimeServerUrl="ws://localhost:4000"
+      />,
+    );
+
+    expect(screen.getByLabelText('Document title')).toHaveValue(
+      'Published title',
+    );
+    expect(screen.getByRole('button', { name: 'Save title' })).toBeDisabled();
+    expect(onTitleSubmit).not.toHaveBeenCalled();
   });
 
   it('marks the current user as typing after editor updates and returns to idle', async () => {
