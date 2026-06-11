@@ -80,6 +80,12 @@ impl RequestBuilder {
     }
 
     fn send_inner(self, body: &[u8], content_type: Option<&str>) -> Result<Response, RequestError> {
+        validate_http_token("HTTP method", &self.method)?;
+        for (name, value) in &self.headers {
+            validate_http_token("HTTP header name", name)?;
+            validate_header_value(name, value)?;
+        }
+
         let host = self.url.host_str().ok_or_else(|| {
             RequestError::Transport(format!("request URL `{}` is missing a host", self.url))
         })?;
@@ -344,4 +350,101 @@ fn tls_config() -> &'static Arc<ClientConfig> {
                 .with_no_client_auth(),
         )
     })
+}
+
+fn validate_http_token(kind: &str, value: &str) -> Result<(), RequestError> {
+    if value.is_empty() || !value.bytes().all(is_http_token_char) {
+        return Err(RequestError::Transport(format!(
+            "{kind} contains characters that are not allowed in HTTP tokens"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_header_value(name: &str, value: &str) -> Result<(), RequestError> {
+    if value
+        .bytes()
+        .any(|byte| matches!(byte, b'\r' | b'\n' | 0x00..=0x08 | 0x0b..=0x1f | 0x7f))
+    {
+        return Err(RequestError::Transport(format!(
+            "header `{name}` contains disallowed control characters"
+        )));
+    }
+
+    Ok(())
+}
+
+fn is_http_token_char(byte: u8) -> bool {
+    matches!(
+        byte,
+        b'!' | b'#'
+            | b'$'
+            | b'%'
+            | b'&'
+            | b'\''
+            | b'*'
+            | b'+'
+            | b'-'
+            | b'.'
+            | b'^'
+            | b'_'
+            | b'`'
+            | b'|'
+            | b'~'
+            | b'0'..=b'9'
+            | b'A'..=b'Z'
+            | b'a'..=b'z'
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_transport_error_contains(result: Result<Response, RequestError>, expected: &str) {
+        match result {
+            Err(RequestError::Transport(message)) => assert!(
+                message.contains(expected),
+                "expected `{message}` to contain `{expected}`"
+            ),
+            Err(other) => panic!("expected transport error, received {other:?}"),
+            Ok(_) => panic!("expected request to fail validation before network I/O"),
+        }
+    }
+
+    #[test]
+    fn request_rejects_invalid_http_method_before_network_io() {
+        let client = BlockingHttpClient::new(Duration::from_secs(1));
+        let request = client
+            .request("GET\r\nX-Injected: yes", "http://127.0.0.1:9/")
+            .expect("test URL should parse");
+
+        assert_transport_error_contains(request.call(), "HTTP method contains characters");
+    }
+
+    #[test]
+    fn request_rejects_invalid_header_name_before_network_io() {
+        let client = BlockingHttpClient::new(Duration::from_secs(1));
+        let request = client
+            .request("GET", "http://127.0.0.1:9/")
+            .expect("test URL should parse")
+            .set("Bad Header", "value");
+
+        assert_transport_error_contains(request.call(), "HTTP header name contains characters");
+    }
+
+    #[test]
+    fn request_rejects_header_value_line_breaks_before_network_io() {
+        let client = BlockingHttpClient::new(Duration::from_secs(1));
+        let request = client
+            .request("GET", "http://127.0.0.1:9/")
+            .expect("test URL should parse")
+            .set("Authorization", "Bearer token\r\nX-Injected: yes");
+
+        assert_transport_error_contains(
+            request.call(),
+            "header `Authorization` contains disallowed control characters",
+        );
+    }
 }
