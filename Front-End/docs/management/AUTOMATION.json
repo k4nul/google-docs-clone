@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_automation",
+  "projectId": "web-google-docs-clone-Front-End",
+  "lifecycle": {},
+  "progressTracked": false,
+  "codexPromptCompatibilityPaths": [],
+  "notes": [
+    "Harness code and runner structure are intentionally unchanged.",
+    "AGENTS.md is a map; active management instructions are JSON under docs/management."
+  ]
+}

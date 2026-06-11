@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_validation",
+  "projectId": "web-google-docs-clone-Front-End",
+  "commands": [
+    "npm run test",
+    "npm run build",
+    "npm run lint",
+    "npm run typecheck"
+  ],
+  "progressCriteria": []
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "management_index",
+  "project": {
+    "id": "web-google-docs-clone",
+    "root": "."
+  },
+  "layout": {
+    "instructionDirectory": "docs/management",
+    "commonFiles": {
+      "index": "docs/management/INDEX.json",
+      "project": "docs/management/PROJECT.json",
+      "architecture": "docs/management/ARCHITECTURE.json",
+      "plan": "docs/management/PLAN.json",
+      "validation": "docs/management/VALIDATION.json",
+      "policy": "docs/management/POLICY.json",
+      "automation": "docs/management/AUTOMATION.json"
+    },
+    "optionalFiles": {},
+    "codexPromptCompatibility": null
+  },
+  "rules": {
+    "agentsMdRole": "map_only",
+    "instructionFormat": "json",
+    "commonFilesRequiredForEveryManagedProject": true,
+    "projectSpecificFilesAllowed": true,
+    "rootDocDirectoryAllowed": false
+  }
+}

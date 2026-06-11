@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_plan",
+  "projectId": "web-google-docs-clone",
+  "nextGoals": [
+    {
+      "source": "progress-criteria",
+      "criterionId": "frontend_checklist",
+      "action": "finish unchecked front-end checklist gates",
+      "weight": 50
+    },
+    {
+      "source": "progress-criteria",
+      "criterionId": "backend_checklist",
+      "action": "finish unchecked back-end checklist gates",
+      "weight": 50
+    },
+    {
+      "source": "progress-criteria",
+      "criterionId": "frontend_build_passes",
+      "action": "fix Front-End build before google-docs-clone can be production-complete",
+      "weight": 20
+    },
+    {
+      "source": "progress-criteria",
+      "criterionId": "backend_core_verify_passes",
+      "action": "fix Back-End core verification before google-docs-clone can be production-complete",
+      "weight": 20
+    }
+  ],
+  "implementationRules": {
+    "maxMajorGoalPerRun": 1,
+    "preferPhasedImplementation": true,
+    "doNotImplementWholeRoadmapAtOnce": true
+  }
+}

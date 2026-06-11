@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_validation",
+  "projectId": "web-google-docs-clone",
+  "commands": [
+    "bash -lc cd Front-End && npm run build",
+    "bash -lc cd Back-End && bash scripts/verify.sh core"
+  ],
+  "progressCriteria": [
+    {
+      "id": "frontend_checklist",
+      "label": "Front-end checklist completion",
+      "type": "markdown_checkbox_percent",
+      "path": "Front-End/docs/checklist.md",
+      "weight": 50,
+      "nextAction": "finish unchecked front-end checklist gates"
+    },
+    {
+      "id": "backend_checklist",
+      "label": "Back-end checklist completion",
+      "type": "markdown_checkbox_percent",
+      "path": "Back-End/docs/checklist.md",
+      "weight": 50,
+      "nextAction": "finish unchecked back-end checklist gates"
+    },
+    {
+      "id": "frontend_build_passes",
+      "label": "Front-end build passes",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Front-End && npm run build"
+      ],
+      "timeout": 180,
+      "weight": 20,
+      "blocking": true,
+      "nextAction": "fix Front-End build before google-docs-clone can be production-complete"
+    },
+    {
+      "id": "backend_core_verify_passes",
+      "label": "Back-end core verification passes",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Back-End && bash scripts/verify.sh core"
+      ],
+      "timeout": 240,
+      "weight": 20,
+      "blocking": true,
+      "nextAction": "fix Back-End core verification before google-docs-clone can be production-complete"
+    }
+  ]
+}

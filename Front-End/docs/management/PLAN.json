@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_plan",
+  "projectId": "web-google-docs-clone-Front-End",
+  "nextGoals": [],
+  "implementationRules": {
+    "maxMajorGoalPerRun": 1,
+    "preferPhasedImplementation": true,
+    "doNotImplementWholeRoadmapAtOnce": true
+  }
+}

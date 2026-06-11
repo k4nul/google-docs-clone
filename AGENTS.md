@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "kind": "agent_map",
   "project": {
-    "id": "web-google-docs-clone-Back-End",
+    "id": "web-google-docs-clone",
     "root": "."
   },
   "map": {
@@ -14,11 +14,9 @@
     "policy": "docs/management/POLICY.json",
     "automation": "docs/management/AUTOMATION.json"
   },
-  "optionalMap": {
-    "legacyInstructions": "docs/management/LEGACY_INSTRUCTIONS.json"
-  },
+  "optionalMap": {},
   "compatibility": {
-    "codexPromptDirectory": ".codex/",
-    "legacyInstructionArchive": "docs/management/LEGACY_INSTRUCTIONS.json"
+    "codexPromptDirectory": null,
+    "legacyInstructionArchive": null
   }
 }

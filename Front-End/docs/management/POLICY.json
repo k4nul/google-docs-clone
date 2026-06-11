@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_policy",
+  "projectId": "web-google-docs-clone-Front-End",
+  "instructionPolicy": {
+    "format": "json",
+    "directory": "docs/management",
+    "requiredFiles": [
+      "docs/management/INDEX.json",
+      "docs/management/PROJECT.json",
+      "docs/management/ARCHITECTURE.json",
+      "docs/management/PLAN.json",
+      "docs/management/VALIDATION.json",
+      "docs/management/POLICY.json",
+      "docs/management/AUTOMATION.json"
+    ],
+    "agentsMdMayContainOnlyMap": true
+  },
+  "folderPolicy": {
+    "rootDocDirectoryAllowed": false,
+    "machineReadableControlDocsDirectory": "docs/control",
+    "managementInstructionsDirectory": "docs/management"
+  },
+  "harnessPolicy": {
+    "doNotChangeHarnessStructure": true,
+    "doNotMoveCodexMaintainerHarnessFiles": true,
+    "projectLocalCodexPromptsMayRemainForHarnessCompatibility": true
+  }
+}

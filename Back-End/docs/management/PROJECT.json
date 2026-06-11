@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "project_management_identity",
+  "project": {
+    "id": "web-google-docs-clone-Back-End",
+    "root": "web/google-docs-clone/Back-End",
+    "repositoryRoot": "web/google-docs-clone",
+    "isGitRepositoryRoot": false,
+    "managementStatus": "unspecified"
+  },
+  "classification": {
+    "source": "filesystem-agents-discovery",
+    "group": null,
+    "rollup": null
+  }
+}
