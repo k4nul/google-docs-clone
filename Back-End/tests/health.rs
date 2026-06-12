@@ -250,6 +250,7 @@ fn configure_managed_snapshot_store(
     config.snapshot_managed_timeout_secs = 5;
 }
 
+#[cfg(feature = "full-snapshot-stores")]
 fn configure_s3_snapshot_store(
     config: &mut Config,
     endpoint: &str,
