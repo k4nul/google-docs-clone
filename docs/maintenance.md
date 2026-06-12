@@ -17,6 +17,12 @@ The maintainer progress dashboard scores this project from checkbox completion i
 
 Keep implementation completion items as checked only when local source, docs, and validation evidence support them. External account provisioning can be recorded as a non-checkbox follow-up when it does not block local implementation or verification.
 
+## Local Validation Closeout Evidence
+
+- 2026-06-12: `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` contain no unchecked local implementation checklist items for the collaborative editor, REST API, WebSocket sync, document credentials, or snapshot-store boundary.
+- 2026-06-12: External provisioning review for local-validation exit found one known follow-up: replace the root `.github/CODEOWNERS` `@System-Docs-H` baseline with dedicated GitHub users or teams after those accounts exist. That follow-up is not required for local source validation.
+- Automation must not create external accounts, add secrets, deploy hosting, publish public data, or replace CODEOWNERS with unprovisioned handles. Those actions remain reserved for the `external-account-provisioning-review` phase.
+
 ## Validation Lanes
 
 For documentation-only changes, run:

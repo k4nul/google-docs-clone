@@ -4,28 +4,22 @@
   "projectId": "web-google-docs-clone",
   "nextGoals": [
     {
-      "source": "progress-criteria",
-      "criterionId": "frontend_checklist",
-      "action": "finish unchecked front-end checklist gates",
-      "weight": 50
+      "source": "phase-gates",
+      "criterionId": "checklists-current",
+      "action": "keep the frontend and backend checklist evidence current while local validation is rerun",
+      "weight": 30
     },
     {
-      "source": "progress-criteria",
-      "criterionId": "backend_checklist",
-      "action": "finish unchecked back-end checklist gates",
-      "weight": 50
+      "source": "phase-gates",
+      "criterionId": "transition_validation",
+      "action": "run the collaborative-editor local-validation transition command after dependencies are available",
+      "weight": 40
     },
     {
-      "source": "progress-criteria",
-      "criterionId": "frontend_build_passes",
-      "action": "fix Front-End build before google-docs-clone can be production-complete",
-      "weight": 20
-    },
-    {
-      "source": "progress-criteria",
-      "criterionId": "backend_core_verify_passes",
-      "action": "fix Back-End core verification before google-docs-clone can be production-complete",
-      "weight": 20
+      "source": "phase-gates",
+      "criterionId": "external-provisioning-reviewed",
+      "action": "obtain explicit owner review for external GitHub owner, hosting, storage, publish, and secret boundaries without provisioning them automatically",
+      "weight": 30
     }
   ],
   "implementationRules": {

@@ -109,6 +109,12 @@ HTTP base path는 `/api`입니다.
 
 문서 목록/생성은 `Authorization: Bearer <API_TOKEN>`을 사용하고, 상세/제목 변경/preview visibility 변경/삭제는 `Authorization: Bearer <document-access-token>`을 사용합니다. 문서 목록은 저장된 Yrs `content` update에서 plain-text `preview`를 만들어 반환하며, `hide_preview=true` 문서는 body-derived preview를 보내지 않고 `preview_hidden=true`만 반환합니다. 브라우저 WebSocket은 임의 헤더를 보낼 수 없으므로 문서 credential을 `access_token` query parameter로 전달합니다. WebSocket payload는 JSON이 아니라 Yrs v1 binary message입니다. 프론트엔드 provider는 `Sync`, `Awareness`, `AwarenessQuery` 메시지를 인코딩/디코딩하고, 백엔드는 같은 `doc_id` room에 연결된 클라이언트에게 update를 broadcast합니다.
 
+## 외부 프로비저닝 경계
+
+루트 `.github/CODEOWNERS`는 현재 `@System-Docs-H` baseline owner를 사용합니다. dedicated GitHub users/teams가 준비되고 owner review가 끝나면 이 baseline을 실제 팀/사용자 핸들로 교체할 수 있습니다.
+
+Production hosting, S3/managed external services, public data publishing, and real secrets are outside the local collaborative-editor validation phase. They require explicit owner review in the `external-account-provisioning-review` phase and must not be provisioned or committed by automation.
+
 ## 검증 명령
 
 프론트엔드:
