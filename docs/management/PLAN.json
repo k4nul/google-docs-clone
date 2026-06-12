@@ -18,7 +18,7 @@
     {
       "source": "phase-gates",
       "criterionId": "external-provisioning-reviewed",
-      "action": "obtain explicit owner review for external GitHub owner, hosting, storage, publish, and secret boundaries without provisioning them automatically",
+      "action": "carry docs/external-provisioning-review.md into the next phase and obtain explicit owner approval before any GitHub owner, hosting, storage, publish, secret, or public-data provisioning",
       "weight": 30
     }
   ],

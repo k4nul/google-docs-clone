@@ -115,6 +115,8 @@ HTTP base path는 `/api`입니다.
 
 Production hosting, S3/managed external services, public data publishing, and real secrets are outside the local collaborative-editor validation phase. They require explicit owner review in the `external-account-provisioning-review` phase and must not be provisioned or committed by automation.
 
+The local-validation external review packet is recorded in [External Provisioning Review](docs/external-provisioning-review.md). It lists the GitHub owner, hosting, snapshot durability, room coordination, secret storage, and public-data decisions that remain for the next phase without provisioning any external resource.
+
 ## 검증 명령
 
 프론트엔드:
@@ -148,6 +150,7 @@ cargo check --features full-snapshot-stores
 | [Testing](docs/testing.md) | 프론트엔드, 백엔드 검증 명령과 CI 상태 |
 | [Troubleshooting](docs/troubleshooting.md) | 로컬 API/WS 연동과 validation 문제 해결 |
 | [Maintenance](docs/maintenance.md) | 활성 CI/CODEOWNERS 경계, progress gate, 검증 lane |
+| [External Provisioning Review](docs/external-provisioning-review.md) | local validation exit을 위한 외부 계정/호스팅/스토리지/secret 경계와 다음 phase owner decision |
 | [Front-End README](Front-End/README.md) | 프론트엔드 기능, 실행 방법, 디버깅 체크리스트 |
 | [Front-End Architecture](Front-End/docs/architecture.md) | 프론트엔드 모듈 구조와 realtime flow |
 | [Front-End Setup](Front-End/docs/setup.md) | 프론트엔드 설치, 실행, 환경변수 |

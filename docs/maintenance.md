@@ -20,7 +20,7 @@ Keep implementation completion items as checked only when local source, docs, an
 ## Local Validation Closeout Evidence
 
 - 2026-06-12: `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` contain no unchecked local implementation checklist items for the collaborative editor, REST API, WebSocket sync, document credentials, or snapshot-store boundary.
-- 2026-06-12: External provisioning review for local-validation exit found one known follow-up: replace the root `.github/CODEOWNERS` `@System-Docs-H` baseline with dedicated GitHub users or teams after those accounts exist. That follow-up is not required for local source validation.
+- 2026-06-12: External provisioning needs for local-validation exit are listed in `docs/external-provisioning-review.md`. Known follow-ups are dedicated GitHub users or teams, production hosting, snapshot durability choice, room coordination choice, secret storage, and public-data policy. Those follow-ups are not required for local source validation and remain reserved for owner review in the next phase.
 - Automation must not create external accounts, add secrets, deploy hosting, publish public data, or replace CODEOWNERS with unprovisioned handles. Those actions remain reserved for the `external-account-provisioning-review` phase.
 
 ## Validation Lanes
@@ -54,4 +54,4 @@ Run `cargo check --features full-snapshot-stores` only when the full snapshot ad
 
 ## Known External Follow-Up
 
-Dedicated GitHub users or teams can replace the current `@System-Docs-H` baseline owner in root `.github/CODEOWNERS` when those accounts exist. That account provisioning is separate from the local product implementation and validation gates.
+Dedicated GitHub users or teams can replace the current `@System-Docs-H` baseline owner in root `.github/CODEOWNERS` when those accounts exist. The full follow-up list is maintained in `docs/external-provisioning-review.md`; account provisioning, hosting, external storage, secret creation, and public data publication are separate from the local product implementation and validation gates.

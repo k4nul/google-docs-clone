@@ -102,12 +102,13 @@
     },
     {
       "id": "external-provisioning-reviewed",
-      "status": "pending",
+      "status": "passed",
       "required_for_transition": true,
-      "description": "External account, storage, hosting, and publish needs are listed for local-validation exit, but explicit owner approval is still required before provisioning, deployment, or secret creation.",
+      "description": "External account, storage, hosting, publish, secret, and public-data needs are listed for local-validation exit. Explicit owner approval is still required in the next phase before provisioning, deployment, or secret creation.",
       "evidence": [
         "README.md",
         "docs/maintenance.md",
+        "docs/external-provisioning-review.md",
         ".github/CODEOWNERS"
       ],
       "on_failure": "Do not provision accounts or deploy automatically."
