@@ -3256,11 +3256,11 @@ async fn websocket_endpoint_rejects_non_local_owner_with_redirect_headers() {
     response.assert_header("x-collab-owner-base-url", "http://node-b.internal:4000");
     response.assert_header(
         "x-collab-redirect-location",
-        format!("http://node-b.internal:4000/ws/{}?source=edge", document.id),
+        format!("http://node-b.internal:4000/ws/{}", document.id),
     );
     response.assert_header(
         "location",
-        format!("http://node-b.internal:4000/ws/{}?source=edge", document.id),
+        format!("http://node-b.internal:4000/ws/{}", document.id),
     );
 
     let payload = response.json::<Value>();
@@ -3599,7 +3599,7 @@ async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff(
     standby_response.assert_header("x-collab-owner-base-url", "http://node-a.internal:4300");
     standby_response.assert_header(
         "x-collab-redirect-location",
-        format!("http://node-a.internal:4300/api/documents/{doc_id}?probe=standby"),
+        format!("http://node-a.internal:4300/api/documents/{doc_id}"),
     );
 
     node_a_client.close().await;

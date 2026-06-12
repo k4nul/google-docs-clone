@@ -489,4 +489,53 @@ mod tests {
             other => panic!("expected conflict, received {other:?}"),
         }
     }
+
+    #[test]
+    fn websocket_room_resolution_strips_query_from_remote_owner_redirect() {
+        let state = AppState::with_snapshot_store_and_locator(
+            DEFAULT_FRONTEND_ORIGIN,
+            crate::config::DEFAULT_API_TOKEN,
+            Arc::new(InMemorySnapshotStore::new()),
+            Arc::new(RemoteRoomLocator),
+        )
+        .expect("state should initialize with rejecting locator");
+        let document = state
+            .rooms()
+            .create_document(Some("Remote websocket owner with token".to_owned()))
+            .expect("document should be created");
+
+        let mut headers = HeaderMap::new();
+        headers.insert(ORIGIN, HeaderValue::from_static(DEFAULT_FRONTEND_ORIGIN));
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", document.access_token()))
+                .expect("document authorization header should be valid"),
+        );
+        let request_uri: Uri = format!(
+            "/ws/{}?access_token={}&source=edge",
+            document.id,
+            document.access_token()
+        )
+        .parse()
+        .expect("websocket request URI should parse");
+        let error = match resolve_websocket_room(
+            &state,
+            &headers,
+            &request_uri,
+            &document.id.to_string(),
+        ) {
+            Ok(_) => panic!("non-local owner should reject websocket room resolution"),
+            Err(error) => error,
+        };
+
+        match error {
+            AppError::RemoteOwner { redirect_url, .. } => {
+                assert_eq!(
+                    redirect_url,
+                    Some(format!("http://node-b.internal:4000/ws/{}", document.id))
+                );
+            }
+            other => panic!("expected conflict, received {other:?}"),
+        }
+    }
 }
