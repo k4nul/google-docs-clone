@@ -96,12 +96,10 @@ impl ManagedSnapshotStore {
     }
 
     fn unexpected_status(&self, status: u16, response: Response, context: &str) -> StorageError {
-        let body = response.into_string().unwrap_or_default();
-        let detail = if body.trim().is_empty() {
-            format!("unexpected HTTP {status}")
-        } else {
-            format!("unexpected HTTP {status}: {}", body.trim())
-        };
+        let detail = response
+            .into_sanitized_error_body()
+            .map(|body| format!("unexpected HTTP {status}: {body}"))
+            .unwrap_or_else(|| format!("unexpected HTTP {status}"));
         StorageError::Io(format!("{context}: {detail}"))
     }
 }

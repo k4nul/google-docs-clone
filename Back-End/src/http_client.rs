@@ -191,6 +191,10 @@ impl Response {
     pub fn into_bytes(self) -> Vec<u8> {
         self.body
     }
+
+    pub fn into_sanitized_error_body(self) -> Option<String> {
+        sanitize_error_body(&String::from_utf8_lossy(&self.body))
+    }
 }
 
 impl std::fmt::Display for Response {
@@ -331,6 +335,52 @@ fn find_sequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         .position(|window| window == needle)
 }
 
+const MAX_ERROR_BODY_CHARS: usize = 512;
+const REDACTED_ERROR_BODY: &str = "[redacted response body]";
+const SENSITIVE_ERROR_BODY_MARKERS: [&str; 10] = [
+    "access_token",
+    "api_key",
+    "authorization",
+    "credential",
+    "credential=",
+    "password",
+    "secret",
+    "signature",
+    "token",
+    "x-amz-security-token",
+];
+
+fn sanitize_error_body(body: &str) -> Option<String> {
+    let normalized = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        return None;
+    }
+
+    let lower = normalized.to_ascii_lowercase();
+    if SENSITIVE_ERROR_BODY_MARKERS
+        .iter()
+        .any(|marker| lower.contains(marker))
+    {
+        return Some(REDACTED_ERROR_BODY.to_owned());
+    }
+
+    Some(truncate_error_body(&normalized))
+}
+
+fn truncate_error_body(body: &str) -> String {
+    let mut characters = body.chars();
+    let truncated = characters
+        .by_ref()
+        .take(MAX_ERROR_BODY_CHARS)
+        .collect::<String>();
+
+    if characters.next().is_some() {
+        format!("{truncated}...")
+    } else {
+        truncated
+    }
+}
+
 fn tls_config() -> &'static Arc<ClientConfig> {
     static TLS_CONFIG: OnceLock<Arc<ClientConfig>> = OnceLock::new();
     TLS_CONFIG.get_or_init(|| {
@@ -413,6 +463,13 @@ mod tests {
         }
     }
 
+    fn response_with_body(body: impl Into<Vec<u8>>) -> Response {
+        Response {
+            status: 500,
+            body: body.into(),
+        }
+    }
+
     #[test]
     fn request_rejects_invalid_http_method_before_network_io() {
         let client = BlockingHttpClient::new(Duration::from_secs(1));
@@ -446,5 +503,44 @@ mod tests {
             request.call(),
             "header `Authorization` contains disallowed control characters",
         );
+    }
+
+    #[test]
+    fn sanitized_error_body_redacts_sensitive_markers() {
+        let response =
+            response_with_body(br#"{"message":"bad token","access_token":"doc-secret"}"#.to_vec());
+
+        assert_eq!(
+            response.into_sanitized_error_body().as_deref(),
+            Some(REDACTED_ERROR_BODY)
+        );
+    }
+
+    #[test]
+    fn sanitized_error_body_collapses_whitespace_for_safe_body() {
+        let response = response_with_body("service\n  temporarily\tunavailable");
+
+        assert_eq!(
+            response.into_sanitized_error_body().as_deref(),
+            Some("service temporarily unavailable")
+        );
+    }
+
+    #[test]
+    fn sanitized_error_body_truncates_safe_body() {
+        let response = response_with_body("a".repeat(MAX_ERROR_BODY_CHARS + 8));
+        let body = response
+            .into_sanitized_error_body()
+            .expect("non-empty safe body should remain available");
+
+        assert_eq!(body.chars().count(), MAX_ERROR_BODY_CHARS + 3);
+        assert!(body.ends_with("..."));
+    }
+
+    #[test]
+    fn sanitized_error_body_omits_blank_body() {
+        let response = response_with_body(" \n\t ");
+
+        assert_eq!(response.into_sanitized_error_body(), None);
     }
 }

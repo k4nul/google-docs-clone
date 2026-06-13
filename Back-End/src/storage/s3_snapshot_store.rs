@@ -282,12 +282,10 @@ impl S3SnapshotStore {
     fn map_request_error(&self, method: &str, url: &Url, error: RequestError) -> StorageError {
         match error {
             RequestError::Status(status, response) => {
-                let body = response.into_string().unwrap_or_default();
-                let detail = if body.trim().is_empty() {
-                    format!("unexpected HTTP {status}")
-                } else {
-                    format!("unexpected HTTP {status}: {}", body.trim())
-                };
+                let detail = response
+                    .into_sanitized_error_body()
+                    .map(|body| format!("unexpected HTTP {status}: {body}"))
+                    .unwrap_or_else(|| format!("unexpected HTTP {status}"));
                 StorageError::Io(format!(
                     "{method} {url} (endpoint `{}`, bucket `{}`): {detail}",
                     self.endpoint_label, self.bucket

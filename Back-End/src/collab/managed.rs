@@ -242,12 +242,10 @@ impl ManagedCoordinationClient {
         response: Response,
         context: String,
     ) -> ManagedCoordinationClientError {
-        let body = response.into_string().unwrap_or_default();
-        let detail = if body.trim().is_empty() {
-            format!("unexpected HTTP {status}")
-        } else {
-            format!("unexpected HTTP {status}: {}", body.trim())
-        };
+        let detail = response
+            .into_sanitized_error_body()
+            .map(|body| format!("unexpected HTTP {status}: {body}"))
+            .unwrap_or_else(|| format!("unexpected HTTP {status}"));
         ManagedCoordinationClientError::Request(format!("{context}: {detail}"))
     }
 }
