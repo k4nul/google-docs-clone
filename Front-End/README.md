@@ -136,7 +136,7 @@ React + TypeScript + Vite 기반의 collaborative editor 프론트엔드 저장�
   - `npm run lint`
   - `npm run test`
   - `npm run typecheck`
-- 같은 품질 게이트가 활성 CI entry point인 루트 `.github/workflows/ci.yml`의 frontend job에서도 통과되어야 한다. `Front-End/.github/workflows/ci.yml`은 legacy nested frontend workflow 파일이며, 이 root repository의 활성 GitHub Actions workflow로 사용되지 않는다.
+- 같은 품질 게이트가 활성 CI entry point인 루트 `.github/workflows/ci.yml`의 frontend job에서도 통과되어야 한다.
 - UI 변경이 있으면 PR 설명에 변경 화면이나 동작 요약을 함께 남긴다.
 - API, route, provider 계약이 바뀌면 관련 `docs/` 문서도 함께 포함한다.
 - README나 운영 규칙 변경도 PR 설명에 이유를 명확히 적는다.

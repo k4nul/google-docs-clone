@@ -59,7 +59,7 @@ npm run typecheck
 
 ## CI Quality Gates
 
-같은 검증은 활성 CI entry point인 루트 `.github/workflows/ci.yml`에서 `Front-End/` 기준으로 실행된다. `Front-End/.github/workflows/ci.yml`은 legacy nested frontend workflow 파일이며, 이 root repository의 활성 GitHub Actions workflow로 사용되지 않는다.
+같은 검증은 활성 CI entry point인 루트 `.github/workflows/ci.yml`에서 `Front-End/` 기준으로 실행된다.
 
 - `build`
 - `lint`

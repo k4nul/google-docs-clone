@@ -17,8 +17,6 @@
   },
   "knownSubpaths": [
     ".env.example",
-    ".github/CODEOWNERS",
-    ".github/workflows/ci.yml",
     ".gitignore",
     ".prettierrc.json",
     "AGENTS.md",

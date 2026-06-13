@@ -5,7 +5,7 @@ This document summarizes the repository-level maintenance gates for the combined
 ## Active Automation Boundaries
 
 - The active GitHub Actions entry point is the root `.github/workflows/ci.yml`. It runs frontend gates from `Front-End/` and backend core verification from `Back-End/`.
-- `Front-End/.github/workflows/ci.yml` and `Front-End/.github/CODEOWNERS` are legacy nested frontend files. GitHub does not use nested `.github/` files as active workflow or owner files for this root repository.
+- The retired nested frontend `.github/` files have been removed so the root workflow and CODEOWNERS file are the only repository automation entry points.
 - The active ownership file is root `.github/CODEOWNERS`. It maps the current A/B/C/D role paths to the `@System-Docs-H` baseline owner until dedicated GitHub users or teams are provisioned.
 
 ## Progress Gates
