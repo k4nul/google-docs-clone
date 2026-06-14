@@ -10,12 +10,19 @@ This document summarizes the repository-level maintenance gates for the combined
 
 ## Progress Gates
 
-The maintainer progress dashboard scores this project from checkbox completion in:
+The maintainer progress dashboard scores this project from the checklist and
+command criteria in `docs/management/VALIDATION.json`. The checklist criteria
+read checkbox completion in:
 
 - `Front-End/docs/checklist.md`
 - `Back-End/docs/checklist.md`
 
-Keep implementation completion items as checked only when local source, docs, and validation evidence support them. External account provisioning can be recorded as a non-checkbox follow-up when it does not block local implementation or verification.
+The command criteria mirror the active phase gate: frontend build, lint, test,
+and typecheck must pass, and backend `core` plus `websocket` verification lanes
+must pass before local validation can transition. Keep implementation completion
+items as checked only when local source, docs, and validation evidence support
+them. External account provisioning can be recorded as a non-checkbox follow-up
+when it does not block local implementation or verification.
 
 ## Local Validation Closeout Evidence
 

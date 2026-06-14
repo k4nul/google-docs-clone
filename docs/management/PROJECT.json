@@ -3,10 +3,10 @@
   "kind": "project_management_identity",
   "project": {
     "id": "web-google-docs-clone",
-    "root": "web/google-docs-clone",
-    "repositoryRoot": "web/google-docs-clone",
+    "root": ".",
+    "repositoryRoot": ".",
     "isGitRepositoryRoot": true,
-    "managementStatus": "unspecified"
+    "managementStatus": "active"
   },
   "classification": {
     "source": "codex-maintainer-progress-criteria",

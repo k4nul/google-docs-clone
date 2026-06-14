@@ -34,7 +34,6 @@ Use the scripted lanes first because they separate socket-free checks from WebSo
 ```bash
 cd Back-End
 ./scripts/verify.sh core
-./scripts/preflight.sh publish
 ./scripts/verify.sh websocket
 cargo check --features full-snapshot-stores
 ```
@@ -42,11 +41,11 @@ cargo check --features full-snapshot-stores
 | Command | Purpose |
 | --- | --- |
 | `./scripts/verify.sh core` | Runs `cargo fmt --check`, `cargo check --locked`, and socket-free tests |
-| `./scripts/preflight.sh publish` | Checks `.git` metadata write access and `github.com` DNS for publish readiness |
 | `./scripts/verify.sh websocket` | Probes socket binding, then runs WebSocket/delete/managed/S3 lanes |
 | `cargo check --features full-snapshot-stores` | Compile-checks the full snapshot adapter inventory |
 
 The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` for the backend. WebSocket and full snapshot-store checks remain explicit follow-up lanes because they need socket binding or compile the large optional adapter inventory.
+`./scripts/preflight.sh publish` remains available as a publish readiness check for `.git` metadata write access and `github.com` DNS, but it is not part of the local-validation phase transition command.
 
 For full adapter regression instead of compile-only inventory, run:
 

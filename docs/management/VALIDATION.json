@@ -3,8 +3,9 @@
   "kind": "project_validation",
   "projectId": "web-google-docs-clone",
   "commands": [
-    "bash -lc cd Front-End && npm run build",
-    "bash -lc cd Back-End && bash scripts/verify.sh core"
+    "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck",
+    "cd Back-End && ./scripts/verify.sh core",
+    "cd Back-End && ./scripts/verify.sh websocket"
   ],
   "progressCriteria": [
     {
@@ -12,7 +13,7 @@
       "label": "Front-end checklist completion",
       "type": "markdown_checkbox_percent",
       "path": "Front-End/docs/checklist.md",
-      "weight": 50,
+      "weight": 20,
       "nextAction": "finish unchecked front-end checklist gates"
     },
     {
@@ -20,7 +21,7 @@
       "label": "Back-end checklist completion",
       "type": "markdown_checkbox_percent",
       "path": "Back-End/docs/checklist.md",
-      "weight": 50,
+      "weight": 20,
       "nextAction": "finish unchecked back-end checklist gates"
     },
     {
@@ -33,9 +34,51 @@
         "cd Front-End && npm run build"
       ],
       "timeout": 180,
-      "weight": 20,
+      "weight": 10,
       "blocking": true,
-      "nextAction": "fix Front-End build before google-docs-clone can be production-complete"
+      "nextAction": "fix Front-End build before the local-validation phase can transition"
+    },
+    {
+      "id": "frontend_lint_passes",
+      "label": "Front-end lint passes",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Front-End && npm run lint"
+      ],
+      "timeout": 180,
+      "weight": 10,
+      "blocking": true,
+      "nextAction": "fix Front-End lint before the local-validation phase can transition"
+    },
+    {
+      "id": "frontend_test_passes",
+      "label": "Front-end tests pass",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Front-End && npm run test"
+      ],
+      "timeout": 180,
+      "weight": 10,
+      "blocking": true,
+      "nextAction": "fix Front-End tests before the local-validation phase can transition"
+    },
+    {
+      "id": "frontend_typecheck_passes",
+      "label": "Front-end typecheck passes",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Front-End && npm run typecheck"
+      ],
+      "timeout": 180,
+      "weight": 10,
+      "blocking": true,
+      "nextAction": "fix Front-End typecheck before the local-validation phase can transition"
     },
     {
       "id": "backend_core_verify_passes",
@@ -47,9 +90,23 @@
         "cd Back-End && bash scripts/verify.sh core"
       ],
       "timeout": 240,
-      "weight": 20,
+      "weight": 10,
       "blocking": true,
-      "nextAction": "fix Back-End core verification before google-docs-clone can be production-complete"
+      "nextAction": "fix Back-End core verification before the local-validation phase can transition"
+    },
+    {
+      "id": "backend_websocket_verify_passes",
+      "label": "Back-end WebSocket verification passes",
+      "type": "command_success",
+      "command": [
+        "bash",
+        "-lc",
+        "cd Back-End && bash scripts/verify.sh websocket"
+      ],
+      "timeout": 300,
+      "weight": 10,
+      "blocking": true,
+      "nextAction": "fix Back-End WebSocket verification before the local-validation phase can transition"
     }
   ]
 }

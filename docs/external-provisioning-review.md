@@ -25,6 +25,24 @@ The current repository is validated as a local collaborative editor:
 These defaults are local-development defaults. They are not production hosting,
 external storage, external coordination, or owner-account provisioning.
 
+## Transition Validation Boundary
+
+This packet satisfies only the external-risk review evidence for leaving local
+collaborative-editor validation. It does not replace the machine transition
+command in `docs/instructions/phase-gates.json`.
+
+Before the phase can move to `external-account-provisioning-review`, the
+transition command must still pass:
+
+```bash
+cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck
+cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+```
+
+The root CI workflow covers the frontend gates and backend core lane. The
+backend WebSocket lane remains an explicit local transition gate because it
+needs socket binding.
+
 ## Reviewed External Needs
 
 | Area | Current state | Required owner decision before action |
@@ -64,6 +82,22 @@ The next phase can start from these owner-review inputs:
    credentials, managed-service tokens, and citadeldb passphrase if used.
 6. Data publication and retention policy for demos, backups, and support access.
 
-The local-validation exit review is complete when these external needs are
-listed and bounded. Actual approval and provisioning remain reserved for the
-`external-account-provisioning-review` phase.
+## Owner Review Checklist
+
+The `external-account-provisioning-review` phase should record explicit owner
+decisions before any external action:
+
+- Replace the baseline CODEOWNERS handle only after the dedicated GitHub users
+  or teams exist.
+- Choose the hosting target, public origin allowlist, TLS boundary, rollback
+  owner, and deployment approval path.
+- Choose snapshot durability and room coordination surfaces before provisioning
+  buckets, databases, or managed services.
+- Choose the secret store before generating deployment tokens or service
+  credentials.
+- Approve public demo data, retention rules, backup handling, and support-access
+  policy before publishing any document data.
+
+The local-validation external review packet is complete when these external
+needs are listed and bounded. Actual approval and provisioning remain reserved
+for the `external-account-provisioning-review` phase.

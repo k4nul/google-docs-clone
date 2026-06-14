@@ -11,9 +11,15 @@
     },
     {
       "source": "phase-gates",
-      "criterionId": "transition_validation",
-      "action": "run the collaborative-editor local-validation transition command after dependencies are available",
-      "weight": 40
+      "criterionId": "frontend-validation-passes",
+      "action": "keep the frontend build, lint, test, and typecheck gates green for the local-validation transition command",
+      "weight": 20
+    },
+    {
+      "source": "phase-gates",
+      "criterionId": "backend-validation-passes",
+      "action": "keep the backend core and websocket verification lanes green for the local-validation transition command",
+      "weight": 20
     },
     {
       "source": "phase-gates",

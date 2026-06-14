@@ -134,12 +134,12 @@ npm run typecheck
 ```bash
 cd Back-End
 ./scripts/verify.sh core
-./scripts/preflight.sh publish
 ./scripts/verify.sh websocket
 cargo check --features full-snapshot-stores
 ```
 
 기본 백엔드 빌드는 compile fan-out을 줄이기 위해 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 바로 컴파일합니다. 전체 adapter inventory를 점검할 때만 `--features full-snapshot-stores`를 사용합니다.
+`./scripts/preflight.sh publish`는 `.git` metadata 쓰기와 `github.com` DNS를 확인하는 publish readiness 점검이며, local-validation phase transition command에는 포함되지 않습니다.
 
 ## 문서 바로가기
 
@@ -151,6 +151,8 @@ cargo check --features full-snapshot-stores
 | [Troubleshooting](docs/troubleshooting.md) | 로컬 API/WS 연동과 validation 문제 해결 |
 | [Maintenance](docs/maintenance.md) | 활성 CI/CODEOWNERS 경계, progress gate, 검증 lane |
 | [External Provisioning Review](docs/external-provisioning-review.md) | local validation exit을 위한 외부 계정/호스팅/스토리지/secret 경계와 다음 phase owner decision |
+| [Phase Gates](docs/instructions/phase-gates.json) | current phase, next phase, transition command, required gate evidence |
+| [Management Index](docs/management/INDEX.json) | machine-readable project management docs map |
 | [Front-End README](Front-End/README.md) | 프론트엔드 기능, 실행 방법, 디버깅 체크리스트 |
 | [Front-End Architecture](Front-End/docs/architecture.md) | 프론트엔드 모듈 구조와 realtime flow |
 | [Front-End Setup](Front-End/docs/setup.md) | 프론트엔드 설치, 실행, 환경변수 |

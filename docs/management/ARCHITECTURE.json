@@ -4,14 +4,14 @@
   "projectId": "web-google-docs-clone",
   "paths": {
     "managementInstructions": "docs/management/",
-    "machineReadableProjectDocs": null,
+    "machineReadableProjectDocs": "docs/management/",
     "humanDocs": "docs/",
     "legacyDocDirectory": null
   },
   "boundaries": {
     "agentsMdRole": "map_only",
     "instructionsMustLiveUnderDocs": true,
-    "docDirectoryPolicy": "use docs/control for machine-readable project control files; do not create a root-level doc directory",
+    "docDirectoryPolicy": "use docs/management for machine-readable project management files; do not create a root-level doc directory",
     "harnessStructureMayNotChange": true,
     "crossProjectEditsRequireExplicitInstruction": true
   },
@@ -28,15 +28,6 @@
     "Back-End/Cargo.lock",
     "Back-End/Cargo.toml",
     "Back-End/README.md",
-    "Back-End/data/snapshots/56420a3e-fb8d-4e5c-b0b5-7425affa7e71.json",
-    "Back-End/data/snapshots/608803d8-36af-465b-94c2-2dfee2efb790.json",
-    "Back-End/data/snapshots/61f2a10b-e908-4a05-9340-600c75afe966.json",
-    "Back-End/data/snapshots/9917d838-1fc7-412c-9b97-ffc4aa5def3e.json",
-    "Back-End/data/snapshots/b4a96231-b806-4f9d-97d5-633ea99fa041.json",
-    "Back-End/data/snapshots/b8c0c48e-ad31-45a6-9d65-0f40c5a452dc.json",
-    "Back-End/data/snapshots/cd481f76-7e9c-4298-be25-481998f35875.json",
-    "Back-End/data/snapshots/dfd3d919-903f-40c1-8de6-13b5ad2b20c8.json",
-    "Back-End/data/snapshots/e1f99b24-851f-42c7-a47a-fa19766f62ef.json",
     "Back-End/docs/agent-rules.md",
     "Back-End/docs/api.md",
     "Back-End/docs/architecture.md",

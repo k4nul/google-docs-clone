@@ -75,6 +75,8 @@ Fallback 문서 카드는 백엔드 persisted document라고 보장하지 않는
 | `docs/troubleshooting.md` | 로컬 API/WS 연동과 validation 문제 해결 |
 | `docs/maintenance.md` | 활성 CI/CODEOWNERS 경계, progress gate, 검증 lane |
 | `docs/external-provisioning-review.md` | local validation exit을 위한 외부 owner, hosting, storage, secret decision packet |
+| `docs/instructions/phase-gates.json` | current phase, next phase, transition command, required gate evidence |
+| `docs/management/INDEX.json` | machine-readable project management docs map |
 | `Front-End/README.md` | 프론트엔드 기능, 개발 규칙, 실행 방법 |
 | `Front-End/docs/setup.md` | 프론트엔드 설치, env, 검증 |
 | `Front-End/docs/architecture.md` | 프론트엔드 모듈과 realtime flow |
