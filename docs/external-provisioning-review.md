@@ -35,13 +35,19 @@ Before the phase can move to `external-account-provisioning-review`, the
 transition command must still pass:
 
 ```bash
-cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
 cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 The root CI workflow covers the frontend gates and backend core lane. The
 backend WebSocket lane remains an explicit local transition gate because it
 needs socket binding.
+
+The transition command is intentionally stricter than the root CI frontend
+steps because generated maintenance worktrees start from a clean checkout.
+`npm run deps:ci` installs from `Front-End/package-lock.json` before TypeScript,
+Vite, ESLint, Vitest, or typecheck run, matching
+`docs/instructions/phase-gates.json` and `docs/management/VALIDATION.json`.
 
 ## Reviewed External Needs
 

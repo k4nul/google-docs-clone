@@ -73,3 +73,19 @@ TEST_BASE_URL=http://localhost:4000 TEST_API_TOKEN=dev-admin-token cargo test --
 - Cross-stack contract changes: run frontend gates, backend `core`, backend `websocket`, and manually exercise create/open/edit with the backend and Vite dev servers running.
 - Auth or REST API behavior changes: add the ignored live API test lane when a running local backend is available.
 - Docs-only changes: run `git diff --check`; run full gates only when the documentation change reveals a command or contract that needs live verification.
+
+## Phase Transition Readiness
+
+The active phase gate in `docs/instructions/phase-gates.json` uses one
+root-relative command for transition readiness:
+
+```bash
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
+cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+```
+
+Treat that command as the source of truth when deciding whether local validation
+can advance to external account provisioning review. A run can show all visible
+test suites passing but still be blocked if any command in the chain exits
+nonzero. In that case, keep the phase in local validation and use the first
+nonzero command output as the blocker to fix or rerun.

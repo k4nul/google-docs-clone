@@ -93,3 +93,26 @@ npm run typecheck
 ```
 
 Vitest uses jsdom and `Front-End/src/test/setup.ts` from `Front-End/vite.config.ts`. If `npm` is blocked by PowerShell execution policy on Windows, use `npm.cmd run <task>`.
+
+## Phase Transition Command Is Blocked
+
+The local-validation phase transition command is:
+
+```bash
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
+cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+```
+
+If the phase controller reports `returnCode` as nonzero, do not infer readiness
+from later green test summaries alone. Re-run the chain from the repository root
+and inspect the first command that exits nonzero. Common distinctions:
+
+- `npm run deps:ci` failures are clean-install or lockfile/install environment blockers.
+- `npm run build`, `lint`, `test`, or `typecheck` failures are frontend validation blockers.
+- `./scripts/verify.sh core` failures are backend format, compile, or socket-free test blockers.
+- `./scripts/verify.sh websocket` failures are WebSocket/delete/managed/S3 lane blockers or local socket-binding environment blockers.
+
+When the progress dashboard already shows `100%/complete`, use this command to
+decide phase-transition readiness. Do not create external accounts, deploy
+hosting, add secrets, or change CODEOWNERS while this phase still points to
+`external-account-provisioning-review`.

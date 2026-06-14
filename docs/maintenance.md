@@ -25,6 +25,13 @@ only when local source, docs, and validation evidence support them. External
 account provisioning can be recorded as a non-checkbox follow-up when it does
 not block local implementation or verification.
 
+When the progress dashboard reads `100%/complete` while the phase still shows
+`collaborative-editor-local-validation->external-account-provisioning-review`,
+the next meaningful movement is a phase-transition run, not another
+implementation checklist edit. A docs-only run should only change documentation
+that keeps the transition evidence accurate; it must not force the phase forward
+or provision external accounts.
+
 ## Local Validation Closeout Evidence
 
 - 2026-06-12: `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` contain no unchecked local implementation checklist items for the collaborative editor, REST API, WebSocket sync, document credentials, or snapshot-store boundary.
@@ -37,6 +44,14 @@ For documentation-only changes, run:
 
 ```bash
 git diff --check
+```
+
+For local-validation transition readiness, run the full phase command from the
+repository root:
+
+```bash
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
+cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 For frontend behavior, API client, route, UI, or env changes, run:
