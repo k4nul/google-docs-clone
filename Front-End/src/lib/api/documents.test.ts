@@ -128,6 +128,139 @@ describe('document API client', () => {
     );
   });
 
+  it('normalizes list summaries from preview text before falling back to summary text', async () => {
+    const longPreview = `${'Long preview text '.repeat(12)}tail`;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          documents: [
+            {
+              id: '10101010-1010-4010-8010-101010101010',
+              title: 'Whitespace preview',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-01T10:00:00.000Z',
+              preview: '  First line\n\nsecond\tline  ',
+              summary: 'Summary should not win.',
+            },
+            {
+              id: '20202020-2020-4020-8020-202020202020',
+              title: 'Summary fallback',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-01T10:00:00.000Z',
+              preview: '   ',
+              summary: '  Summary\nfallback  ',
+            },
+            {
+              id: '30303030-3030-4030-8030-303030303030',
+              title: 'Long preview',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-01T10:00:00.000Z',
+              preview: longPreview,
+            },
+          ],
+        }),
+      ),
+    );
+
+    await expect(listBackendDocuments()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: '10101010-1010-4010-8010-101010101010',
+          summary: 'First line second line',
+        }),
+        expect.objectContaining({
+          id: '20202020-2020-4020-8020-202020202020',
+          summary: 'Summary fallback',
+        }),
+        expect.objectContaining({
+          id: '30303030-3030-4030-8030-303030303030',
+          summary: `${longPreview.slice(0, 177)}...`,
+        }),
+      ]),
+    );
+  });
+
+  it('honors both hidden-preview flags and collaborator count aliases in list results', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          documents: [
+            {
+              id: '40404040-4040-4040-8040-404040404040',
+              title: 'Legacy hidden flag',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-01T10:00:00.000Z',
+              preview_hidden: true,
+              preview: 'Sensitive legacy preview.',
+              collaborators: 5,
+              collaborator_count: 2,
+            },
+            {
+              id: '50505050-5050-4050-8050-505050505050',
+              title: 'Count fallback',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-01T10:00:00.000Z',
+              preview: 'Visible preview.',
+              collaborator_count: 4,
+            },
+          ],
+        }),
+      ),
+    );
+
+    await expect(listBackendDocuments()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: '40404040-4040-4040-8040-404040404040',
+          collaborators: 5,
+          summary: 'Preview hidden',
+        }),
+        expect.objectContaining({
+          id: '50505050-5050-4050-8050-505050505050',
+          collaborators: 4,
+          summary: 'Visible preview.',
+        }),
+      ]),
+    );
+  });
+
+  it('keeps documents with invalid update timestamps behind dated documents', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          documents: [
+            {
+              id: '60606060-6060-4060-8060-606060606060',
+              title: 'Undated draft',
+              created_at: 'not-a-date',
+              updated_at: 'not-a-date',
+            },
+            {
+              id: '70707070-7070-4070-8070-707070707070',
+              title: 'Recent draft',
+              created_at: '2026-04-01T10:00:00.000Z',
+              updated_at: '2026-04-06T10:00:00.000Z',
+            },
+          ],
+        }),
+      ),
+    );
+
+    await expect(listBackendDocuments()).resolves.toMatchObject([
+      {
+        id: '70707070-7070-4070-8070-707070707070',
+        title: 'Recent draft',
+      },
+      {
+        id: '60606060-6060-4060-8060-606060606060',
+        title: 'Undated draft',
+      },
+    ]);
+  });
+
   it('fetches one backend document by encoded id', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
