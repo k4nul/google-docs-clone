@@ -66,31 +66,31 @@ async fn serve_room_socket(
         "websocket collaboration session started"
     );
 
-    if active_sessions == 1 {
-        if let Err(error) = coordinator.room_activated(&doc_id) {
-            warn!(
+    if active_sessions == 1
+        && let Err(error) = coordinator.room_activated(&doc_id)
+    {
+        warn!(
+            %doc_id,
+            coordinator_mode = coordinator.mode(),
+            %error,
+            "failed to activate room coordinator for websocket collaboration session"
+        );
+
+        match registry.persist_and_evict_if_idle(&doc_id, &room) {
+            Ok(teardown) => info!(
                 %doc_id,
-                coordinator_mode = coordinator.mode(),
-                %error,
-                "failed to activate room coordinator for websocket collaboration session"
-            );
-
-            match registry.persist_and_evict_if_idle(&doc_id, &room) {
-                Ok(teardown) => info!(
-                    %doc_id,
-                    remaining_sessions = teardown.remaining_sessions,
-                    evicted = teardown.evicted,
-                    "rolled back websocket session after coordinator activation failure"
-                ),
-                Err(cleanup_error) => warn!(
-                    %doc_id,
-                    %cleanup_error,
-                    "failed to roll back websocket session after coordinator activation failure"
-                ),
-            }
-
-            return;
+                remaining_sessions = teardown.remaining_sessions,
+                evicted = teardown.evicted,
+                "rolled back websocket session after coordinator activation failure"
+            ),
+            Err(cleanup_error) => warn!(
+                %doc_id,
+                %cleanup_error,
+                "failed to roll back websocket session after coordinator activation failure"
+            ),
         }
+
+        return;
     }
 
     let broadcast_group = room.broadcast_group().await;

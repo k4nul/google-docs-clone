@@ -17,7 +17,7 @@ pub(crate) enum ManagedCoordinationClientError {
     #[error("{0}")]
     Request(String),
     #[error("managed coordination service reported an active lease conflict")]
-    Conflict(Option<PersistedRoomCoordinatorState>),
+    Conflict(Box<Option<PersistedRoomCoordinatorState>>),
 }
 
 #[derive(Debug, Clone)]
@@ -120,7 +120,7 @@ impl ManagedCoordinationClient {
                 ),
             ),
             Err(RequestError::Status(409, response)) => Err(
-                ManagedCoordinationClientError::Conflict(self.try_parse_state(response)),
+                ManagedCoordinationClientError::Conflict(Box::new(self.try_parse_state(response))),
             ),
             Err(RequestError::Status(status, response)) => Err(self.unexpected_status(
                 status,

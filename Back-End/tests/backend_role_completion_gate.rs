@@ -78,10 +78,10 @@ fn run_script(script: &Path, arg: &str) -> Output {
         if let Ok(user_profile) = env::var("USERPROFILE") {
             cargo_path_entries.push(format!(r"{user_profile}\.cargo\bin"));
         }
-        if cargo_path_entries.is_empty() {
-            if let (Ok(home_drive), Ok(home_path)) = (env::var("HOMEDRIVE"), env::var("HOMEPATH")) {
-                cargo_path_entries.push(format!(r"{home_drive}{home_path}\.cargo\bin"));
-            }
+        if cargo_path_entries.is_empty()
+            && let (Ok(home_drive), Ok(home_path)) = (env::var("HOMEDRIVE"), env::var("HOMEPATH"))
+        {
+            cargo_path_entries.push(format!(r"{home_drive}{home_path}\.cargo\bin"));
         }
         let cargo_path_prefix = if cargo_path_entries.is_empty() {
             String::new()

@@ -1259,20 +1259,22 @@ impl ManagedRoomCoordinator {
                 self.lease_ttl,
             )
             .map_err(|error| match error {
-                ManagedCoordinationClientError::Conflict(Some(state)) => {
-                    let owner_node_id = state.node_id.trim();
-                    let owner_node_id = if owner_node_id.is_empty() {
-                        "<unknown-node>"
-                    } else {
-                        owner_node_id
-                    };
-                    RoomCoordinatorError::Operation(format!(
-                        "document `{doc_id}` is already leased by node `{owner_node_id}`"
-                    ))
-                }
-                ManagedCoordinationClientError::Conflict(None) => RoomCoordinatorError::Operation(
-                    format!("document `{doc_id}` is already leased by another collaboration node"),
-                ),
+                ManagedCoordinationClientError::Conflict(state) => match *state {
+                    Some(state) => {
+                        let owner_node_id = state.node_id.trim();
+                        let owner_node_id = if owner_node_id.is_empty() {
+                            "<unknown-node>"
+                        } else {
+                            owner_node_id
+                        };
+                        RoomCoordinatorError::Operation(format!(
+                            "document `{doc_id}` is already leased by node `{owner_node_id}`"
+                        ))
+                    }
+                    None => RoomCoordinatorError::Operation(format!(
+                        "document `{doc_id}` is already leased by another collaboration node"
+                    )),
+                },
                 ManagedCoordinationClientError::Config(message)
                 | ManagedCoordinationClientError::Request(message) => {
                     RoomCoordinatorError::Operation(message)

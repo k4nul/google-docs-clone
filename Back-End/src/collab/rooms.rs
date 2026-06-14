@@ -230,10 +230,10 @@ impl RoomRegistry {
     }
 
     pub fn delete_document(&self, doc_id: &Uuid) -> Result<Option<Document>, StorageError> {
-        if let Some(room) = self.get(doc_id) {
-            if room.active_sessions() > 0 {
-                return Err(StorageError::DocumentBusy(*doc_id));
-            }
+        if let Some(room) = self.get(doc_id)
+            && room.active_sessions() > 0
+        {
+            return Err(StorageError::DocumentBusy(*doc_id));
         }
 
         let document = self.rooms.remove(doc_id).map(|(_, room)| room.document());
