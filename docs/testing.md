@@ -8,7 +8,7 @@
 
 ```bash
 cd Front-End
-npm ci
+npm run deps:ci
 npm run build
 npm run lint
 npm run test
@@ -25,7 +25,7 @@ npm run typecheck
 
 Frontend unit and component tests use Vitest/jsdom and mocked `fetch` boundaries, so they do not require a live backend. Run the local backend and Vite dev server only for manual cross-stack create/open/edit checks.
 
-The root `.github/workflows/ci.yml` workflow is the active CI entry point and runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path.
+The root `.github/workflows/ci.yml` workflow is the active CI entry point and runs these frontend gates from `Front-End/` with `npm ci` and the package lockfile cache path. Maintainer phase and progress gates use `npm run deps:ci` first so clean temporary worktrees install from `package-lock.json` before invoking `tsc`, Vite, ESLint, or Vitest.
 
 ## Backend
 

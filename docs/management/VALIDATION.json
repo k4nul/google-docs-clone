@@ -3,7 +3,7 @@
   "kind": "project_validation",
   "projectId": "web-google-docs-clone",
   "commands": [
-    "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck",
+    "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck",
     "cd Back-End && ./scripts/verify.sh core",
     "cd Back-End && ./scripts/verify.sh websocket"
   ],
@@ -31,9 +31,9 @@
       "command": [
         "bash",
         "-lc",
-        "cd Front-End && npm run build"
+        "cd Front-End && npm run deps:ci && npm run build"
       ],
-      "timeout": 180,
+      "timeout": 300,
       "weight": 10,
       "blocking": true,
       "nextAction": "fix Front-End build before the local-validation phase can transition"
@@ -45,9 +45,9 @@
       "command": [
         "bash",
         "-lc",
-        "cd Front-End && npm run lint"
+        "cd Front-End && npm run deps:ci && npm run lint"
       ],
-      "timeout": 180,
+      "timeout": 300,
       "weight": 10,
       "blocking": true,
       "nextAction": "fix Front-End lint before the local-validation phase can transition"
@@ -59,9 +59,9 @@
       "command": [
         "bash",
         "-lc",
-        "cd Front-End && npm run test"
+        "cd Front-End && npm run deps:ci && npm run test"
       ],
-      "timeout": 180,
+      "timeout": 300,
       "weight": 10,
       "blocking": true,
       "nextAction": "fix Front-End tests before the local-validation phase can transition"
@@ -73,9 +73,9 @@
       "command": [
         "bash",
         "-lc",
-        "cd Front-End && npm run typecheck"
+        "cd Front-End && npm run deps:ci && npm run typecheck"
       ],
-      "timeout": 180,
+      "timeout": 300,
       "weight": 10,
       "blocking": true,
       "nextAction": "fix Front-End typecheck before the local-validation phase can transition"

@@ -6,8 +6,8 @@
   "transition": {
     "intent": "Advance only after local frontend/backend validation is complete and any external account or publish needs are explicitly reviewed.",
     "mode": "machine-gated-local-validation-with-manual-external-review",
-    "validation_command": "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
-    "transition_validation_command": "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
+    "validation_command": "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
+    "transition_validation_command": "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
     "decision_rule": "Do not move to external provisioning while local checks, checklist evidence, or external-risk review are pending."
   },
   "phase_model": [
@@ -77,7 +77,7 @@
       "required_for_transition": true,
       "description": "Frontend build, lint, tests, and typecheck pass.",
       "evidence": [
-        "cd Front-End && npm run build && npm run lint && npm run test && npm run typecheck"
+        "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck"
       ]
     },
     {

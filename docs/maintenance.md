@@ -17,12 +17,13 @@ read checkbox completion in:
 - `Front-End/docs/checklist.md`
 - `Back-End/docs/checklist.md`
 
-The command criteria mirror the active phase gate: frontend build, lint, test,
-and typecheck must pass, and backend `core` plus `websocket` verification lanes
-must pass before local validation can transition. Keep implementation completion
-items as checked only when local source, docs, and validation evidence support
-them. External account provisioning can be recorded as a non-checkbox follow-up
-when it does not block local implementation or verification.
+The command criteria mirror the active phase gate: the frontend first runs
+`npm run deps:ci` from `Front-End/`, then build, lint, test, and typecheck must
+pass; backend `core` plus `websocket` verification lanes must also pass before
+local validation can transition. Keep implementation completion items as checked
+only when local source, docs, and validation evidence support them. External
+account provisioning can be recorded as a non-checkbox follow-up when it does
+not block local implementation or verification.
 
 ## Local Validation Closeout Evidence
 
@@ -42,6 +43,7 @@ For frontend behavior, API client, route, UI, or env changes, run:
 
 ```bash
 cd Front-End
+npm run deps:ci
 npm run build
 npm run lint
 npm run test

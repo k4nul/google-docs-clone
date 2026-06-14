@@ -123,6 +123,7 @@ The local-validation external review packet is recorded in [External Provisionin
 
 ```bash
 cd Front-End
+npm run deps:ci
 npm run build
 npm run lint
 npm run test
