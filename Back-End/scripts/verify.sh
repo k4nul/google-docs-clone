@@ -29,6 +29,21 @@ CORE_SKIP_FILTERS=(
     "--skip" "s3_snapshot_store_"
 )
 
+WEBSOCKET_TEST_FILTERS=(
+    "websocket_endpoint_"
+    "websocket_room_coordinator_tracks_first_and_last_session"
+    "websocket_room_activation_failure_does_not_leak_active_sessions"
+    "delete_document_endpoint_rejects_documents_with_active_websocket_sessions"
+    "delete_document_endpoint_allows_delete_after_websocket_session_closes"
+    "document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff"
+    "app_state_restores_latest_managed_snapshot_after_managed_owner_handoff"
+    "app_state_uses_managed_room_coordination_from_config"
+    "app_state_uses_managed_snapshot_store_from_config"
+    "app_state_uses_s3_snapshot_store_from_config"
+    "managed_snapshot_store_"
+    "s3_snapshot_store_"
+)
+
 run() {
     printf '==> %s\n' "$*"
     "$@"
@@ -39,6 +54,16 @@ run_cargo() {
         run env "CARGO_TARGET_DIR=$NESTED_TARGET_DIR" "$CARGO_BIN" "$@"
     else
         run "$CARGO_BIN" "$@"
+    fi
+}
+
+run_websocket_filter() {
+    local test_filter="$1"
+
+    if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
+        run_cargo test --locked --test health "$test_filter"
+    else
+        run_cargo test --locked "$test_filter"
     fi
 }
 
@@ -57,33 +82,10 @@ run_core_lane() {
 
 run_websocket_lane() {
     run "$ROOT_DIR/scripts/preflight.sh" websocket
-    if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
-        run_cargo test --locked --test health websocket_endpoint_
-        run_cargo test --locked --test health websocket_room_coordinator_tracks_first_and_last_session
-        run_cargo test --locked --test health websocket_room_activation_failure_does_not_leak_active_sessions
-        run_cargo test --locked --test health delete_document_endpoint_rejects_documents_with_active_websocket_sessions
-        run_cargo test --locked --test health delete_document_endpoint_allows_delete_after_websocket_session_closes
-        run_cargo test --locked --test health document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff
-        run_cargo test --locked --test health app_state_restores_latest_managed_snapshot_after_managed_owner_handoff
-        run_cargo test --locked --test health app_state_uses_managed_room_coordination_from_config
-        run_cargo test --locked --test health app_state_uses_managed_snapshot_store_from_config
-        run_cargo test --locked --test health app_state_uses_s3_snapshot_store_from_config
-        run_cargo test --locked --test health managed_snapshot_store_
-        run_cargo test --locked --test health s3_snapshot_store_
-    else
-        run_cargo test --locked websocket_endpoint_
-        run_cargo test --locked websocket_room_coordinator_tracks_first_and_last_session
-        run_cargo test --locked websocket_room_activation_failure_does_not_leak_active_sessions
-        run_cargo test --locked delete_document_endpoint_rejects_documents_with_active_websocket_sessions
-        run_cargo test --locked delete_document_endpoint_allows_delete_after_websocket_session_closes
-        run_cargo test --locked document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff
-        run_cargo test --locked app_state_restores_latest_managed_snapshot_after_managed_owner_handoff
-        run_cargo test --locked app_state_uses_managed_room_coordination_from_config
-        run_cargo test --locked app_state_uses_managed_snapshot_store_from_config
-        run_cargo test --locked app_state_uses_s3_snapshot_store_from_config
-        run_cargo test --locked managed_snapshot_store_
-        run_cargo test --locked s3_snapshot_store_
-    fi
+
+    for test_filter in "${WEBSOCKET_TEST_FILTERS[@]}"; do
+        run_websocket_filter "$test_filter"
+    done
 }
 
 run_all_lanes() {
