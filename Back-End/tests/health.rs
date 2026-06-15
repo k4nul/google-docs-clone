@@ -2046,6 +2046,18 @@ fn decode_sync_message(payload: impl AsRef<[u8]>) -> SyncMessage {
     }
 }
 
+fn text_content_from_snapshot(snapshot: DocumentSnapshot) -> String {
+    let doc = Doc::new();
+    let text = doc.get_or_insert_text("content");
+    let mut txn = doc.transact_mut();
+    txn.apply_update(
+        Update::decode_v1(snapshot.update.as_slice()).expect("snapshot update should decode"),
+    );
+    drop(txn);
+
+    text.get_string(&doc.transact())
+}
+
 async fn wait_for_sqlite_room_lease_release(sqlite_path: &std::path::Path, doc_id: Uuid) {
     for _ in 0..20 {
         let connection = rusqlite::Connection::open(sqlite_path)
@@ -3669,6 +3681,199 @@ async fn websocket_endpoint_restores_latest_sqlite_snapshot_after_owner_handoff(
 
     node_b_client.close().await;
     fs::remove_dir_all(shared_root).expect("shared sqlite handoff directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_keeps_sqlite_snapshot_cold_while_remote_owner_is_active() {
+    let shared_root = temp_snapshot_dir("sqlite-cold-remote-owner");
+
+    let mut node_a_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_a_config,
+        &shared_root,
+        "node-a",
+        "http://node-a.internal:4300/",
+    );
+
+    let mut node_b_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_b_config,
+        &shared_root,
+        "node-b",
+        "http://node-b.internal:4301/",
+    );
+
+    let node_a_state =
+        AppState::from_config(&node_a_config).expect("node-a state should initialize");
+    let document = node_a_state
+        .rooms()
+        .create_document(Some("Cold remote owner".to_owned()))
+        .expect("document should be created");
+    let node_a_room = node_a_state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have an active room");
+    assert_eq!(node_a_room.start_session(), 1);
+    node_a_state
+        .room_coordinator()
+        .room_activated(&document.id)
+        .expect("node-a should acquire the sqlite room lease");
+
+    let node_b_state =
+        AppState::from_config(&node_b_config).expect("node-b state should initialize");
+    assert!(
+        node_b_state.rooms().get(&document.id).is_none(),
+        "distributed sqlite mode should keep remote-owned rooms cold on startup"
+    );
+
+    let listed_documents = node_b_state
+        .rooms()
+        .list_documents()
+        .expect("node-b should list the sqlite snapshot catalog without hydrating the room");
+    assert_eq!(listed_documents.len(), 1);
+    assert_eq!(listed_documents[0].id, document.id);
+    assert_eq!(listed_documents[0].title, "Cold remote owner");
+    assert!(
+        node_b_state.rooms().get(&document.id).is_none(),
+        "catalog reads should not claim or hydrate the remote-owned room"
+    );
+
+    let error = node_b_state
+        .ensure_local_room_owner(&document.id)
+        .expect_err("node-b should reject the active sqlite owner before handoff");
+    match error {
+        AppError::RemoteOwner {
+            owner_node_id,
+            owner_base_url,
+            ..
+        } => {
+            assert_eq!(owner_node_id, "node-a");
+            assert_eq!(
+                owner_base_url.as_deref(),
+                Some("http://node-a.internal:4300")
+            );
+        }
+        other => panic!("expected remote owner error, received {other:?}"),
+    }
+
+    node_a_state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &node_a_room)
+        .expect("node-a should persist before cleanup");
+    node_a_state
+        .room_coordinator()
+        .room_deactivated(&document.id)
+        .expect("node-a should release the sqlite room lease");
+    wait_for_sqlite_room_lease_release(&shared_root.join("room-coordinator.sqlite3"), document.id)
+        .await;
+    fs::remove_dir_all(shared_root).expect("sqlite cold owner directory should be cleaned up");
+}
+
+#[tokio::test]
+async fn app_state_restores_latest_sqlite_snapshot_after_sqlite_owner_handoff() {
+    let shared_root = temp_snapshot_dir("sqlite-app-state-owner-handoff");
+
+    let mut node_a_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_a_config,
+        &shared_root,
+        "node-a",
+        "http://node-a.internal:4300/",
+    );
+
+    let mut node_b_config = test_config();
+    configure_shared_sqlite_collaboration(
+        &mut node_b_config,
+        &shared_root,
+        "node-b",
+        "http://node-b.internal:4301/",
+    );
+
+    let node_a_state =
+        AppState::from_config(&node_a_config).expect("node-a state should initialize");
+    let document = node_a_state
+        .rooms()
+        .create_document(Some("Original sqlite handoff title".to_owned()))
+        .expect("document should be created");
+    let node_a_room = node_a_state
+        .rooms()
+        .get(&document.id)
+        .expect("created document should have an active room");
+    assert_eq!(node_a_room.start_session(), 1);
+    node_a_state
+        .room_coordinator()
+        .room_activated(&document.id)
+        .expect("node-a should acquire the sqlite room lease");
+
+    {
+        let node_a_doc = node_a_room.awareness().write().await.doc().clone();
+        let node_a_text = node_a_doc.get_or_insert_text("content");
+        let mut node_a_txn = node_a_doc.transact_mut();
+        node_a_text.insert(&mut node_a_txn, 0, "latest sqlite handoff content");
+    }
+
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    let updated_document = node_a_state
+        .rooms()
+        .update_document(
+            &document.id,
+            Some("Renamed sqlite handoff title".to_owned()),
+            Some(true),
+        )
+        .expect("document metadata update should persist to sqlite")
+        .expect("document should still exist");
+    assert!(updated_document.updated_at > document.updated_at);
+
+    let node_b_state =
+        AppState::from_config(&node_b_config).expect("node-b state should initialize");
+    let remote_owner = node_b_state
+        .ensure_local_room_owner(&document.id)
+        .expect_err("node-b should observe node-a before sqlite handoff");
+    assert!(matches!(
+        remote_owner,
+        AppError::RemoteOwner {
+            owner_node_id,
+            ..
+        } if owner_node_id == "node-a"
+    ));
+
+    let teardown = node_a_state
+        .rooms()
+        .persist_and_evict_if_idle(&document.id, &node_a_room)
+        .expect("node-a should persist the latest sqlite snapshot before handoff");
+    assert!(teardown.evicted);
+    assert_eq!(teardown.remaining_sessions, 0);
+    node_a_state
+        .room_coordinator()
+        .room_deactivated(&document.id)
+        .expect("node-a should release the sqlite room lease");
+    wait_for_sqlite_room_lease_release(&shared_root.join("room-coordinator.sqlite3"), document.id)
+        .await;
+
+    node_b_state
+        .ensure_local_room_owner(&document.id)
+        .expect("node-b should resolve locally after the sqlite lease is released");
+    let restored_room = node_b_state
+        .rooms()
+        .get_or_restore(&document.id)
+        .expect("node-b restore should query the sqlite snapshot store")
+        .expect("sqlite snapshot should restore after owner handoff");
+    let restored_document = restored_room.document();
+    assert_eq!(restored_document.id, document.id);
+    assert_eq!(restored_document.title, "Renamed sqlite handoff title");
+    assert!(restored_document.hide_preview);
+    assert!(restored_document.updated_at >= updated_document.updated_at);
+    assert!(restored_room.authorizes(document.access_token()));
+    assert_eq!(
+        text_content_from_snapshot(
+            restored_room
+                .snapshot()
+                .expect("restored room should produce a snapshot")
+        ),
+        "latest sqlite handoff content"
+    );
+
+    fs::remove_dir_all(shared_root).expect("sqlite handoff directory should be cleaned up");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
