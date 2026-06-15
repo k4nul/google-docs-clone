@@ -3,11 +3,8 @@ use uuid::Uuid;
 use crate::errors::{AppError, AppResult};
 
 pub(crate) fn parse_uuid_param(parameter: &str, raw_value: &str) -> AppResult<Uuid> {
-    Uuid::parse_str(raw_value).map_err(|_| {
-        AppError::BadRequest(format!(
-            "{parameter} must be a valid UUID, received `{raw_value}`"
-        ))
-    })
+    Uuid::parse_str(raw_value)
+        .map_err(|_| AppError::BadRequest(format!("{parameter} must be a valid UUID")))
 }
 
 #[cfg(test)]
@@ -24,14 +21,14 @@ mod tests {
     }
 
     #[test]
-    fn parse_uuid_param_returns_bad_request_with_parameter_name() {
+    fn parse_uuid_param_returns_bad_request_without_reflecting_raw_value() {
         let error = parse_uuid_param("doc_id", "not-a-uuid")
             .expect_err("invalid uuid path parameter should be rejected");
 
         assert!(matches!(
             error,
             AppError::BadRequest(message)
-                if message == "doc_id must be a valid UUID, received `not-a-uuid`"
+                if message == "doc_id must be a valid UUID" && !message.contains("not-a-uuid")
         ));
     }
 }

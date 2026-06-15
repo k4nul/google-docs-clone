@@ -27,7 +27,7 @@ pub fn require_bearer_token(headers: &HeaderMap) -> AppResult<&str> {
 pub fn require_admin_token(headers: &HeaderMap, expected_token: &str) -> AppResult<()> {
     let token = require_bearer_token(headers)?;
 
-    if token != expected_token {
+    if !crate::secrets::constant_time_eq(token, expected_token) {
         return Err(AppError::Forbidden(
             "provided API token does not grant this operation".to_owned(),
         ));

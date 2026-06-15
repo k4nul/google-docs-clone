@@ -53,7 +53,7 @@ impl Document {
     }
 
     pub fn authorize(&self, token: &str) -> bool {
-        self.access_token == token
+        crate::secrets::constant_time_eq(&self.access_token, token)
     }
 
     pub(crate) fn from_parts(

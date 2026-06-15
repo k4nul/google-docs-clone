@@ -7,9 +7,11 @@
 ```json
 {
   "error": "bad_request",
-  "message": "id must be a valid UUID, received `not-a-uuid`"
+  "message": "id must be a valid UUID"
 }
 ```
+
+잘못된 UUID 값은 요청 제어 문자열을 응답 body에 반사하지 않도록 생략한다.
 
 room ownership conflict처럼 non-local owner 힌트를 함께 주는 경우에는 `owner` 객체가 추가될 수 있다.
 

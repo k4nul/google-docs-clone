@@ -7,5 +7,6 @@ pub mod http_client;
 mod http_params;
 pub mod models;
 pub mod routes;
+mod secrets;
 pub mod state;
 pub mod storage;

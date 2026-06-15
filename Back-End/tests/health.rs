@@ -3114,10 +3114,7 @@ async fn document_detail_endpoint_rejects_invalid_uuid_with_json_error() {
 
     let payload = response.json::<Value>();
     assert_eq!(payload["error"], "bad_request");
-    assert_eq!(
-        payload["message"],
-        "id must be a valid UUID, received `not-a-uuid`"
-    );
+    assert_eq!(payload["message"], "id must be a valid UUID");
 }
 
 #[tokio::test]
@@ -3190,10 +3187,7 @@ async fn websocket_endpoint_rejects_invalid_uuid_with_json_error() {
 
     let payload = response.json::<Value>();
     assert_eq!(payload["error"], "bad_request");
-    assert_eq!(
-        payload["message"],
-        "doc_id must be a valid UUID, received `not-a-uuid`"
-    );
+    assert_eq!(payload["message"], "doc_id must be a valid UUID");
 }
 
 #[tokio::test]
@@ -28903,10 +28897,7 @@ async fn delete_document_endpoint_rejects_invalid_uuid_with_json_error() {
     response.assert_status_bad_request();
     let payload = response.json::<Value>();
     assert_eq!(payload["error"], "bad_request");
-    assert_eq!(
-        payload["message"],
-        "id must be a valid UUID, received `not-a-uuid`"
-    );
+    assert_eq!(payload["message"], "id must be a valid UUID");
 }
 
 #[tokio::test]

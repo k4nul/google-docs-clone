@@ -199,10 +199,7 @@ async fn localhost_document_detail_rejects_invalid_uuid() {
     assert_eq!(resp.status().as_u16(), 400);
     let body: Value = resp.json().await.unwrap();
     assert_eq!(body["error"], "bad_request");
-    assert_eq!(
-        body["message"],
-        "id must be a valid UUID, received `not-a-uuid`"
-    );
+    assert_eq!(body["message"], "id must be a valid UUID");
 }
 
 #[tokio::test]
