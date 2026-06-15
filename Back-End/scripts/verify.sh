@@ -52,12 +52,37 @@ run_cargo() {
 
 run_websocket_filter() {
     local test_filter="$1"
+    local test_log
+    local status
+    local -a test_command
 
+    test_log="$(mktemp)"
     if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
-        run_cargo test --locked --test health "$test_filter"
+        test_command=(env "CARGO_TARGET_DIR=$NESTED_TARGET_DIR" "$CARGO_BIN" test --locked --test health "$test_filter")
     else
-        run_cargo test --locked "$test_filter"
+        test_command=("$CARGO_BIN" test --locked --test health "$test_filter")
     fi
+
+    printf '==> %s\n' "${test_command[*]}"
+    if "${test_command[@]}" >"$test_log" 2>&1; then
+        cat "$test_log"
+        rm -f "$test_log"
+        return 0
+    else
+        status=$?
+    fi
+
+    cat "$test_log" >&2
+    if grep -q "Cannot create socket address for use" "$test_log"; then
+        rm -f "$test_log"
+        printf '[fail] websocket verification filter `%s` could not bind socket addresses\n' "$test_filter" >&2
+        printf '[fail] runner cannot bind socket addresses; websocket verification lane is blocked\n' >&2
+        return 1
+    fi
+
+    rm -f "$test_log"
+    printf '[fail] websocket verification filter `%s` failed with status %s\n' "$test_filter" "$status" >&2
+    return "$status"
 }
 
 run_core_lane() {

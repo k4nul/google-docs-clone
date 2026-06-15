@@ -4,6 +4,14 @@ use std::{
     process::{Command, Output},
 };
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
+use std::{
+    fs,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 const NESTED_GATE_ENV: &str = "BACKEND_ROLE_COMPLETION_NESTED";
 const GATE_COMMAND: &str = "cargo test --test backend_role_completion_gate -- --nocapture";
 const WINDOWS_SQLITE_STATUS_MARKER: &str = "WINDOWS_SQLITE_SHIM_COMPATIBILITY_DONE";
@@ -130,6 +138,39 @@ fn combined_output(output: &Output) -> String {
     )
 }
 
+#[cfg(unix)]
+fn unique_temp_dir(test_name: &str) -> PathBuf {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    env::temp_dir().join(format!(
+        "backend-{test_name}-{}-{timestamp}",
+        std::process::id()
+    ))
+}
+
+#[cfg(unix)]
+fn write_executable(path: &Path, contents: &str) {
+    fs::write(path, contents).expect("fake cargo script should be written");
+    let mut permissions = fs::metadata(path)
+        .expect("fake cargo script metadata should be readable")
+        .permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(path, permissions).expect("fake cargo script should be executable");
+}
+
+#[cfg(unix)]
+fn run_verify_websocket_with_fake_cargo(fake_cargo: &Path, log_path: &Path) -> Output {
+    Command::new(repo_root().join("scripts/verify.sh"))
+        .arg("websocket")
+        .current_dir(repo_root())
+        .env("CARGO", fake_cargo)
+        .env("FAKE_CARGO_LOG", log_path)
+        .output()
+        .expect("verify websocket command should run with fake cargo")
+}
+
 fn latest_current_status_entry(checklist: &str) -> &str {
     let mut in_current_status_section = false;
 
@@ -165,6 +206,101 @@ fn latest_status_entry_marks_completion(status_entry: &str) -> bool {
                 || headline.starts_with(WINDOWS_SQLITE_STATUS_MARKER)
         })
         .unwrap_or(false)
+}
+
+#[cfg(unix)]
+#[test]
+fn verify_websocket_reports_failed_filter_name() {
+    let temp_dir = unique_temp_dir("verify-websocket-failed-filter");
+    fs::create_dir_all(&temp_dir).expect("test temp directory should be created");
+    let fake_cargo = temp_dir.join("fake-cargo");
+    let call_log = temp_dir.join("cargo-calls.log");
+    write_executable(
+        &fake_cargo,
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${FAKE_CARGO_LOG:?}"
+if [[ "$*" == *"websocket_endpoint_accepts_document_connections -- --exact"* ]]; then
+    exit 0
+fi
+if [[ "$*" == *"--test health websocket_endpoint_"* ]]; then
+    echo "simulated websocket assertion failed" >&2
+    exit 101
+fi
+exit 0
+"#,
+    );
+
+    let output = run_verify_websocket_with_fake_cargo(&fake_cargo, &call_log);
+    let combined = combined_output(&output);
+
+    assert!(
+        !output.status.success(),
+        "fake cargo should make websocket verification fail.\n{combined}"
+    );
+    assert!(
+        combined.contains("simulated websocket assertion failed"),
+        "verify output should include the cargo failure body.\n{combined}"
+    );
+    assert!(
+        combined
+            .contains("websocket verification filter `websocket_endpoint_` failed with status 101"),
+        "verify output should name the failing websocket filter.\n{combined}"
+    );
+    assert!(
+        fs::read_to_string(&call_log)
+            .expect("fake cargo call log should be readable")
+            .contains("--test health websocket_endpoint_"),
+        "websocket filters should run against the health integration test target"
+    );
+
+    fs::remove_dir_all(temp_dir).expect("test temp directory should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn verify_websocket_classifies_post_preflight_socket_bind_failure() {
+    let temp_dir = unique_temp_dir("verify-websocket-socket-bind");
+    fs::create_dir_all(&temp_dir).expect("test temp directory should be created");
+    let fake_cargo = temp_dir.join("fake-cargo");
+    let call_log = temp_dir.join("cargo-calls.log");
+    write_executable(
+        &fake_cargo,
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${FAKE_CARGO_LOG:?}"
+if [[ "$*" == *"websocket_endpoint_accepts_document_connections -- --exact"* ]]; then
+    exit 0
+fi
+if [[ "$*" == *"--test health websocket_endpoint_"* ]]; then
+    echo "Cannot create socket address for use" >&2
+    exit 101
+fi
+exit 0
+"#,
+    );
+
+    let output = run_verify_websocket_with_fake_cargo(&fake_cargo, &call_log);
+    let combined = combined_output(&output);
+
+    assert!(
+        !output.status.success(),
+        "fake cargo should make websocket verification fail.\n{combined}"
+    );
+    assert!(
+        combined.contains(
+            "websocket verification filter `websocket_endpoint_` could not bind socket addresses"
+        ),
+        "verify output should name the filter that hit the socket blocker.\n{combined}"
+    );
+    assert!(
+        combined.contains(
+            "runner cannot bind socket addresses; websocket verification lane is blocked"
+        ),
+        "verify output should classify socket bind failures like preflight.\n{combined}"
+    );
+
+    fs::remove_dir_all(temp_dir).expect("test temp directory should be removed");
 }
 
 #[test]
@@ -324,6 +460,9 @@ fn backend_role_completion_gate() {
     assert!(
         verify_script.contains("run_websocket_lane")
             && verify_script.contains("websocket_endpoint_")
+            && verify_script.contains("--test health")
+            && verify_script.contains("websocket verification filter")
+            && verify_script.contains("Cannot create socket address for use")
             && verify_script.contains(
                 "delete_document_endpoint_rejects_documents_with_active_websocket_sessions"
             ),

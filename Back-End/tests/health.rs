@@ -250,7 +250,6 @@ fn configure_managed_snapshot_store(
     config.snapshot_managed_timeout_secs = 5;
 }
 
-#[cfg(feature = "full-snapshot-stores")]
 fn configure_s3_snapshot_store(
     config: &mut Config,
     endpoint: &str,
@@ -10862,7 +10861,6 @@ fn app_state_uses_parity_db_snapshot_store_from_config() {
 }
 
 #[test]
-#[cfg(feature = "full-snapshot-stores")]
 fn app_state_rejects_s3_snapshot_store_without_endpoint() {
     let mut config = test_config();
     config.snapshot_store = "s3".to_owned();
@@ -10881,7 +10879,6 @@ fn app_state_rejects_s3_snapshot_store_without_endpoint() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_managed_snapshot_store_from_config() {
     let harness = spawn_mock_managed_coordination_service(Some("snapshot-secret")).await;
 
@@ -10928,7 +10925,6 @@ async fn app_state_uses_managed_snapshot_store_from_config() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[cfg(feature = "full-snapshot-stores")]
 async fn app_state_uses_s3_snapshot_store_from_config() {
     let harness = spawn_mock_s3_snapshot_service().await;
 
