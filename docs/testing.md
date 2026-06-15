@@ -47,6 +47,24 @@ cargo check --features full-snapshot-stores
 The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` and `./scripts/verify.sh websocket` for the backend. Full snapshot-store checks remain explicit follow-up lanes because they compile the large optional adapter inventory.
 `./scripts/preflight.sh publish` remains available as a publish readiness check for `.git` metadata write access and `github.com` DNS, but it is not part of the local-validation phase transition command.
 
+The WebSocket lane runs each socket-dependent filter separately through
+`Back-End/scripts/verify.sh`. That split is intentional: a phase-transition
+blocker should name the first failing filter, not just the final cargo summary.
+The managed owner handoff filter currently used for SQLite snapshot restore
+readiness is:
+
+```bash
+cd Back-End
+cargo test --locked --test health document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff
+```
+
+That test creates two managed-coordination nodes sharing SQLite snapshots. It
+expects node B to observe node A as the active owner, then restore the latest
+persisted `"hello managed handoff"` snapshot from SQLite after node A persists,
+evicts, and releases the managed lease. After fixing or rerunning a single
+failing filter, run `./scripts/verify.sh websocket` again so the remaining
+WebSocket/delete/managed/S3 filters are covered in script order.
+
 For full adapter regression instead of compile-only inventory, run:
 
 ```bash
@@ -88,3 +106,14 @@ can advance to external account provisioning review. A run can show all visible
 test suites passing but still be blocked if any command in the chain exits
 nonzero. In that case, keep the phase in local validation and use the first
 nonzero command output as the blocker to fix or rerun.
+
+When the controller reports a WebSocket lane failure with:
+
+```text
+[fail] websocket verification filter `document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff` failed
+```
+
+keep the phase in `collaborative-editor-local-validation`. The failure means
+the managed-coordination plus shared SQLite handoff contract has not been
+validated for transition, even if frontend checks, backend core checks, and
+other WebSocket filters passed earlier in the same run.

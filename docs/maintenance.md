@@ -56,6 +56,17 @@ repository root:
 cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
+The current phase remains `collaborative-editor-local-validation` until that
+chain exits zero. A WebSocket lane failure such as
+`document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff`
+is a local validation blocker for managed coordination plus shared SQLite
+snapshot handoff; it is not an external provisioning task. Reproduce that
+single filter from `Back-End/` with:
+
+```bash
+cargo test --locked --test health document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff
+```
+
 For frontend behavior, API client, route, UI, or env changes, run:
 
 ```bash

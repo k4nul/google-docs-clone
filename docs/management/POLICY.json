@@ -18,7 +18,7 @@
   },
   "folderPolicy": {
     "rootDocDirectoryAllowed": false,
-    "machineReadableControlDocsDirectory": "docs/control",
+    "machineReadableControlDocsDirectory": "docs/management",
     "managementInstructionsDirectory": "docs/management"
   },
   "harnessPolicy": {

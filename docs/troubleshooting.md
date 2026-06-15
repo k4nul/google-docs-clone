@@ -63,14 +63,14 @@ Use the scripted lanes to distinguish environment blockers from test failures.
 ```bash
 cd Back-End
 ./scripts/verify.sh core
-./scripts/preflight.sh publish
 ./scripts/preflight.sh websocket
 ./scripts/verify.sh websocket
 ```
 
 - If `preflight.sh websocket` reports that the runner cannot bind socket addresses, the WebSocket lane is blocked by the environment.
 - If `verify.sh core` fails, inspect the preceding `cargo fmt`, `cargo check`, or socket-free test output.
-- If `preflight.sh publish` fails DNS or `.git` write checks, that blocks publish readiness, not necessarily local build correctness.
+- If `verify.sh websocket` reports a named filter failure, rerun that exact filter before rerunning the whole lane. For the current managed SQLite owner handoff transition blocker, use `cargo test --locked --test health document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff` from `Back-End/`.
+- If `preflight.sh publish` fails DNS or `.git` write checks, that blocks publish readiness, not phase-transition reproduction or local build correctness.
 
 For live API failures that only reproduce against a running server, keep `cargo run` active in one terminal and run:
 
@@ -110,6 +110,18 @@ and inspect the first command that exits nonzero. Common distinctions:
 - `npm run build`, `lint`, `test`, or `typecheck` failures are frontend validation blockers.
 - `./scripts/verify.sh core` failures are backend format, compile, or socket-free test blockers.
 - `./scripts/verify.sh websocket` failures are WebSocket/delete/managed/S3 lane blockers or local socket-binding environment blockers.
+
+For a failure like:
+
+```text
+[fail] websocket verification filter `document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff` failed with status 101
+```
+
+the socket preflight has already passed and the blocker is a backend regression
+or timing failure in the managed coordination plus shared SQLite snapshot
+handoff path. Re-run the single filter from `Back-End/`, inspect the assertion
+or panic above the `[fail]` line, then rerun `./scripts/verify.sh websocket`.
+Do not mark local validation ready until the full phase command passes.
 
 When the progress dashboard already shows `100%/complete`, use this command to
 decide phase-transition readiness. Do not create external accounts, deploy

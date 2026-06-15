@@ -139,6 +139,10 @@ cd Back-End
 cargo check --features full-snapshot-stores
 ```
 
+Local-validation phase transition readiness is governed by
+`docs/instructions/phase-gates.json`. The chained source-of-truth command and
+current blocker triage notes are in [Testing](docs/testing.md#phase-transition-readiness).
+
 기본 백엔드 빌드는 compile fan-out을 줄이기 위해 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 바로 컴파일합니다. 전체 adapter inventory를 점검할 때만 `--features full-snapshot-stores`를 사용합니다.
 `./scripts/preflight.sh publish`는 `.git` metadata 쓰기와 `github.com` DNS를 확인하는 publish readiness 점검이며, local-validation phase transition command에는 포함되지 않습니다.
 
