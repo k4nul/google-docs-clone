@@ -58,3 +58,21 @@ jobs:
 
       - name: Run core backend verification
         run: ./scripts/verify.sh core
+
+  backend-websocket:
+    name: backend websocket
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Back-End
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
+
+      - name: Run websocket backend verification
+        run: ./scripts/verify.sh websocket

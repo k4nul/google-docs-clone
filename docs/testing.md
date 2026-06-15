@@ -44,7 +44,7 @@ cargo check --features full-snapshot-stores
 | `./scripts/verify.sh websocket` | Probes socket binding, then runs WebSocket/delete/managed/S3 lanes |
 | `cargo check --features full-snapshot-stores` | Compile-checks the full snapshot adapter inventory |
 
-The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` for the backend. WebSocket and full snapshot-store checks remain explicit follow-up lanes because they need socket binding or compile the large optional adapter inventory.
+The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` and `./scripts/verify.sh websocket` for the backend. Full snapshot-store checks remain explicit follow-up lanes because they compile the large optional adapter inventory.
 `./scripts/preflight.sh publish` remains available as a publish readiness check for `.git` metadata write access and `github.com` DNS, but it is not part of the local-validation phase transition command.
 
 For full adapter regression instead of compile-only inventory, run:

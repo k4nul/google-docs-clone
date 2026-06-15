@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "project": "google-docs-clone",
+  "project": "web-google-docs-clone",
   "current_phase": "collaborative-editor-local-validation",
   "next_phase": "external-account-provisioning-review",
   "transition": {
