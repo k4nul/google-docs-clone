@@ -20,7 +20,7 @@ The current repository is validated as a local collaborative editor:
   repository paths to the baseline `@System-Docs-H` owner.
 - The active CI entry point is root `.github/workflows/ci.yml`. It runs the
   frontend build, lint, test, and typecheck gates, plus backend
-  `./scripts/verify.sh core`.
+  `./scripts/verify.sh core` and `./scripts/verify.sh websocket`.
 
 These defaults are local-development defaults. They are not production hosting,
 external storage, external coordination, or owner-account provisioning.
@@ -35,13 +35,13 @@ Before the phase can move to `external-account-provisioning-review`, the
 transition command must still pass:
 
 ```bash
-cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
-cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
-The root CI workflow covers the frontend gates and backend core lane. The
-backend WebSocket lane remains an explicit local transition gate because it
-needs socket binding.
+The root CI workflow covers the frontend gates, backend core lane, and backend
+WebSocket lane. The backend WebSocket lane also remains explicit in the local
+transition command because it exercises socket binding and collaboration
+session behavior that must pass before the phase changes.
 
 The transition command is intentionally stricter than the root CI frontend
 steps because generated maintenance worktrees start from a clean checkout.

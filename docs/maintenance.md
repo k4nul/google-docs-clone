@@ -4,7 +4,7 @@ This document summarizes the repository-level maintenance gates for the combined
 
 ## Active Automation Boundaries
 
-- The active GitHub Actions entry point is the root `.github/workflows/ci.yml`. It runs frontend gates from `Front-End/` and backend core verification from `Back-End/`.
+- The active GitHub Actions entry point is the root `.github/workflows/ci.yml`. It runs frontend gates from `Front-End/`, backend core verification from `Back-End/`, and the backend WebSocket verification lane from `Back-End/`.
 - The retired nested frontend `.github/` files have been removed so the root workflow and CODEOWNERS file are the only repository automation entry points.
 - The active ownership file is root `.github/CODEOWNERS`. It maps the current A/B/C/D role paths to the `@System-Docs-H` baseline owner until dedicated GitHub users or teams are provisioned.
 
@@ -20,10 +20,13 @@ read checkbox completion in:
 The command criteria mirror the active phase gate: the frontend first runs
 `npm run deps:ci` from `Front-End/`, then build, lint, test, and typecheck must
 pass; backend `core` plus `websocket` verification lanes must also pass before
-local validation can transition. Keep implementation completion items as checked
-only when local source, docs, and validation evidence support them. External
-account provisioning can be recorded as a non-checkbox follow-up when it does
-not block local implementation or verification.
+local validation can transition. Root CI covers the same frontend build, lint,
+test, typecheck, backend core, and backend WebSocket lanes, while the maintainer
+phase command keeps `npm run deps:ci` explicit so clean temporary worktrees
+install from the lockfile before validation. Keep implementation completion
+items as checked only when local source, docs, and validation evidence support
+them. External account provisioning can be recorded as a non-checkbox follow-up
+when it does not block local implementation or verification.
 
 When the progress dashboard reads `100%/complete` while the phase still shows
 `collaborative-editor-local-validation->external-account-provisioning-review`,
@@ -50,8 +53,7 @@ For local-validation transition readiness, run the full phase command from the
 repository root:
 
 ```bash
-cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
-cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 For frontend behavior, API client, route, UI, or env changes, run:

@@ -80,8 +80,7 @@ The active phase gate in `docs/instructions/phase-gates.json` uses one
 root-relative command for transition readiness:
 
 ```bash
-cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
-cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 Treat that command as the source of truth when deciding whether local validation

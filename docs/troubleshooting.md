@@ -85,7 +85,7 @@ Run commands from `Front-End/` because the package manifest and lockfile live th
 
 ```bash
 cd Front-End
-npm ci
+npm run deps:ci
 npm run build
 npm run lint
 npm run test
@@ -99,8 +99,7 @@ Vitest uses jsdom and `Front-End/src/test/setup.ts` from `Front-End/vite.config.
 The local-validation phase transition command is:
 
 ```bash
-cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck
-cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
+cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 If the phase controller reports `returnCode` as nonzero, do not infer readiness
