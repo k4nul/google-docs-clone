@@ -11,22 +11,10 @@ if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
     mkdir -p "$NESTED_TARGET_DIR"
 fi
 
-CORE_SKIP_FILTERS=(
+CORE_ONLY_SKIP_FILTERS=(
     "--skip" "backend_role_completion_gate"
     "--skip" "project_completion_gate"
     "--skip" "qa_docs_devops_completion_gate"
-    "--skip" "delete_document_endpoint_rejects_documents_with_active_websocket_sessions"
-    "--skip" "delete_document_endpoint_allows_delete_after_websocket_session_closes"
-    "--skip" "websocket_endpoint_"
-    "--skip" "websocket_room_coordinator_tracks_first_and_last_session"
-    "--skip" "websocket_room_activation_failure_does_not_leak_active_sessions"
-    "--skip" "document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff"
-    "--skip" "app_state_restores_latest_managed_snapshot_after_managed_owner_handoff"
-    "--skip" "app_state_uses_managed_room_coordination_from_config"
-    "--skip" "app_state_uses_managed_snapshot_store_from_config"
-    "--skip" "app_state_uses_s3_snapshot_store_from_config"
-    "--skip" "managed_snapshot_store_"
-    "--skip" "s3_snapshot_store_"
 )
 
 WEBSOCKET_TEST_FILTERS=(
@@ -43,6 +31,11 @@ WEBSOCKET_TEST_FILTERS=(
     "managed_snapshot_store_"
     "s3_snapshot_store_"
 )
+
+CORE_SKIP_FILTERS=("${CORE_ONLY_SKIP_FILTERS[@]}")
+for test_filter in "${WEBSOCKET_TEST_FILTERS[@]}"; do
+    CORE_SKIP_FILTERS+=("--skip" "$test_filter")
+done
 
 run() {
     printf '==> %s\n' "$*"
