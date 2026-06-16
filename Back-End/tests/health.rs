@@ -3991,7 +3991,11 @@ async fn document_detail_restores_latest_sqlite_snapshot_after_managed_owner_han
     standby_response.assert_header("x-collab-owner-base-url", "http://node-a.internal:4300");
     standby_response.assert_header(
         "x-collab-redirect-location",
-        format!("http://node-a.internal:4300/api/documents/{doc_id}?probe=managed-standby"),
+        format!("http://node-a.internal:4300/api/documents/{doc_id}"),
+    );
+    standby_response.assert_header(
+        "location",
+        format!("http://node-a.internal:4300/api/documents/{doc_id}"),
     );
 
     let teardown = node_a_state

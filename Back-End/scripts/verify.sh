@@ -73,7 +73,7 @@ run_websocket_filter() {
     fi
 
     cat "$test_log" >&2
-    if grep -q "Cannot create socket address for use" "$test_log"; then
+    if grep -q -e "Cannot create socket address for use" -e "Operation not permitted" "$test_log"; then
         rm -f "$test_log"
         printf '[fail] websocket verification filter `%s` could not bind socket addresses\n' "$test_filter" >&2
         printf '[fail] runner cannot bind socket addresses; websocket verification lane is blocked\n' >&2

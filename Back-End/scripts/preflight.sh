@@ -76,7 +76,7 @@ check_socket_bind() {
         return 0
     fi
 
-    if grep -q "Cannot create socket address for use" "$probe_log"; then
+    if grep -q -e "Cannot create socket address for use" -e "Operation not permitted" "$probe_log"; then
         rm -f "$probe_log"
         fail "runner cannot bind socket addresses; websocket verification lane is blocked"
         return 1
