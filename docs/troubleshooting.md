@@ -94,9 +94,9 @@ npm run typecheck
 
 Vitest uses jsdom and `Front-End/src/test/setup.ts` from `Front-End/vite.config.ts`. If `npm` is blocked by PowerShell execution policy on Windows, use `npm.cmd run <task>`.
 
-## Phase Transition Command Is Blocked
+## Phase Validation Command Is Blocked
 
-The local-validation phase transition command is:
+The active phase validation command is:
 
 ```bash
 cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
@@ -121,9 +121,15 @@ the socket preflight has already passed and the blocker is a backend regression
 or timing failure in the managed coordination plus shared SQLite snapshot
 handoff path. Re-run the single filter from `Back-End/`, inspect the assertion
 or panic above the `[fail]` line, then rerun `./scripts/verify.sh websocket`.
-Do not mark local validation ready until the full phase command passes.
+Do not mark phase validation ready until the full phase command passes.
 
 When the progress dashboard already shows `100%/complete`, use this command to
 decide phase-transition readiness. Do not create external accounts, deploy
 hosting, add secrets, or change CODEOWNERS while this phase still points to
 `external-account-provisioning-review`.
+
+If the command passes but the phase still cannot transition, check
+`docs/instructions/phase-gates.json` for manual gates. The current manual gate
+is `external-owner-approval-recorded`; while it is `pending`, do not move the
+project to `maintenance-only`, provision external accounts, deploy hosting,
+create secrets, replace CODEOWNERS, or publish public data.

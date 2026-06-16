@@ -45,7 +45,7 @@ cargo check --features full-snapshot-stores
 | `cargo check --features full-snapshot-stores` | Compile-checks the full snapshot adapter inventory |
 
 The root `.github/workflows/ci.yml` workflow runs `./scripts/verify.sh core` and `./scripts/verify.sh websocket` for the backend. Full snapshot-store checks remain explicit follow-up lanes because they compile the large optional adapter inventory.
-`./scripts/preflight.sh publish` remains available as a publish readiness check for `.git` metadata write access and `github.com` DNS, but it is not part of the local-validation phase transition command.
+`./scripts/preflight.sh publish` remains available as a publish readiness check for `.git` metadata write access and `github.com` DNS, but it is not part of the current phase transition command.
 
 The WebSocket lane runs each socket-dependent filter separately through
 `Back-End/scripts/verify.sh`. That split is intentional: a phase-transition
@@ -92,20 +92,22 @@ TEST_BASE_URL=http://localhost:4000 TEST_API_TOKEN=dev-admin-token cargo test --
 - Auth or REST API behavior changes: add the ignored live API test lane when a running local backend is available.
 - Docs-only changes: run `git diff --check`; run full gates only when the documentation change reveals a command or contract that needs live verification.
 
-## Phase Transition Readiness
+## Phase Readiness
 
-The active phase gate in `docs/instructions/phase-gates.json` uses one
-root-relative command for transition readiness:
+The active phase gate in `docs/instructions/phase-gates.json` currently keeps
+the project in `external-account-provisioning-review` with
+`maintenance-only` as the next phase. It uses one root-relative command for
+validation readiness:
 
 ```bash
 cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
-Treat that command as the source of truth when deciding whether local validation
-can advance to external account provisioning review. A run can show all visible
-test suites passing but still be blocked if any command in the chain exits
-nonzero. In that case, keep the phase in local validation and use the first
-nonzero command output as the blocker to fix or rerun.
+Treat that command as the source of truth for the machine validation side of
+phase readiness. A run can show all visible test suites passing but still be
+blocked if any command in the chain exits nonzero. In that case, keep the phase
+in `external-account-provisioning-review` and use the first nonzero command
+output as the blocker to fix or rerun.
 
 When the controller reports a WebSocket lane failure with:
 
@@ -113,7 +115,13 @@ When the controller reports a WebSocket lane failure with:
 [fail] websocket verification filter `document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff` failed
 ```
 
-keep the phase in `collaborative-editor-local-validation`. The failure means
-the managed-coordination plus shared SQLite handoff contract has not been
-validated for transition, even if frontend checks, backend core checks, and
-other WebSocket filters passed earlier in the same run.
+keep the phase in `external-account-provisioning-review`. The failure means the
+managed-coordination plus shared SQLite handoff contract has not been validated
+for transition, even if frontend checks, backend core checks, and other
+WebSocket filters passed earlier in the same run.
+
+Even when the validation command passes, the project must not advance to
+`maintenance-only` until the `external-owner-approval-recorded` gate in
+`docs/instructions/phase-gates.json` is no longer pending. Owner approval must
+cover the external account, hosting, storage, publish, secret, and public-data
+plan before any provisioning or deployment work starts.

@@ -28,18 +28,19 @@ items as checked only when local source, docs, and validation evidence support
 them. External account provisioning can be recorded as a non-checkbox follow-up
 when it does not block local implementation or verification.
 
-When the progress dashboard reads `100%/complete` while the phase still shows
-`collaborative-editor-local-validation->external-account-provisioning-review`,
-the next meaningful movement is a phase-transition run, not another
-implementation checklist edit. A docs-only run should only change documentation
-that keeps the transition evidence accurate; it must not force the phase forward
-or provision external accounts.
+When the progress dashboard reads `100%/complete` while the phase shows
+`external-account-provisioning-review->maintenance-only`, the remaining
+movement is owner approval for the external provisioning plan, followed by a
+phase-transition run. A docs-only run should only keep the review evidence and
+validation instructions accurate; it must not force the phase forward, provision
+external accounts, create secrets, deploy hosting, or replace CODEOWNERS.
 
 ## Local Validation Closeout Evidence
 
 - 2026-06-12: `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` contain no unchecked local implementation checklist items for the collaborative editor, REST API, WebSocket sync, document credentials, or snapshot-store boundary.
-- 2026-06-12: External provisioning needs for local-validation exit are listed in `docs/external-provisioning-review.md`. Known follow-ups are dedicated GitHub users or teams, production hosting, snapshot durability choice, room coordination choice, secret storage, and public-data policy. Those follow-ups are not required for local source validation and remain reserved for owner review in the next phase.
-- Automation must not create external accounts, add secrets, deploy hosting, publish public data, or replace CODEOWNERS with unprovisioned handles. Those actions remain reserved for the `external-account-provisioning-review` phase.
+- 2026-06-12: External provisioning needs for local-validation exit are listed in `docs/external-provisioning-review.md`. Known follow-ups are dedicated GitHub users or teams, production hosting, snapshot durability choice, room coordination choice, secret storage, and public-data policy. Those follow-ups are not required for local source validation and remain reserved for owner review in the active external provisioning phase.
+- 2026-06-16: The active phase is `external-account-provisioning-review`. The local validation evidence remains useful, but the transition to `maintenance-only` is blocked until `external-owner-approval-recorded` is no longer pending in `docs/instructions/phase-gates.json`.
+- Automation must not create external accounts, add secrets, deploy hosting, publish public data, or replace CODEOWNERS with unprovisioned handles. Those actions remain reserved for explicit owner approval during `external-account-provisioning-review`.
 
 ## Validation Lanes
 
@@ -49,17 +50,16 @@ For documentation-only changes, run:
 git diff --check
 ```
 
-For local-validation transition readiness, run the full phase command from the
-repository root:
+For phase readiness, run the full validation command from the repository root:
 
 ```bash
 cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
-The current phase remains `collaborative-editor-local-validation` until that
-chain exits zero. A WebSocket lane failure such as
-`document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff`
-is a local validation blocker for managed coordination plus shared SQLite
+The current phase remains `external-account-provisioning-review` until that
+chain exits zero and owner approval is recorded. A WebSocket lane failure such
+as `document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff`
+is still a validation blocker for managed coordination plus shared SQLite
 snapshot handoff; it is not an external provisioning task. Reproduce that
 single filter from `Back-End/` with:
 

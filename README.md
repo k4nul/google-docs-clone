@@ -115,7 +115,10 @@ HTTP base path는 `/api`입니다.
 
 Production hosting, S3/managed external services, public data publishing, and real secrets are outside the local collaborative-editor validation phase. They require explicit owner review in the `external-account-provisioning-review` phase and must not be provisioned or committed by automation.
 
-The local-validation external review packet is recorded in [External Provisioning Review](docs/external-provisioning-review.md). It lists the GitHub owner, hosting, snapshot durability, room coordination, secret storage, and public-data decisions that remain for the next phase without provisioning any external resource.
+The local-validation external review packet is recorded in [External Provisioning Review](docs/external-provisioning-review.md). It lists the GitHub owner, hosting, snapshot durability, room coordination, secret storage, and public-data decisions that now require owner approval without provisioning any external resource.
+The project is currently in `external-account-provisioning-review`; the next
+phase is `maintenance-only` only after explicit owner approval is recorded for
+the external account, hosting, storage, publish, secret, and public-data plan.
 
 ## 검증 명령
 
@@ -139,12 +142,12 @@ cd Back-End
 cargo check --features full-snapshot-stores
 ```
 
-Local-validation phase transition readiness is governed by
-`docs/instructions/phase-gates.json`. The chained source-of-truth command and
-current blocker triage notes are in [Testing](docs/testing.md#phase-transition-readiness).
+Phase validation readiness is governed by `docs/instructions/phase-gates.json`.
+The chained source-of-truth command and current blocker triage notes are in
+[Testing](docs/testing.md#phase-readiness).
 
 기본 백엔드 빌드는 compile fan-out을 줄이기 위해 `memory`, `file`, `sqlite`, `s3`, `managed` snapshot backend만 바로 컴파일합니다. 전체 adapter inventory를 점검할 때만 `--features full-snapshot-stores`를 사용합니다.
-`./scripts/preflight.sh publish`는 `.git` metadata 쓰기와 `github.com` DNS를 확인하는 publish readiness 점검이며, local-validation phase transition command에는 포함되지 않습니다.
+`./scripts/preflight.sh publish`는 `.git` metadata 쓰기와 `github.com` DNS를 확인하는 publish readiness 점검이며, 현재 phase validation command에는 포함되지 않습니다.
 
 ## 문서 바로가기
 

@@ -25,29 +25,35 @@ The current repository is validated as a local collaborative editor:
 These defaults are local-development defaults. They are not production hosting,
 external storage, external coordination, or owner-account provisioning.
 
-## Transition Validation Boundary
+## Current Phase Boundary
 
-This packet satisfies only the external-risk review evidence for leaving local
-collaborative-editor validation. It does not replace the machine transition
-command in `docs/instructions/phase-gates.json`.
+This packet is now the evidence file for the active
+`external-account-provisioning-review` phase. It does not authorize account
+creation, deployment, secret creation, public data publication, or a phase move
+to `maintenance-only`.
 
-Before the phase can move to `external-account-provisioning-review`, the
-transition command must still pass:
+The phase gate in `docs/instructions/phase-gates.json` still requires the local
+validation command to pass:
 
 ```bash
 cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket
 ```
 
 The root CI workflow covers the frontend gates, backend core lane, and backend
-WebSocket lane. The backend WebSocket lane also remains explicit in the local
-transition command because it exercises socket binding and collaboration
-session behavior that must pass before the phase changes.
+WebSocket lane. The backend WebSocket lane also remains explicit in the phase
+command because it exercises socket binding and collaboration session behavior.
 
-The transition command is intentionally stricter than the root CI frontend
-steps because generated maintenance worktrees start from a clean checkout.
+The phase command is intentionally stricter than the root CI frontend install
+step because generated maintenance worktrees start from a clean checkout.
 `npm run deps:ci` installs from `Front-End/package-lock.json` before TypeScript,
 Vite, ESLint, Vitest, or typecheck run, matching
 `docs/instructions/phase-gates.json` and `docs/management/VALIDATION.json`.
+
+The remaining transition blocker is owner approval. The
+`external-owner-approval-recorded` gate is pending until an owner explicitly
+approves the external account, hosting, storage, publish, secret, and
+public-data plan. Until that approval is recorded, keep the current phase at
+`external-account-provisioning-review`.
 
 ## Reviewed External Needs
 
@@ -74,9 +80,10 @@ Automation may keep the docs and local validation commands current. It must not:
 - deploy the frontend or backend.
 - publish real document data.
 
-## Next Phase Inputs
+## Owner Review Inputs
 
-The next phase can start from these owner-review inputs:
+The active external provisioning review can start from these owner-review
+inputs:
 
 1. GitHub owner handles or teams that should replace `@System-Docs-H`.
 2. Hosting target, public origin list, TLS boundary, and rollback owner.
@@ -104,6 +111,7 @@ decisions before any external action:
 - Approve public demo data, retention rules, backup handling, and support-access
   policy before publishing any document data.
 
-The local-validation external review packet is complete when these external
-needs are listed and bounded. Actual approval and provisioning remain reserved
-for the `external-account-provisioning-review` phase.
+The local-validation external review packet is complete because these external
+needs are listed and bounded. Actual approval remains the open item for the
+active `external-account-provisioning-review` phase, and provisioning must wait
+until that approval is recorded.
