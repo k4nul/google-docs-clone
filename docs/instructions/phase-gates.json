@@ -1,14 +1,17 @@
 {
   "schema_version": "1.0.0",
   "project": "web-google-docs-clone",
-  "current_phase": "collaborative-editor-local-validation",
-  "next_phase": "external-account-provisioning-review",
+  "current_phase": "external-account-provisioning-review",
+  "next_phase": "maintenance-only",
   "transition": {
-    "intent": "Advance only after local frontend/backend validation is complete and any external account or publish needs are explicitly reviewed.",
-    "mode": "machine-gated-local-validation-with-manual-external-review",
+    "intent": "Advance only after the external account, hosting, storage, publish, secret, and public-data plan has explicit owner approval.",
+    "mode": "manual-owner-approval-with-local-validation",
+    "phase_update_files": [
+      "docs/instructions/phase-gates.json"
+    ],
     "validation_command": "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
     "transition_validation_command": "cd Front-End && npm run deps:ci && npm run build && npm run lint && npm run test && npm run typecheck && cd ../Back-End && ./scripts/verify.sh core && ./scripts/verify.sh websocket",
-    "decision_rule": "Do not move to external provisioning while local checks, checklist evidence, or external-risk review are pending."
+    "decision_rule": "Do not move to maintenance-only, provision accounts, deploy, create secrets, or publish public data until owner approval is recorded."
   },
   "phase_model": [
     {
@@ -112,6 +115,16 @@
         ".github/CODEOWNERS"
       ],
       "on_failure": "Do not provision accounts or deploy automatically."
+    },
+    {
+      "id": "external-owner-approval-recorded",
+      "status": "pending",
+      "required_for_transition": true,
+      "description": "The owner must explicitly approve the external account, hosting, storage, publish, secret, and public-data plan before this project leaves external provisioning review.",
+      "evidence": [
+        "docs/external-provisioning-review.md"
+      ],
+      "on_failure": "Stay in external-account-provisioning-review; do not provision external accounts, deploy, create secrets, or publish public data."
     },
     {
       "id": "secret-boundary-retained",
