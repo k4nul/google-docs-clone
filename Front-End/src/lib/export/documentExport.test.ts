@@ -66,4 +66,60 @@ describe('document export helpers', () => {
     );
     expect(blob.type).toBe('application/docx');
   });
+
+  it('preserves nested inline formatting and line breaks', async () => {
+    await createDocxExportBlob(
+      '<p><strong><em><u>Nested</u></em></strong><br>Next line</p>',
+    );
+
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bold: true,
+        italics: true,
+        text: 'Nested',
+        underline: {},
+      }),
+    );
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ break: 1, text: '' }),
+    );
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Next line' }),
+    );
+  });
+
+  it('creates a blank DOCX paragraph for empty HTML', async () => {
+    await createDocxExportBlob('   ');
+
+    expect(docxMock.Paragraph).toHaveBeenCalledWith('');
+  });
+
+  it('keeps top-level text nodes and unknown block text as paragraphs', async () => {
+    await createDocxExportBlob(
+      'Loose text<section><span>Fallback block</span></section>',
+    );
+
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Loose text' }),
+    );
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Fallback block' }),
+    );
+  });
+
+  it('ignores non-list children inside list containers', async () => {
+    await createDocxExportBlob(
+      '<ul><li>First point</li><div>Ignored block</div><li>Second point</li></ul>',
+    );
+
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'First point' }),
+    );
+    expect(docxMock.TextRun).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Second point' }),
+    );
+    expect(docxMock.TextRun).not.toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Ignored block' }),
+    );
+  });
 });
