@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type MockConnectionStatus =
@@ -255,7 +256,7 @@ function latestConnection() {
 }
 
 function renderEditorShell(
-  props: Partial<React.ComponentProps<typeof EditorShell>> = {},
+  props: Partial<ComponentProps<typeof EditorShell>> = {},
 ) {
   const editor = createMockEditor();
   tiptapMock.useEditor.mockReturnValue(editor);

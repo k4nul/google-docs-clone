@@ -6,15 +6,15 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from 'react';
+import type { FormEvent } from 'react';
 
 import {
   connectCollaborationConnection,
   createCollaborationConnection,
   scheduleCollaborationConnectionDestroy,
-  type ProviderConnectionStatus,
 } from '@/lib/collab/connection';
+import type { ProviderConnectionStatus } from '@/lib/collab/connection';
 import { createPlaceholderCollaborationUser } from '@/lib/collab/user';
 import { appEnv } from '@/shared/config/env';
 import { Badge, Button } from '@/shared/ui';

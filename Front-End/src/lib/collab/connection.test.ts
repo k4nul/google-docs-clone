@@ -7,8 +7,8 @@ import {
   createCollaborationConnection,
   redactAccessToken,
   scheduleCollaborationConnectionDestroy,
-  type ProviderConnectionStatus,
 } from './connection';
+import type { ProviderConnectionStatus } from './connection';
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;

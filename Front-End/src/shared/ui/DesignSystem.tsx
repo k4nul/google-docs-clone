@@ -4,7 +4,8 @@ import type {
   InputHTMLAttributes,
   ReactNode,
 } from 'react';
-import { Link, type LinkProps } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import type { LinkProps } from 'react-router-dom';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md';

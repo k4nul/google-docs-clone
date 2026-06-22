@@ -1,12 +1,11 @@
 import { Navigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
-import { type FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 
 import { EditorAccessForm } from '@/features/editor/EditorAccessForm';
-import {
-  EditorDetailsSidebar,
-  type EditorDocumentDetailStatus,
-} from '@/features/editor/EditorDetailsSidebar';
+import { EditorDetailsSidebar } from '@/features/editor/EditorDetailsSidebar';
+import type { EditorDocumentDetailStatus } from '@/features/editor/EditorDetailsSidebar';
 import { EditorShell } from '@/features/editor/EditorShell';
 import type { CollaborationSnapshot } from '@/features/editor/EditorShell';
 import { FileManager } from '@/features/util/FileManager';
