@@ -1,5 +1,5 @@
 use std::sync::{
-    Arc, RwLock as StdRwLock,
+    Arc, Mutex as StdMutex, RwLock as StdRwLock,
     atomic::{AtomicUsize, Ordering},
 };
 
@@ -23,6 +23,7 @@ pub struct Room {
     awareness: AwarenessRef,
     broadcast_group: OnceCell<Arc<BroadcastGroup>>,
     active_sessions: AtomicUsize,
+    coordinator_sessions: StdMutex<usize>,
     _update_persistence: Subscription,
 }
 
@@ -39,6 +40,7 @@ impl Room {
             awareness,
             broadcast_group: OnceCell::new(),
             active_sessions: AtomicUsize::new(0),
+            coordinator_sessions: StdMutex::new(0),
             _update_persistence: update_persistence,
         }
     }
@@ -65,6 +67,7 @@ impl Room {
             awareness,
             broadcast_group: OnceCell::new(),
             active_sessions: AtomicUsize::new(0),
+            coordinator_sessions: StdMutex::new(0),
             _update_persistence: update_persistence,
         })
     }
@@ -185,6 +188,34 @@ impl Room {
             - 1
     }
 
+    pub fn begin_coordinator_session<E>(
+        &self,
+        activate: impl FnOnce() -> Result<(), E>,
+    ) -> Result<usize, E> {
+        let mut coordinator_sessions = self
+            .coordinator_sessions
+            .lock()
+            .expect("room coordinator session lock should not be poisoned");
+
+        if *coordinator_sessions == 0 {
+            activate()?;
+        }
+
+        *coordinator_sessions += 1;
+        Ok(*coordinator_sessions)
+    }
+
+    pub fn end_coordinator_session(&self) -> usize {
+        let mut coordinator_sessions = self
+            .coordinator_sessions
+            .lock()
+            .expect("room coordinator session lock should not be poisoned");
+        *coordinator_sessions = coordinator_sessions
+            .checked_sub(1)
+            .expect("room coordinator session count should not underflow");
+        *coordinator_sessions
+    }
+
     pub async fn broadcast_group(&self) -> Arc<BroadcastGroup> {
         self.broadcast_group
             .get_or_init(|| async { Arc::new(BroadcastGroup::new(self.awareness(), 32).await) })
@@ -196,6 +227,7 @@ impl Room {
 pub struct RoomRegistry {
     rooms: DashMap<Uuid, Arc<Room>>,
     snapshot_store: Arc<dyn SnapshotStore>,
+    lifecycle_lock: StdMutex<()>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,6 +241,7 @@ impl RoomRegistry {
         Self {
             rooms: DashMap::new(),
             snapshot_store,
+            lifecycle_lock: StdMutex::new(()),
         }
     }
 
@@ -217,6 +250,10 @@ impl RoomRegistry {
     }
 
     pub fn create_document(&self, title: Option<String>) -> Result<Document, StorageError> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
         let document = Document::new(Uuid::new_v4(), title);
         let room = Arc::new(Room::new(
             document.clone(),
@@ -230,6 +267,11 @@ impl RoomRegistry {
     }
 
     pub fn delete_document(&self, doc_id: &Uuid) -> Result<Option<Document>, StorageError> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
         if let Some(room) = self.get(doc_id)
             && room.active_sessions() > 0
         {
@@ -255,7 +297,12 @@ impl RoomRegistry {
         title: Option<String>,
         hide_preview: Option<bool>,
     ) -> Result<Option<Document>, StorageError> {
-        let Some(room) = self.get_or_restore(doc_id)? else {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
+        let Some(room) = self.get_or_restore_unlocked(doc_id)? else {
             return Ok(None);
         };
 
@@ -268,6 +315,11 @@ impl RoomRegistry {
     }
 
     pub fn get_or_create(&self, document: Document) -> Arc<Room> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
         match self.rooms.entry(document.id) {
             Entry::Occupied(entry) => entry.get().clone(),
             Entry::Vacant(entry) => {
@@ -279,6 +331,15 @@ impl RoomRegistry {
     }
 
     pub fn get_or_restore(&self, doc_id: &Uuid) -> Result<Option<Arc<Room>>, StorageError> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
+        self.get_or_restore_unlocked(doc_id)
+    }
+
+    fn get_or_restore_unlocked(&self, doc_id: &Uuid) -> Result<Option<Arc<Room>>, StorageError> {
         if let Some(room) = self.get(doc_id) {
             return Ok(Some(room));
         }
@@ -302,11 +363,37 @@ impl RoomRegistry {
         }
     }
 
+    pub fn start_session(
+        &self,
+        doc_id: &Uuid,
+        room: &Arc<Room>,
+    ) -> Result<Option<usize>, StorageError> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
+        let Some(entry) = self.rooms.get(doc_id) else {
+            return Ok(None);
+        };
+
+        if !Arc::ptr_eq(entry.value(), room) {
+            return Ok(None);
+        }
+
+        Ok(Some(room.start_session()))
+    }
+
     pub fn persist_and_evict_if_idle(
         &self,
         doc_id: &Uuid,
         room: &Arc<Room>,
     ) -> Result<SessionTeardown, StorageError> {
+        let _guard = self
+            .lifecycle_lock
+            .lock()
+            .expect("room registry lifecycle lock should not be poisoned");
+
         let remaining_sessions = room.end_session();
         if remaining_sessions > 0 {
             return Ok(SessionTeardown {
@@ -585,6 +672,128 @@ mod tests {
                 .expect("snapshot lookup should succeed")
                 .is_some()
         );
+    }
+
+    #[test]
+    fn registry_reserved_session_blocks_delete_before_websocket_serves() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Reserved room".to_owned()))
+            .expect("document should be created");
+        let room = registry
+            .get(&document.id)
+            .expect("created document should have an active room");
+
+        let active_sessions = registry
+            .start_session(&document.id, &room)
+            .expect("session reservation should succeed")
+            .expect("room should still be registered");
+        assert_eq!(active_sessions, 1);
+
+        let error = registry
+            .delete_document(&document.id)
+            .expect_err("delete should fail while a session is reserved");
+        assert!(matches!(error, StorageError::DocumentBusy(id) if id == document.id));
+        assert!(registry.get(&document.id).is_some());
+        assert!(
+            snapshot_store
+                .load_snapshot(&document.id)
+                .expect("snapshot lookup should succeed")
+                .is_some()
+        );
+
+        let teardown = registry
+            .persist_and_evict_if_idle(&document.id, &room)
+            .expect("reservation teardown should succeed");
+        assert!(teardown.evicted);
+        assert_eq!(teardown.remaining_sessions, 0);
+    }
+
+    #[test]
+    fn registry_rejects_session_start_for_room_deleted_after_resolution() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let registry = RoomRegistry::new(snapshot_store.clone());
+        let document = registry
+            .create_document(Some("Deleted before upgrade".to_owned()))
+            .expect("document should be created");
+        let resolved_room = registry
+            .get_or_restore(&document.id)
+            .expect("room lookup should succeed")
+            .expect("document should resolve before delete");
+
+        let deleted = registry
+            .delete_document(&document.id)
+            .expect("delete should succeed")
+            .expect("deleted document should be returned");
+        assert_eq!(deleted.id, document.id);
+
+        let active_sessions = registry
+            .start_session(&document.id, &resolved_room)
+            .expect("stale session reservation check should succeed");
+        assert_eq!(active_sessions, None);
+        assert_eq!(resolved_room.active_sessions(), 0);
+        assert!(
+            snapshot_store
+                .load_snapshot(&document.id)
+                .expect("snapshot lookup should succeed")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn room_retries_coordinator_activation_after_failed_first_session_start() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let room = Room::new(
+            Document::new(Uuid::new_v4(), Some("Coordinator retry".to_owned())),
+            snapshot_store,
+        );
+        let attempts = AtomicUsize::new(0);
+
+        let first = room.begin_coordinator_session(|| {
+            attempts.fetch_add(1, Ordering::SeqCst);
+            Err("coordinator unavailable")
+        });
+        assert_eq!(first, Err("coordinator unavailable"));
+
+        let second = room
+            .begin_coordinator_session(|| {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                Ok::<_, &str>(())
+            })
+            .expect("second coordinator activation should succeed");
+        assert_eq!(second, 1);
+        assert_eq!(attempts.load(Ordering::SeqCst), 2);
+        assert_eq!(room.end_coordinator_session(), 0);
+    }
+
+    #[test]
+    fn room_activates_coordinator_only_for_first_served_session() {
+        let snapshot_store: Arc<dyn SnapshotStore> = Arc::new(InMemorySnapshotStore::new());
+        let room = Room::new(
+            Document::new(Uuid::new_v4(), Some("Coordinator join".to_owned())),
+            snapshot_store,
+        );
+        let attempts = AtomicUsize::new(0);
+
+        let first = room
+            .begin_coordinator_session(|| {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                Ok::<_, &str>(())
+            })
+            .expect("first coordinator activation should succeed");
+        let second = room
+            .begin_coordinator_session(|| {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                Ok::<_, &str>(())
+            })
+            .expect("second coordinator session should join");
+
+        assert_eq!(first, 1);
+        assert_eq!(second, 2);
+        assert_eq!(attempts.load(Ordering::SeqCst), 1);
+        assert_eq!(room.end_coordinator_session(), 1);
+        assert_eq!(room.end_coordinator_session(), 0);
     }
 
     #[test]

@@ -211,4 +211,19 @@ describe('EditorToolbar', () => {
     expect(chain.unsetLink).not.toHaveBeenCalled();
     expect(chain.run).toHaveBeenCalledTimes(1);
   });
+
+  it('ignores unsupported link protocols from the prompt', () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('javascript:alert(1)');
+    const { chain, chainMock, editor } = createEditor();
+
+    render(<EditorToolbar editor={editor} />);
+
+    fireEvent.click(toolbarButton('Edit link'));
+
+    expect(chainMock).not.toHaveBeenCalled();
+    expect(chain.extendMarkRange).not.toHaveBeenCalled();
+    expect(chain.setLink).not.toHaveBeenCalled();
+    expect(chain.unsetLink).not.toHaveBeenCalled();
+    expect(chain.run).not.toHaveBeenCalled();
+  });
 });

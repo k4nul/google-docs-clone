@@ -1,5 +1,7 @@
 import { importDocxToHtml } from './docxImport';
 
+export const MAX_DOCX_IMPORT_BYTES = 10 * 1024 * 1024;
+
 export type EditorImportResult =
   | {
       content: string;
@@ -17,6 +19,13 @@ export async function readEditorImportFile(
   const fileName = file.name.toLowerCase();
 
   if (fileName.endsWith('.docx')) {
+    if (file.size > MAX_DOCX_IMPORT_BYTES) {
+      return {
+        kind: 'unsupported',
+        notice: 'DOCX file is too large. Choose a file under 10 MB.',
+      };
+    }
+
     const content = await importDocxToHtml(await file.arrayBuffer());
 
     return {

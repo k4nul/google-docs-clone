@@ -48,7 +48,33 @@ pub async fn ws_handler(
 
     let registry = state.rooms_registry();
     let coordinator = state.room_coordinator();
-    Ok(ws.on_upgrade(move |socket| serve_room_socket(socket, registry, coordinator, room, doc_id)))
+    let active_sessions = reserve_websocket_session(&registry, doc_id, &room)?;
+    let failed_upgrade_registry = Arc::clone(&registry);
+    let failed_upgrade_room = Arc::clone(&room);
+    Ok(ws
+        .on_failed_upgrade(move |error| {
+            warn!(
+                %doc_id,
+                %error,
+                "websocket upgrade failed after room session reservation"
+            );
+            match failed_upgrade_registry.persist_and_evict_if_idle(&doc_id, &failed_upgrade_room) {
+                Ok(teardown) => info!(
+                    %doc_id,
+                    remaining_sessions = teardown.remaining_sessions,
+                    evicted = teardown.evicted,
+                    "released websocket session reservation after failed upgrade"
+                ),
+                Err(cleanup_error) => warn!(
+                    %doc_id,
+                    %cleanup_error,
+                    "failed to release websocket session reservation after failed upgrade"
+                ),
+            }
+        })
+        .on_upgrade(move |socket| {
+            serve_room_socket(socket, registry, coordinator, room, doc_id, active_sessions)
+        }))
 }
 
 async fn serve_room_socket(
@@ -57,41 +83,44 @@ async fn serve_room_socket(
     coordinator: Arc<dyn RoomCoordinator>,
     room: Arc<Room>,
     doc_id: Uuid,
+    active_sessions: usize,
 ) {
-    let active_sessions = room.start_session();
+    let coordinator_sessions =
+        match room.begin_coordinator_session(|| coordinator.room_activated(&doc_id)) {
+            Ok(coordinator_sessions) => coordinator_sessions,
+            Err(error) => {
+                warn!(
+                    %doc_id,
+                    coordinator_mode = coordinator.mode(),
+                    %error,
+                    "failed to activate room coordinator for websocket collaboration session"
+                );
+
+                match registry.persist_and_evict_if_idle(&doc_id, &room) {
+                    Ok(teardown) => info!(
+                        %doc_id,
+                        remaining_sessions = teardown.remaining_sessions,
+                        evicted = teardown.evicted,
+                        "rolled back websocket session after coordinator activation failure"
+                    ),
+                    Err(cleanup_error) => warn!(
+                        %doc_id,
+                        %cleanup_error,
+                        "failed to roll back websocket session after coordinator activation failure"
+                    ),
+                }
+
+                return;
+            }
+        };
+
     info!(
         %doc_id,
         active_sessions,
+        coordinator_sessions,
         coordinator_mode = coordinator.mode(),
         "websocket collaboration session started"
     );
-
-    if active_sessions == 1
-        && let Err(error) = coordinator.room_activated(&doc_id)
-    {
-        warn!(
-            %doc_id,
-            coordinator_mode = coordinator.mode(),
-            %error,
-            "failed to activate room coordinator for websocket collaboration session"
-        );
-
-        match registry.persist_and_evict_if_idle(&doc_id, &room) {
-            Ok(teardown) => info!(
-                %doc_id,
-                remaining_sessions = teardown.remaining_sessions,
-                evicted = teardown.evicted,
-                "rolled back websocket session after coordinator activation failure"
-            ),
-            Err(cleanup_error) => warn!(
-                %doc_id,
-                %cleanup_error,
-                "failed to roll back websocket session after coordinator activation failure"
-            ),
-        }
-
-        return;
-    }
 
     let broadcast_group = room.broadcast_group().await;
     let (sink, stream) = socket.split();
@@ -106,10 +135,13 @@ async fn serve_room_socket(
     }
     heartbeat.abort();
 
+    let remaining_coordinator_sessions = room.end_coordinator_session();
     match registry.persist_and_evict_if_idle(&doc_id, &room) {
         Ok(teardown) if teardown.evicted => {
             info!(%doc_id, "persisted snapshot and evicted idle room");
-            if let Err(error) = coordinator.room_deactivated(&doc_id) {
+            if remaining_coordinator_sessions == 0
+                && let Err(error) = coordinator.room_deactivated(&doc_id)
+            {
                 warn!(
                     %doc_id,
                     coordinator_mode = coordinator.mode(),
@@ -121,10 +153,23 @@ async fn serve_room_socket(
         Ok(teardown) => info!(
             %doc_id,
             active_sessions = teardown.remaining_sessions,
+            coordinator_sessions = remaining_coordinator_sessions,
             "room remains active after websocket session"
         ),
         Err(error) => warn!(%doc_id, %error, "failed to persist snapshot after websocket session"),
     }
+}
+
+fn reserve_websocket_session(
+    registry: &RoomRegistry,
+    doc_id: Uuid,
+    room: &Arc<Room>,
+) -> AppResult<usize> {
+    registry
+        .start_session(&doc_id, room)
+        .map_err(anyhow::Error::from)
+        .map_err(AppError::from)?
+        .ok_or_else(|| AppError::NotFound(format!("document `{doc_id}` was not found")))
 }
 
 fn spawn_socket_heartbeat(sink: Arc<Mutex<AxumSink>>, doc_id: Uuid) -> JoinHandle<()> {

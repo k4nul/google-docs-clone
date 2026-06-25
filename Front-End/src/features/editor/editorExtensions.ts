@@ -7,6 +7,11 @@ import StarterKit from '@tiptap/starter-kit';
 import type { CollaborationConnection } from '@/lib/collab/connection';
 import type { CollaborationUser } from '@/shared/types/collaboration';
 
+import { isSafeEditorLinkHref } from './linkSafety';
+
+const DEFAULT_COLLABORATION_COLOR = '#0f8b8d';
+const SAFE_COLLABORATION_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
 export const INITIAL_EDITOR_CONTENT = `
   <h2>Project brief</h2>
   <p>Use this canvas to draft decisions, capture review notes, and align the team before handoff.</p>
@@ -17,14 +22,23 @@ export const INITIAL_EDITOR_CONTENT = `
   </ul>
 `;
 
+export function normalizeCollaborationColor(value?: string | null) {
+  const color = value?.trim();
+
+  return color && SAFE_COLLABORATION_COLOR_PATTERN.test(color)
+    ? color
+    : DEFAULT_COLLABORATION_COLOR;
+}
+
 function renderCaret(user: Record<string, string>) {
+  const color = normalizeCollaborationColor(user.color);
   const cursor = document.createElement('span');
   cursor.className = 'collaboration-caret';
-  cursor.style.setProperty('--caret-color', user.color ?? '#0f8b8d');
+  cursor.style.setProperty('--caret-color', color);
 
   const label = document.createElement('span');
   label.className = 'collaboration-caret__label';
-  label.style.setProperty('--caret-color', user.color ?? '#0f8b8d');
+  label.style.setProperty('--caret-color', color);
   label.textContent = user.name ?? 'Anonymous';
 
   cursor.append(label);
@@ -33,7 +47,7 @@ function renderCaret(user: Record<string, string>) {
 }
 
 function renderSelection(user: Record<string, string>) {
-  const color = user.color ?? '#0f8b8d';
+  const color = normalizeCollaborationColor(user.color);
 
   return {
     class: 'collaboration-selection',
@@ -54,8 +68,11 @@ export function createEditorExtensions(
     }),
     Link.configure({
       autolink: true,
+      isAllowedUri: isSafeEditorLinkHref,
       linkOnPaste: true,
       openOnClick: false,
+      protocols: ['http', 'https', 'mailto'],
+      shouldAutoLink: isSafeEditorLinkHref,
       HTMLAttributes: {
         rel: 'noopener noreferrer nofollow',
         target: '_blank',

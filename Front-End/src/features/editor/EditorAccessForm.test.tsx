@@ -37,6 +37,14 @@ describe('EditorAccessForm', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Token is required.')).toBeInTheDocument();
     expect(screen.getByLabelText(/access token/i)).toHaveValue('stored-token');
+    expect(screen.getByLabelText(/access token/i)).toHaveAttribute(
+      'type',
+      'password',
+    );
+    expect(screen.getByLabelText(/access token/i)).toHaveAttribute(
+      'autocomplete',
+      'off',
+    );
     expect(
       screen.getByRole('button', { name: 'Unlock document' }),
     ).toBeInTheDocument();

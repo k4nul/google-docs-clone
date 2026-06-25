@@ -1,7 +1,7 @@
 import mammoth from 'mammoth';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readEditorImportFile } from './documentImport';
+import { MAX_DOCX_IMPORT_BYTES, readEditorImportFile } from './documentImport';
 
 vi.mock('mammoth', () => ({
   default: {
@@ -45,6 +45,22 @@ describe('readEditorImportFile', () => {
       kind: 'unsupported',
       notice: 'Unsupported file type. Choose a DOCX file.',
     });
+    expect(convertToHtmlMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects oversized DOCX imports before reading file bytes', async () => {
+    const arrayBuffer = vi.fn(async () => new ArrayBuffer(0));
+    const file = {
+      arrayBuffer,
+      name: 'large.docx',
+      size: MAX_DOCX_IMPORT_BYTES + 1,
+    } as unknown as File;
+
+    await expect(readEditorImportFile(file)).resolves.toEqual({
+      kind: 'unsupported',
+      notice: 'DOCX file is too large. Choose a file under 10 MB.',
+    });
+    expect(arrayBuffer).not.toHaveBeenCalled();
     expect(convertToHtmlMock).not.toHaveBeenCalled();
   });
 });

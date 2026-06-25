@@ -56,6 +56,9 @@ export function EditorAccessForm({
         <span>Access token</span>
         <Input
           autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          type="password"
           value={value}
           onChange={(event) => onValueChange(event.target.value)}
         />

@@ -2,6 +2,8 @@ import type { Editor } from '@tiptap/react';
 
 import { Tooltip } from '@/shared/ui';
 
+import { normalizeEditorLinkHref } from './linkSafety';
+
 interface EditorToolbarProps {
   editor: Editor | null;
 }
@@ -56,11 +58,17 @@ function toggleLink(editor: Editor) {
     return;
   }
 
+  const normalizedHref = normalizeEditorLinkHref(nextHref);
+
+  if (!normalizedHref) {
+    return;
+  }
+
   editor
     .chain()
     .focus()
     .extendMarkRange('link')
-    .setLink({ href: nextHref })
+    .setLink({ href: normalizedHref })
     .run();
 }
 
