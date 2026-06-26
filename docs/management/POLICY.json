@@ -12,7 +12,8 @@
       "docs/management/PLAN.json",
       "docs/management/VALIDATION.json",
       "docs/management/POLICY.json",
-      "docs/management/AUTOMATION.json"
+      "docs/management/AUTOMATION.json",
+      "docs/management/REVIEW_FINDINGS.json"
     ],
     "agentsMdMayContainOnlyMap": true
   },
@@ -25,5 +26,13 @@
     "doNotChangeHarnessStructure": true,
     "doNotMoveCodexMaintainerHarnessFiles": true,
     "projectLocalCodexPromptsMayRemainForHarnessCompatibility": true
+  },
+  "reviewWorkflowPolicy": {
+    "reviewAgent": "Claude Code",
+    "reviewMode": "code_review_and_inspection",
+    "findingInstructionFile": "docs/management/REVIEW_FINDINGS.json",
+    "findingWriteRule": "Claude Code records review and inspection findings in the findings file instead of implementing by default.",
+    "codexReadRequirement": "Codex must read the findings file before automation implementation work.",
+    "codexPriorityRule": "Codex resolves active Claude Code findings before other implementation tasks unless the user explicitly overrides the priority."
   }
 }

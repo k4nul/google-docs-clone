@@ -12,7 +12,8 @@
     "plan": "docs/management/PLAN.json",
     "validation": "docs/management/VALIDATION.json",
     "policy": "docs/management/POLICY.json",
-    "automation": "docs/management/AUTOMATION.json"
+    "automation": "docs/management/AUTOMATION.json",
+    "reviewFindings": "docs/management/REVIEW_FINDINGS.json"
   },
   "optionalMap": {},
   "compatibility": {

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "claude_review_findings",
+  "projectId": "web-google-docs-clone-Back-End",
+  "initializedAt": "2026-06-26",
+  "purpose": "Claude Code records review and inspection findings here so Codex can read and resolve them before other implementation work.",
+  "workflow": {
+    "reviewAgent": "Claude Code",
+    "reviewMode": "code_review_and_inspection",
+    "implementationAgent": "Codex",
+    "codexPriorityRule": "Codex must resolve active Claude Code findings first, ordered by severity, unless the user explicitly overrides that priority."
+  },
+  "findingSchema": {
+    "idFormat": "CR-YYYYMMDD-NNN",
+    "statusValues": [
+      "open",
+      "in_progress",
+      "resolved",
+      "wont_fix"
+    ],
+    "severityValues": [
+      "critical",
+      "high",
+      "medium",
+      "low"
+    ],
+    "requiredFields": [
+      "id",
+      "status",
+      "severity",
+      "title",
+      "location",
+      "problem",
+      "recommendedFix",
+      "createdAt"
+    ]
+  },
+  "activeFindings": [],
+  "resolvedFindings": [],
+  "lastReview": null
+}

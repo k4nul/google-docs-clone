@@ -8,5 +8,22 @@
   "notes": [
     "Harness code and runner structure are intentionally unchanged.",
     "AGENTS.md is a map; active management instructions are JSON under docs/management."
-  ]
+  ],
+  "reviewFindingPriority": {
+    "source": "docs/management/REVIEW_FINDINGS.json",
+    "firstActionForCodexImplementation": "read_active_claude_review_findings",
+    "requiredBeforeOtherImplementation": true,
+    "priorityOrder": [
+      "critical",
+      "high",
+      "medium",
+      "low"
+    ],
+    "statusFilter": [
+      "open",
+      "in_progress"
+    ],
+    "rule": "Before starting automation implementation work, Codex must resolve active Claude Code review findings first unless the user explicitly overrides that priority.",
+    "emptyBacklogBehavior": "continue_with_existing_plan"
+  }
 }

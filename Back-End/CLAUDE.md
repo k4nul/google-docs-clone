@@ -1,81 +1,51 @@
-{
-  "repo": "backend",
-  "goal": "bootstrap-collaborative-editor-server",
-  "stack": {
-    "language": "rust",
-    "framework": "axum",
-    "runtime": "tokio",
-    "crdt": "yrs",
-    "ws_adapter": "yrs-axum"
-  },
-  "docs": {
-    "root": "docs",
-    "agent_rules": "docs/agent-rules.md",
-    "setup": "docs/setup.md",
-    "architecture": "docs/architecture.md",
-    "api": "docs/api.md",
-    "roles": "docs/roles.md",
-    "conventions": "docs/conventions.md",
-    "checklist": "docs/checklist.md"
-  },
-  "owners": {
-    "pm_integration": "A",
-    "frontend_editor_ui": "B",
-    "backend_realtime_api": "C",
-    "qa_docs_devops": "D"
-  },
-  "env": {
-    "host": "HOST",
-    "port": "PORT",
-    "frontend_origin": "FRONTEND_ORIGIN",
-    "rust_log": "RUST_LOG"
-  },
-  "commands": {
-    "run": "cargo run",
-    "check": "cargo check",
-    "fmt": "cargo fmt --check",
-    "test": "cargo test"
-  },
-  "commit": {
-    "message_format": "type(scope): subject",
-    "types": [
-      "feat",
-      "fix",
-      "docs",
-      "style",
-      "refactor",
-      "test",
-      "chore",
-      "perf",
-      "build",
-      "ci",
-      "rename",
-      "remove"
-    ],
-    "scopes": [
-      "api",
-      "sync",
-      "yrs",
-      "auth",
-      "db",
-      "websocket",
-      "storage",
-      "config",
-      "docs",
-      "repo"
-    ],
-    "subject_rules": [
-      "present-tense",
-      "lowercase-first-letter",
-      "no-trailing-period",
-      "specific-change-description"
-    ],
-    "work_rules": [
-      "single-purpose-per-commit",
-      "do-not-mix-refactor-and-behavior-change",
-      "update-related-docs-and-tests-on-schema-or-api-change",
-      "run-build-test-lint-when-possible",
-      "mark-uncertain-work-as-todo-or-blocked"
-    ]
-  }
-}
+# CLAUDE.md
+
+Claude Code entry point for `web-google-docs-clone-Back-End`.
+
+This file is optimized for Claude Code. It preserves the same instruction routing as `AGENTS.md`; do not treat it as a separate policy layer.
+
+## Claude Role
+- Use Claude Code for code review, inspection, risk analysis, and validation planning.
+- Do not treat Claude Code as the default implementation agent unless the user explicitly asks for implementation.
+- Record review and inspection findings in `docs/management/REVIEW_FINDINGS.json` so Codex can read them.
+
+## Codex Handoff
+- Codex must read `docs/management/REVIEW_FINDINGS.json` before automation implementation work.
+- Codex implementation work must resolve active Claude Code findings first, ordered by severity, unless the user explicitly overrides that priority.
+- When a finding is resolved, update its status and keep the evidence or validation note in the findings file.
+
+## Project
+- id: `web-google-docs-clone-Back-End`
+- root: `.`
+
+## Required Context
+Use these files as the authoritative project context. Start with `managementIndex`, then open `reviewFindings`, then open the specific files needed for the task. Paths are relative to this file.
+
+| Key | Path |
+| --- | --- |
+| Management Index | `docs/management/INDEX.json` |
+| Project | `docs/management/PROJECT.json` |
+| Architecture | `docs/management/ARCHITECTURE.json` |
+| Plan | `docs/management/PLAN.json` |
+| Validation | `docs/management/VALIDATION.json` |
+| Policy | `docs/management/POLICY.json` |
+| Automation | `docs/management/AUTOMATION.json` |
+| Review Findings | `docs/management/REVIEW_FINDINGS.json` |
+
+## Optional Context
+Open these files when they exist and are relevant to the current task.
+
+| Key | Path |
+| --- | --- |
+| Legacy Instructions | `docs/management/LEGACY_INSTRUCTIONS.json` |
+
+## Compatibility
+| Key | Value |
+| --- | --- |
+| Codex Prompt Directory | `.codex/` |
+| Legacy Instruction Archive | `docs/management/LEGACY_INSTRUCTIONS.json` |
+
+## Maintenance
+- Keep `AGENTS.md` as the machine-readable source map.
+- Keep this file semantically aligned with `AGENTS.md` when instruction routing changes.
+- Do not duplicate large management documents here; link to the mapped files above.

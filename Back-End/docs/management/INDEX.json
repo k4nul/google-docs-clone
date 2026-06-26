@@ -14,7 +14,8 @@
       "plan": "docs/management/PLAN.json",
       "validation": "docs/management/VALIDATION.json",
       "policy": "docs/management/POLICY.json",
-      "automation": "docs/management/AUTOMATION.json"
+      "automation": "docs/management/AUTOMATION.json",
+      "reviewFindings": "docs/management/REVIEW_FINDINGS.json"
     },
     "optionalFiles": {
       "legacyInstructions": "docs/management/LEGACY_INSTRUCTIONS.json"
@@ -26,6 +27,8 @@
     "instructionFormat": "json",
     "commonFilesRequiredForEveryManagedProject": true,
     "projectSpecificFilesAllowed": true,
-    "rootDocDirectoryAllowed": false
+    "rootDocDirectoryAllowed": false,
+    "claudeReviewFindingsRole": "codex_priority_backlog",
+    "codexMustReadReviewFindingsBeforeImplementation": true
   }
 }

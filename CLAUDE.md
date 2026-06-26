@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Claude Code entry point for `web-google-docs-clone-Front-End`.
+Claude Code entry point for `web-google-docs-clone`.
 
 This file is optimized for Claude Code. It preserves the same instruction routing as `AGENTS.md`; do not treat it as a separate policy layer.
 
@@ -15,7 +15,7 @@ This file is optimized for Claude Code. It preserves the same instruction routin
 - When a finding is resolved, update its status and keep the evidence or validation note in the findings file.
 
 ## Project
-- id: `web-google-docs-clone-Front-End`
+- id: `web-google-docs-clone`
 - root: `.`
 
 ## Required Context
@@ -32,18 +32,11 @@ Use these files as the authoritative project context. Start with `managementInde
 | Automation | `docs/management/AUTOMATION.json` |
 | Review Findings | `docs/management/REVIEW_FINDINGS.json` |
 
-## Optional Context
-Open these files when they exist and are relevant to the current task.
-
-| Key | Path |
-| --- | --- |
-| Legacy Instructions | `docs/management/LEGACY_INSTRUCTIONS.json` |
-
 ## Compatibility
 | Key | Value |
 | --- | --- |
 | Codex Prompt Directory | `null` |
-| Legacy Instruction Archive | `docs/management/LEGACY_INSTRUCTIONS.json` |
+| Legacy Instruction Archive | `null` |
 
 ## Maintenance
 - Keep `AGENTS.md` as the machine-readable source map.
