@@ -6,7 +6,7 @@
     "root": ".",
     "repositoryRoot": ".",
     "isGitRepositoryRoot": true,
-    "managementStatus": "active"
+    "managementStatus": "paused-complete"
   },
   "classification": {
     "source": "codex-maintainer-progress-criteria",

@@ -8,7 +8,7 @@
   "layout": {
     "instructionDirectory": "docs/management",
     "commonFiles": {
-      "index": "docs/management/INDEX.json",
+      "managementIndex": "docs/management/INDEX.json",
       "project": "docs/management/PROJECT.json",
       "architecture": "docs/management/ARCHITECTURE.json",
       "plan": "docs/management/PLAN.json",
@@ -22,11 +22,16 @@
   },
   "rules": {
     "agentsMdRole": "map_only",
-    "instructionFormat": "json",
+    "instructionFormat": "json_schema_not_prose",
     "commonFilesRequiredForEveryManagedProject": true,
     "projectSpecificFilesAllowed": true,
     "rootDocDirectoryAllowed": false,
     "claudeReviewFindingsRole": "codex_priority_backlog",
     "codexMustReadReviewFindingsBeforeImplementation": true
+  },
+  "automationReadiness": {
+    "status": "ready",
+    "requiresPlan": true,
+    "planPath": "docs/management/PLAN.json"
   }
 }

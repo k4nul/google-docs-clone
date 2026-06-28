@@ -3,7 +3,7 @@
   "kind": "project_policy",
   "projectId": "web-google-docs-clone",
   "instructionPolicy": {
-    "format": "json",
+    "format": "json_schema_not_prose",
     "directory": "docs/management",
     "requiredFiles": [
       "docs/management/INDEX.json",

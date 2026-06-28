@@ -11,7 +11,7 @@
   "boundaries": {
     "agentsMdRole": "map_only",
     "instructionsMustLiveUnderDocs": true,
-    "docDirectoryPolicy": "use docs/management for machine-readable project management files; do not create a root-level doc directory",
+    "docDirectoryPolicy": "use docs/control for machine-readable project control files; do not create a root-level doc directory",
     "harnessStructureMayNotChange": true,
     "crossProjectEditsRequireExplicitInstruction": true
   },

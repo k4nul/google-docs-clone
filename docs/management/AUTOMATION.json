@@ -2,12 +2,16 @@
   "schemaVersion": "1.0.0",
   "kind": "project_automation",
   "projectId": "web-google-docs-clone",
-  "lifecycle": {},
+  "lifecycle": {
+    "status": "paused-complete",
+    "reason": "collaborative editor is 100% complete; resume only for explicit external-account or feature scope."
+  },
   "progressTracked": true,
   "codexPromptCompatibilityPaths": [],
   "notes": [
     "Harness code and runner structure are intentionally unchanged.",
-    "AGENTS.md is a map; active management instructions are JSON under docs/management."
+    "AGENTS.md is a map; active management instructions are JSON under docs/management.",
+    "workspace-maintainer skips automation when docs/management/PLAN.json is absent."
   ],
   "reviewFindingPriority": {
     "source": "docs/management/REVIEW_FINDINGS.json",
