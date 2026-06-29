@@ -34,5 +34,25 @@
     "findingWriteRule": "Claude Code records review and inspection findings in the findings file instead of implementing by default.",
     "codexReadRequirement": "Codex must read the findings file before automation implementation work.",
     "codexPriorityRule": "Codex resolves active Claude Code findings before other implementation tasks unless the user explicitly overrides the priority."
+  },
+  "commitPolicy": {
+    "messageFormat": "type(scope): subject",
+    "allowedTypes": [
+      "feat",
+      "fix",
+      "docs",
+      "style",
+      "refactor",
+      "test",
+      "chore",
+      "perf",
+      "build",
+      "ci",
+      "rename",
+      "remove"
+    ],
+    "scopePattern": "[a-z0-9][a-z0-9-]*",
+    "subjectPolicy": "Use a concise imperative subject that describes the single purpose of the commit.",
+    "historyPolicy": "All commits on published project branches must follow this format before push. When owner-approved history repair is required, rewrite only commit messages and preserve original author and committer dates."
   }
 }
