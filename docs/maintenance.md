@@ -37,6 +37,11 @@ external accounts, create secrets, deploy hosting, or replace CODEOWNERS.
 
 ## Local Validation Closeout Evidence
 
+- 2026-08-12: The full local-validation transition command passed in a clean
+  worktree: frontend dependency install, build, lint, tests, and typecheck,
+  followed by backend `./scripts/verify.sh core` and
+  `./scripts/verify.sh websocket`. This refreshes local validation evidence
+  only; it does not record external owner approval or authorize a phase move.
 - 2026-06-12: `Front-End/docs/checklist.md` and `Back-End/docs/checklist.md` contain no unchecked local implementation checklist items for the collaborative editor, REST API, WebSocket sync, document credentials, or snapshot-store boundary.
 - 2026-06-12: External provisioning needs for local-validation exit are listed in `docs/external-provisioning-review.md`. Known follow-ups are dedicated GitHub users or teams, production hosting, snapshot durability choice, room coordination choice, secret storage, and public-data policy. Those follow-ups are not required for local source validation and remain reserved for owner review in the active external provisioning phase.
 - 2026-06-16: The active phase is `external-account-provisioning-review`. The local validation evidence remains useful, but the transition to `maintenance-only` is blocked until `external-owner-approval-recorded` is no longer pending in `docs/instructions/phase-gates.json`.
