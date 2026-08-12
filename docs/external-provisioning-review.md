@@ -111,6 +111,28 @@ decisions before any external action:
 - Approve public demo data, retention rules, backup handling, and support-access
   policy before publishing any document data.
 
+## Owner Decision Record
+
+The following record is intentionally pending. An authorized owner can complete
+it when the external plan is reviewed; completing this template alone does not
+provision anything or change the phase.
+
+| Review field | Owner record (pending) |
+| --- | --- |
+| Review date and approving owner | _Pending_ |
+| Overall decision | _Pending: approve, reject, or request changes_ |
+| GitHub ownership | _Pending: dedicated team/user handles or a decision to retain the baseline_ |
+| Hosting and public origins | _Pending: hosting target, HTTPS boundary, allowed origins, rollback owner_ |
+| Snapshot durability and room coordination | _Pending: selected durability service and single- or multi-node ownership plan_ |
+| Secret storage | _Pending: approved secret store and rotation/revocation owner; do not record secret values_ |
+| Public data and retention | _Pending: demo-data, retention, backup, and support-access policy_ |
+| Approval evidence | _Pending: owner decision reference or review link_ |
+
+When every row has an explicit owner decision and the overall decision approves
+the plan, update the `external-owner-approval-recorded` gate through the
+normal phase-transition workflow. A rejection or requested changes leaves the
+project in this phase and should identify the decision that needs revision.
+
 The local-validation external review packet is complete because these external
 needs are listed and bounded. Actual approval remains the open item for the
 active `external-account-provisioning-review` phase, and provisioning must wait
