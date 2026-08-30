@@ -68,7 +68,7 @@ cd Back-End
 ```
 
 - If `preflight.sh websocket` reports that the runner cannot bind socket addresses, the WebSocket lane is blocked by the environment.
-- If `verify.sh core` fails, inspect the preceding `cargo fmt`, `cargo check`, or socket-free test output.
+- If `verify.sh core` fails, inspect the preceding `cargo fmt`, test-profile compile, or socket-free test output.
 - If `verify.sh websocket` reports a named filter failure, rerun that exact filter before rerunning the whole lane. For the current managed SQLite owner handoff transition blocker, use `cargo test --locked --test health document_detail_restores_latest_sqlite_snapshot_after_managed_owner_handoff` from `Back-End/`.
 - If `preflight.sh publish` fails DNS or `.git` write checks, that blocks publish readiness, not phase-transition reproduction or local build correctness.
 

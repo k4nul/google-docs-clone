@@ -89,7 +89,7 @@
         "-lc",
         "cd Back-End && bash scripts/verify.sh core"
       ],
-      "timeout": 240,
+      "timeout": 600,
       "weight": 10,
       "blocking": true,
       "nextAction": "fix Back-End core verification before the local-validation phase can transition"
@@ -108,5 +108,8 @@
       "blocking": true,
       "nextAction": "fix Back-End WebSocket verification before the local-validation phase can transition"
     }
+  ],
+  "notes": [
+    "Back-end core verification compiles and executes in one Cargo test profile; a 600-second bound covers the measured 517.79-second clean-worktree run while still treating longer waits as failures."
   ]
 }

@@ -171,6 +171,17 @@ fn run_verify_websocket_with_fake_cargo(fake_cargo: &Path, log_path: &Path) -> O
         .expect("verify websocket command should run with fake cargo")
 }
 
+#[cfg(unix)]
+fn run_verify_core_with_fake_cargo(fake_cargo: &Path, log_path: &Path) -> Output {
+    Command::new(repo_root().join("scripts/verify.sh"))
+        .arg("core")
+        .current_dir(repo_root())
+        .env("CARGO", fake_cargo)
+        .env("FAKE_CARGO_LOG", log_path)
+        .output()
+        .expect("verify core command should run with fake cargo")
+}
+
 fn latest_current_status_entry(checklist: &str) -> &str {
     let mut in_current_status_section = false;
 
@@ -206,6 +217,87 @@ fn latest_status_entry_marks_completion(status_entry: &str) -> bool {
                 || headline.starts_with(WINDOWS_SQLITE_STATUS_MARKER)
         })
         .unwrap_or(false)
+}
+
+#[cfg(unix)]
+#[test]
+fn verify_core_reuses_the_test_profile_for_compile_and_execution() {
+    let temp_dir = unique_temp_dir("verify-core-test-profile");
+    fs::create_dir_all(&temp_dir).expect("test temp directory should be created");
+    let fake_cargo = temp_dir.join("fake-cargo");
+    let call_log = temp_dir.join("cargo-calls.log");
+    write_executable(
+        &fake_cargo,
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${FAKE_CARGO_LOG:?}"
+"#,
+    );
+
+    let output = run_verify_core_with_fake_cargo(&fake_cargo, &call_log);
+    let combined = combined_output(&output);
+    assert!(
+        output.status.success(),
+        "core verification should pass when each cargo command passes.\n{combined}"
+    );
+
+    let call_log = fs::read_to_string(&call_log).expect("fake cargo call log should be readable");
+    let calls = call_log.lines().collect::<Vec<_>>();
+    assert_eq!(
+        calls.len(),
+        3,
+        "core verification should invoke three cargo commands"
+    );
+    assert_eq!(calls[0], "fmt --check");
+    assert_eq!(calls[1], "test --locked --no-run");
+    assert!(
+        calls[2].starts_with("test --locked -- --skip backend_role_completion_gate"),
+        "core test execution should retain the socket and nested-gate skip contract: {call_log}"
+    );
+    assert!(
+        calls.iter().all(|call| *call != "check --locked"),
+        "core verification should not rebuild the dependency graph in the dev profile: {call_log}"
+    );
+
+    fs::remove_dir_all(temp_dir).expect("test temp directory should be removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn verify_core_stops_when_test_profile_compilation_fails() {
+    let temp_dir = unique_temp_dir("verify-core-compile-failure");
+    fs::create_dir_all(&temp_dir).expect("test temp directory should be created");
+    let fake_cargo = temp_dir.join("fake-cargo");
+    let call_log = temp_dir.join("cargo-calls.log");
+    write_executable(
+        &fake_cargo,
+        r#"#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "${FAKE_CARGO_LOG:?}"
+if [[ "$*" == "test --locked --no-run" ]]; then
+    echo "simulated test-profile compile failure" >&2
+    exit 101
+fi
+"#,
+    );
+
+    let output = run_verify_core_with_fake_cargo(&fake_cargo, &call_log);
+    let combined = combined_output(&output);
+    assert!(
+        !output.status.success(),
+        "core verification must fail when test-profile compilation fails.\n{combined}"
+    );
+    assert!(
+        combined.contains("simulated test-profile compile failure"),
+        "core verification should preserve the compile failure output.\n{combined}"
+    );
+    assert_eq!(
+        fs::read_to_string(&call_log).expect("fake cargo call log should be readable"),
+        "fmt --check\ntest --locked --no-run\n",
+        "core verification must not execute tests after compilation fails"
+    );
+
+    fs::remove_dir_all(temp_dir).expect("test temp directory should be removed");
 }
 
 #[cfg(unix)]

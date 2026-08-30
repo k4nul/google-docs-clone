@@ -40,7 +40,7 @@ cargo check --features full-snapshot-stores
 
 | Command | Purpose |
 | --- | --- |
-| `./scripts/verify.sh core` | Runs `cargo fmt --check`, `cargo check --locked`, and socket-free tests |
+| `./scripts/verify.sh core` | Runs `cargo fmt --check`, a test-profile compile, and socket-free tests without rebuilding dependencies in the dev profile |
 | `./scripts/verify.sh websocket` | Probes socket binding, then runs WebSocket/delete/managed/S3 lanes |
 | `cargo check --features full-snapshot-stores` | Compile-checks the full snapshot adapter inventory |
 

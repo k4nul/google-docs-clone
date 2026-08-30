@@ -87,7 +87,7 @@ run_websocket_filter() {
 
 run_core_lane() {
     run_cargo fmt --check
-    run_cargo check --locked
+    run_cargo test --locked --no-run
     if [[ -n "${BACKEND_ROLE_COMPLETION_NESTED:-}" ]]; then
         run_cargo test --locked --lib -- "${CORE_SKIP_FILTERS[@]}"
         run_cargo test --locked --test docs_snapshot_store_lists -- "${CORE_SKIP_FILTERS[@]}"

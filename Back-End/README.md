@@ -71,7 +71,7 @@ cargo check --features full-snapshot-stores
 - `./scripts/preflight.sh commit`는 `.git` 메타데이터 쓰기 가능 여부를 먼저 확인해 commit/stage 차단을 조기에 드러낸다.
 - `./scripts/preflight.sh publish`는 여기에 `github.com` DNS 확인을 더해 push 가능성을 사전에 확인한다.
 - `./scripts/preflight.sh websocket`는 socket bind가 필요한 WebSocket 검증 레인이 현재 러너에서 실행 가능한지 probe test로 확인한다.
-- `./scripts/verify.sh core`는 `cargo fmt --check`, `cargo check --locked`, 그리고 socket bind가 필요 없는 테스트만 실행한다. commit/push 가능 여부와는 분리돼 있어 sandbox 환경에서도 core 검증을 막지 않는다.
+- `./scripts/verify.sh core`는 `cargo fmt --check`, test profile compile(`cargo test --locked --no-run`), 그리고 socket bind가 필요 없는 테스트만 실행한다. compile과 test가 같은 Cargo profile을 재사용하며, commit/push 가능 여부와는 분리돼 있어 sandbox 환경에서도 core 검증을 막지 않는다.
 - `./scripts/verify.sh websocket`는 socket bind가 필요한 WebSocket/삭제 통합 테스트만 분리 실행한다.
 - 전체 snapshot adapter inventory를 다시 컴파일하거나 회귀를 돌릴 때는 `--features full-snapshot-stores`를 추가한다.
 - socket-required 테스트를 새로 추가하면 `scripts/verify.sh`의 core skip 목록과 websocket lane을 함께 갱신한다.
